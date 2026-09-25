@@ -14,7 +14,9 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). API routes are under `/api/` (health check: `/api/health/`). Django admin is at `/admin/`.
+Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Global health: `/api/health/`. Django admin: `/admin/`.
+
+See [docs/architecture.md](docs/architecture.md) for URL layout and ownership.
 
 ## Stack
 
@@ -24,5 +26,9 @@ Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). API routes are under `/ap
 ## Layout
 
 - `pack_referrals/` — project settings, URLs, WSGI/ASGI
-- `api/` — app (models, views, serializers, URLs)
+- `api/` — shared **models**, migrations, admin (persistence only)
+- `accounts/` — profiles, past roles, auth (`/api/accounts/…`)
+- `companies/` — companies (`/api/companies/…`)
+- `connections/` — connection requests, reports (`/api/connections/…`)
+- `chat/` — conversations, messages (`/api/chat/…`)
 - `manage.py` — Django CLI
