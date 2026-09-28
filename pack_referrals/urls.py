@@ -19,5 +19,10 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Domain apps first (more specific prefixes); legacy shared routes under api/.
+    path('api/accounts/', include('accounts.urls')),
+    path('api/companies/', include('companies.urls')),
+    path('api/connections/', include('connections.urls')),
+    path('api/chat/', include('chat.urls')),
     path('api/', include('api.urls')),
 ]
