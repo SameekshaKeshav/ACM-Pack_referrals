@@ -4,13 +4,25 @@
 
 | Layer | Location | Owner |
 |-------|----------|--------|
-| **HTTP (DRF views, URLs, serializers)** | Domain apps: `accounts`, `companies`, `connections`, `chat` | BE1–BE3 (+ PM on connections/chat overlap) |
-| **Persistence (models, migrations, admin)** | `api` app (temporary shared module) | Whole backend; schema changes via PR review |
+| **Models, migrations, admin** | Domain apps: `accounts`, `companies`, `connections`, `chat` | BE1–BE3 (see ownership table) |
+| **HTTP (DRF views, URLs, serializers)** | Same domain apps | Same |
+| **Global API health** | `api` app (no models) | PM / any dev |
 | **Project config** | `pack_referrals/` | PM / any dev |
 
-Domain apps import models from `api.models` until the persistence layer moves (see below).
+Each backend dev runs `makemigrations` only inside their app(s), which avoids conflicting `api.0003_*` migrations on parallel branches.
 
-## URL map (v1 scaffold)
+## Model ownership
+
+| App | Models |
+|-----|--------|
+| `accounts` | `Profile`, `PastRole` |
+| `companies` | `Company` |
+| `connections` | `ConnectionRequest`, `Report` |
+| `chat` | `Conversation`, `Message` |
+
+Cross-app foreign keys use string references (e.g. `Report.reported_message` → `"chat.Message"`, `Profile.current_company` → `"companies.Company"`).
+
+## URL map (v1)
 
 | Prefix | Resources |
 |--------|-----------|
@@ -20,37 +32,30 @@ Domain apps import models from `api.models` until the persistence layer moves (s
 | `/api/connections/` | `connection-requests/`, `reports/`, `health/` |
 | `/api/chat/` | `conversations/`, `messages/`, `health/` |
 
-Frontend and API clients should use these prefixes. Legacy flat paths (`/api/profiles/`, etc.) are **removed** after the domain-app migration.
+Tell frontend before wiring clients: paths are prefixed (e.g. `/api/accounts/profiles/`, not `/api/profiles/`).
 
-## Why `api` still exists
+## Schema changes (team rule)
 
-Django migrations and foreign keys are tied to the app label `api`. Renaming the app to `core` mid-sprint would require careful migration surgery (`RenameApp`, updating `Migration.dependencies`, and team-wide rebases).
+1. Edit **your app’s** `models.py` only.
+2. Run `python manage.py makemigrations <your_app>` and commit that app’s migration folder.
+3. Update `docs/erd.md` in the same PR.
+4. Implement views/serializers in the same app; do not add resource routes to root `urls.py`.
 
-**Decision (Sprint 0):**
+## Resetting local DB after migration squash
 
-1. **Now:** Treat `api` as the **shared persistence layer** (models + migrations + Django admin registrations). All REST surface area lives in domain apps.
-2. **After schema stabilizes (target: end of Sprint 1 / early Sprint 2):** Rename `api` → `core` in a dedicated PR when:
-   - No open migration conflicts on `main`
-   - ERD in `docs/erd.md` matches production models
-   - Team agrees on a freeze window (~1 day) for model changes
+While there is no production/seed data, squashing app migrations is done by deleting old `api` migrations and re-running per-app migrations. After pulling such a change:
 
-**Alternative (not chosen now):** Split models into each domain app immediately. Rejected for Sprint 0 because cross-app FKs (`Profile` ↔ `Company`, `ConnectionRequest` → `Conversation`) multiply migration ordering issues while the schema is still moving (e.g. `unverified` state, company dedupe).
+```bash
+rm -f db.sqlite3
+python manage.py migrate
+```
 
-## Serializer ownership
-
-Serializers live next to views in each domain app (`accounts/serializers.py`, etc.) and reference `api.models`. When/if models move to `core` or per-app modules, serializers move with their views or import from `core.models`.
-
-## Adding routes (team rule)
-
-1. Implement views and URL patterns **inside your domain app** only.
-2. Root `pack_referrals/urls.py` already includes each app; do **not** add resource routes there.
-3. Schema changes: edit `api/models.py`, run `makemigrations`, update `docs/erd.md` in the same PR.
+Once real seed data exists, use normal migration operations instead of deleting history.
 
 ## Ownership (backend)
 
-| Dev column | App | Typical endpoints |
-|------------|-----|-------------------|
-| BE1 — auth & profiles | `accounts` | verification, session, profiles, past roles |
+| Dev column | App | Typical work |
+|------------|-----|--------------|
+| BE1 — auth & profiles | `accounts` (+ `companies` for directory) | verification, profiles, past roles |
 | BE2 — connections & moderation | `connections` | connection-request state machine, reports, blocks |
 | BE3 — chat | `chat` | conversations, messages, polling |
-| Shared directory | `companies` | company CRUD, search (often BE1 + FE1) |

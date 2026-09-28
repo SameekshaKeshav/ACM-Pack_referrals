@@ -14,6 +14,13 @@ python manage.py migrate
 python manage.py runserver
 ```
 
+If migrations were reset on a branch (no production data yet), reset your local DB:
+
+```bash
+rm -f db.sqlite3
+python manage.py migrate
+```
+
 Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Global health: `/api/health/`. Django admin: `/admin/`.
 
 See [docs/architecture.md](docs/architecture.md) for URL layout and ownership.
@@ -26,7 +33,7 @@ See [docs/architecture.md](docs/architecture.md) for URL layout and ownership.
 ## Layout
 
 - `pack_referrals/` — project settings, URLs, WSGI/ASGI
-- `api/` — shared **models**, migrations, admin (persistence only)
+- `api/` — global `/api/health/` only (no domain models)
 - `accounts/` — profiles, past roles, auth (`/api/accounts/…`)
 - `companies/` — companies (`/api/companies/…`)
 - `connections/` — connection requests, reports (`/api/connections/…`)

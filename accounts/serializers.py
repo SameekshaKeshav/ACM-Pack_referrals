@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from api.models import PastRole, Profile
+from .models import PastRole, Profile
 
 
 class ProfileSerializer(serializers.ModelSerializer):

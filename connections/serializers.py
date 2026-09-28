@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from api.models import ConnectionRequest, Report
+from .models import ConnectionRequest, Report
 
 
 class ConnectionRequestSerializer(serializers.ModelSerializer):

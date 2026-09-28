@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from api.models import Conversation, Message
+from .models import Conversation, Message
 
 
 class ConversationSerializer(serializers.ModelSerializer):

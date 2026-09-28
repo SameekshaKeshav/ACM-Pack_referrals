@@ -1,6 +1,10 @@
 # Pack Referrals — Entity Relationship Diagram
 
-Current state of the data model as defined in [`api/models.py`](../api/models.py).
+Current state of the data model as defined in domain apps:
+[`accounts/models.py`](../accounts/models.py),
+[`companies/models.py`](../companies/models.py),
+[`connections/models.py`](../connections/models.py),
+[`chat/models.py`](../chat/models.py).
 GitHub renders the Mermaid diagram below automatically.
 
 This is kept in version control rather than as an exported image so that schema

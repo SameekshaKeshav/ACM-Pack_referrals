@@ -2,8 +2,7 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.models import ConnectionRequest, Report
-
+from .models import ConnectionRequest, Report
 from .serializers import ConnectionRequestSerializer, ReportSerializer
 
 
