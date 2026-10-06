@@ -10,9 +10,12 @@ Requires Python 3.11+.
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+cp .env.example .env               # then edit .env if needed (SECRET_KEY, email, etc.)
 python manage.py migrate
 python manage.py runserver
 ```
+
+Environment variables are loaded from `.env` (see [`.env.example`](.env.example)). With `EMAIL_HOST` left empty, outbound email is printed to the console — fine for local auth spikes.
 
 If migrations were reset on a branch (no production data yet), reset your local DB:
 
