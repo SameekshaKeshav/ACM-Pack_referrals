@@ -5,6 +5,7 @@ from django.db import models
 class Conversation(models.Model):
     participants = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
+        through="ConversationParticipant",
         related_name="conversations",
     )
     created_from_connection_request = models.OneToOneField(
@@ -20,6 +21,30 @@ class Conversation(models.Model):
         return f"Conversation {self.pk}"
 
 
+class ConversationParticipant(models.Model):
+    conversation = models.ForeignKey(
+        Conversation,
+        on_delete=models.CASCADE,
+        related_name="conversation_participants",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="conversation_participants",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["conversation", "user"],
+                name="unique_conversation_participant",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} in conversation {self.conversation_id}"
+
+
 class Message(models.Model):
     conversation = models.ForeignKey(
         Conversation,
@@ -31,7 +56,7 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name="messages",
     )
-    body_text = models.TextField()
+    body_text = models.CharField(max_length=2000)
     created_at = models.DateTimeField(auto_now_add=True)
     read_status = models.BooleanField(default=False)
 

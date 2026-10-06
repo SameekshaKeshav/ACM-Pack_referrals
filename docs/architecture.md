@@ -18,7 +18,7 @@ Each backend dev runs `makemigrations` only inside their app(s), which avoids co
 | `accounts` | `Profile`, `PastRole` |
 | `companies` | `Company` |
 | `connections` | `ConnectionRequest`, `Report` |
-| `chat` | `Conversation`, `Message` |
+| `chat` | `Conversation`, `ConversationParticipant`, `Message` |
 
 Cross-app foreign keys use string references (e.g. `Report.reported_message` → `"chat.Message"`, `Profile.current_company` → `"companies.Company"`).
 
