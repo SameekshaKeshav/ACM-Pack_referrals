@@ -11,6 +11,8 @@
 
 ## Finish the external handoff
 
+This session could not publish a GitHub branch/PR: branch creation returned `403 Resource not accessible by integration`; the NC State account has read-only repo access and direct Git push had no credentials. The package includes a Git patch to apply from an authenticated clone. No remote PR or team-channel post exists yet.
+
 1. Post the SVG/wireframe doc and the review-branch/PR link in the actual team channel. The channel was not identified in the attachments, so no team-channel post has been made from this workspace.
 2. Thomas reviews connection paths/shapes and implements the non-stub POST endpoint. Sameeksha reviews chat shapes, ownership, block/text and pagination decisions. Add each real approval permalink/date to the contract table.
 3. Sanjana reviews and records her FE2 approval, demos locally, and follows the repo's one-review-before-merge rule. A prepared proposal is not a both-sides-signed-off contract.
@@ -26,3 +28,11 @@ Thomas: please review the connection contract and canonical `/api/connections/` 
 ## Scope
 
 This catch-up implements FE2 weeks 2–5. It does not implement chat APIs, poll real threads, accept requests on the backend, create conversations, report/block, or send chat messages. Those later tasks depend on backend ownership and an approved contract.
+
+## Verification in this session
+
+- `npm run build`: passed.
+- `npm run test:dom`: all 5 React interaction tests passed, including typed/pasted 500/501 limits, Unicode count, local Accept/Decline, POST/auth payload, duplicate-click prevention, and failure/retry cases.
+- Existing `python manage.py test`: all 3 tests passed.
+- Wireframe PNG: rendered and visually inspected.
+- Playwright browser suite: blocked before any test could execute because Chromium exits with SIGTRAP in this environment. Responsive layout and browser-specific behavior need a real Chromium run. CI workflow is included but has not run remotely because the branch could not be pushed.

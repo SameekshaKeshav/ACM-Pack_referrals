@@ -42,10 +42,11 @@ The form expects `201 {"id":203,"status":"pending"}`; success adds the row to th
 
 ```bash
 npm run build
+npm run test:dom
 npx playwright install chromium
 npm test
 ```
 
-Playwright starts Vite automatically on port 5173; it can reuse an existing local Vite server. Tests cover exact fixture counts, local PATCH logging without a real PATCH, outgoing/sidebar navigation, 500/501 typing/paste and emoji lengths, exact POST/auth body, single in-flight submission, success, error recovery, token absence, and mobile layout.
+The DOM suite verifies React interactions in jsdom without launching a browser. Playwright starts Vite automatically on port 5173; it can reuse an existing local Vite server. Tests cover exact fixture counts, local PATCH logging without a real PATCH, outgoing/sidebar navigation, 500/501 typing/paste and emoji lengths, exact POST/auth body, single in-flight submission, success, error recovery, token absence, and (Playwright only) mobile layout.
 
 Wireframes: [`../docs/chat-connect-wireframes.md`](../docs/chat-connect-wireframes.md). API proposal and approval table: [`../docs/api-contract-chat.md`](../docs/api-contract-chat.md). Acceptance walkthrough: [`../docs/chat-connect-handoff.md`](../docs/chat-connect-handoff.md).

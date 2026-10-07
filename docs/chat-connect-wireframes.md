@@ -4,6 +4,8 @@ Prepared 2026-10-07 for the FE2 weeks 2–5 deliverables. All people/requests sh
 
 ![Incoming queue, outgoing list, chat window, and sidebar](wireframes/chat-connect.svg)
 
+The [PNG export](wireframes/chat-connect.png) is ready to upload in the team channel.
+
 | Area | Layout and interactions | Component |
 | --- | --- | --- |
 | Incoming queue | Three cards across on desktop; stacked on narrow screens. Sender, company, short note, pending status, Accept/Decline. Action removes local card; count updates. | `RequestQueue` → `ConnectionRequestCard` |
