@@ -28,6 +28,16 @@ Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Global health: `/api/heal
 
 See [docs/architecture.md](docs/architecture.md) for URL layout and ownership.
 
+## Chat & Connect preview (FE2)
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173/chat-mock` for three incoming requests and a five-message thread. See [frontend setup and demo](frontend/README.md), [wireframes](docs/chat-connect-wireframes.md), and the [API contract proposal awaiting owner sign-off](docs/api-contract-chat.md).
+
 ## Stack
 
 - Django 5.2 + Django REST Framework
