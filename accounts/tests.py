@@ -1,8 +1,10 @@
 import re
 from datetime import timedelta
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.db import IntegrityError
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -48,11 +50,53 @@ class AuthFlowTests(APITestCase):
         self.assertNotEqual(stored.code_hash, self._emailed_code())
         self.assertTrue(stored.matches(self._emailed_code()))
 
-    def test_duplicate_signup_returns_conflict(self):
+    def _verify(self, code=None):
+        return self.client.post(
+            self.verify_url,
+            {"email": EMAIL, "code": code or self._emailed_code()},
+            format="json",
+        )
+
+    def test_signup_for_a_verified_account_returns_conflict(self):
         self._signup()
+        self._verify()
+
         response = self._signup()
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(User.objects.count(), 1)
+
+    def test_signup_for_an_unverified_account_reissues_a_code(self):
+        """An unverified address must never be permanently locked out."""
+        self._signup()
+        first_code = self._emailed_code()
+
+        response = self._signup()
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 2)
+
+        second_code = self._emailed_code()
+        self.assertNotEqual(first_code, second_code)
+
+        self.assertEqual(self._verify(first_code).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self._verify(second_code).status_code, status.HTTP_200_OK)
+
+    def test_an_expired_code_can_be_replaced_by_signing_up_again(self):
+        self._signup()
+        stored = User.objects.get(email=EMAIL).verification_codes.first()
+        stored.expires_at = timezone.now() - timedelta(seconds=1)
+        stored.save(update_fields=["expires_at"])
+
+        self._signup()
+        self.assertEqual(self._verify().status_code, status.HTTP_200_OK)
+
+    def test_concurrent_signup_losing_the_race_returns_conflict(self):
+        """A second request that slips past the existence check must not 500."""
+        with mock.patch.object(
+            User, "save", side_effect=IntegrityError("duplicate username")
+        ):
+            response = self._signup()
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
     def test_verify_rejects_a_wrong_code(self):
         self._signup()

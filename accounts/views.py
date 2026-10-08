@@ -1,7 +1,11 @@
+import secrets
+from functools import lru_cache
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,6 +22,13 @@ from .serializers import (
 User = get_user_model()
 
 INVALID_CODE_DETAIL = "That code is invalid or has expired. Request a new one."
+
+
+@lru_cache(maxsize=1)
+def _decoy_hash():
+    """A hash to compare against when no real code exists, so that an unknown
+    email costs the same time as a known one."""
+    return make_password(secrets.token_urlsafe(16))
 
 
 def _send_code(email, code):
@@ -55,18 +66,36 @@ class SignupView(APIView):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data["email"]
 
-        if User.objects.filter(email__iexact=email).exists():
+        existing = User.objects.filter(email__iexact=email).first()
+        if existing is not None:
+            if existing.is_active:
+                return Response(
+                    {"detail": "An account with that email already exists."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            # Never verified: re-issue instead of locking the address out. This
+            # covers an expired code, a failed send, and someone else having
+            # claimed the address first - only the real inbox sees the code.
+            _, code = VerificationCode.issue(existing)
+            _send_code(email, code)
+            return Response(
+                {"detail": "Verification code sent.", "email": email},
+                status=status.HTTP_201_CREATED,
+            )
+
+        try:
+            with transaction.atomic():
+                user = User(username=email, email=email, is_active=False)
+                user.set_unusable_password()
+                user.save()
+                Profile.objects.create(user=user)
+                _, code = VerificationCode.issue(user)
+        except IntegrityError:
+            # Two concurrent signups for the same address; the other one won.
             return Response(
                 {"detail": "An account with that email already exists."},
                 status=status.HTTP_409_CONFLICT,
             )
-
-        with transaction.atomic():
-            user = User(username=email, email=email, is_active=False)
-            user.set_unusable_password()
-            user.save()
-            Profile.objects.create(user=user)
-            _, code = VerificationCode.issue(user)
 
         _send_code(email, code)
         return Response(
@@ -89,13 +118,14 @@ class VerifyView(APIView):
         )
 
         user = User.objects.filter(email__iexact=email).first()
-        if user is None:
-            return invalid
+        verification = user.verification_codes.first() if user else None
 
-        verification = user.verification_codes.first()
-        if verification is None or verification.is_expired():
+        if verification is None:
+            # Spend the same time hashing as a real check would, so response
+            # time does not reveal whether the address is registered.
+            check_password(code, _decoy_hash())
             return invalid
-        if not verification.matches(code):
+        if verification.is_expired() or not verification.matches(code):
             return invalid
 
         with transaction.atomic():
