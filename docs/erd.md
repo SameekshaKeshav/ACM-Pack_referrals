@@ -21,6 +21,7 @@ erDiagram
     USER ||--o{ MESSAGE : "wrote"
     USER ||--o{ REPORT : "filed"
     USER ||--o{ REPORT : "reported in"
+    USER ||--o{ VERIFICATIONCODE : "issued"
 
     COMPANY ||--o{ PASTROLE : "employed"
     COMPANY ||--o{ PROFILE : "currently employs"
@@ -34,6 +35,14 @@ erDiagram
         string username
         string email "must be @ncsu.edu"
         string password "hashed by Django"
+    }
+
+    VERIFICATIONCODE {
+        int id PK
+        int user_id FK
+        string code_hash "PBKDF2 hash; plaintext is emailed, never stored"
+        datetime expires_at "issued_at + VERIFICATION_CODE_TTL_MINUTES"
+        datetime created_at
     }
 
     PROFILE {
@@ -112,6 +121,11 @@ erDiagram
 **`USER` is Django's built-in model**, not one we define. It supplies
 authentication, password hashing and the admin integration. `PROFILE` extends it
 one-to-one with our domain fields rather than replacing it.
+
+**`VERIFICATIONCODE` holds only a hash.** The six-digit code is generated with
+`secrets`, emailed in plaintext, and stored as a PBKDF2 hash using the same
+hasher as passwords. Issuing a new code deletes any outstanding one, and a
+successful verification deletes it, so a code is strictly single-use.
 
 **`PROFILE.account_status` gates everything.** A new account starts
 `unverified` and cannot be treated as a real member until the `@ncsu.edu`

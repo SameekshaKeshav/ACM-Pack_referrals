@@ -224,3 +224,6 @@ __marimo__/
 docs/design.md
 docs/ownership.md
 docs/recent-updates.md
+
+# Editor / local tooling config
+.claude/
