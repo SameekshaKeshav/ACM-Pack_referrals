@@ -21,4 +21,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run tests
+        env:
+          SECRET_KEY: test-secret-key-for-ci-only
+          DEBUG: "True"
+          FRONTEND_URL: http://localhost:3000
+          EMAIL_HOST: ""
+          EMAIL_HOST_PASSWORD: ""
         run: python manage.py test
