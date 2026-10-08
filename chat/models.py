@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Length
+from django.db.models.lookups import LessThanOrEqual
 
 
 class Conversation(models.Model):
@@ -62,6 +64,14 @@ class Message(models.Model):
 
     class Meta:
         ordering = ["created_at"]
+        constraints = [
+            # Django does not call full_clean() on save and SQLite ignores VARCHAR
+            # lengths, so enforce the 2000-character cap in the database itself.
+            models.CheckConstraint(
+                condition=LessThanOrEqual(Length("body_text"), 2000),
+                name="message_body_text_max_2000",
+            ),
+        ]
 
     def __str__(self):
         return f"Message {self.pk}"

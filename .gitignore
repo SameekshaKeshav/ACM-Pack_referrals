@@ -219,3 +219,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local meeting docs (kept outside the repo)
+docs/design.md
+docs/ownership.md
+docs/recent-updates.md
