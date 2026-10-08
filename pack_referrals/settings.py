@@ -141,14 +141,19 @@ REST_FRAMEWORK = {
 
 # --- Authentication (BE1) -------------------------------------------------
 # Signup is restricted to this domain; see accounts/validators.py.
-ALLOWED_SIGNUP_EMAIL_DOMAIN = os.getenv("ALLOWED_SIGNUP_EMAIL_DOMAIN", "ncsu.edu").strip().lstrip("@")
+ALLOWED_SIGNUP_EMAIL_DOMAIN = (
+    os.getenv("ALLOWED_SIGNUP_EMAIL_DOMAIN", "ncsu.edu").strip().lstrip("@")
+)
 
 # Lifetime of an emailed verification code, in minutes.
 VERIFICATION_CODE_TTL_MINUTES = int(os.getenv("VERIFICATION_CODE_TTL_MINUTES") or 10)
 
+ACCESS_TOKEN_LIFETIME_HOURS = int(os.getenv("ACCESS_TOKEN_LIFETIME_HOURS") or 24)
+REFRESH_TOKEN_LIFETIME_DAYS = int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS") or 7)
+
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=int(os.getenv("ACCESS_TOKEN_LIFETIME_HOURS") or 24)),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS") or 7)),
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=ACCESS_TOKEN_LIFETIME_HOURS),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=REFRESH_TOKEN_LIFETIME_DAYS),
 }
 
 # EMAIL_BACKEND is set above from EMAIL_HOST: SMTP when configured, console
