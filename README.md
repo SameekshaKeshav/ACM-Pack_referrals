@@ -42,7 +42,7 @@ Allowed hosts (`localhost`, `127.0.0.1`, and the staging domain) and CSRF truste
 ```bash
 pip install flake8
 python manage.py test
-flake8 --extend-exclude=.venv .
+flake8 .
 ```
 
 Run both before opening a PR. CI runs the same commands.
