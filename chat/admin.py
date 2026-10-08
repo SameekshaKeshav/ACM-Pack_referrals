@@ -1,11 +1,17 @@
 from django.contrib import admin
 
-from .models import Conversation, Message
+from .models import Conversation, ConversationParticipant, Message
+
+
+class ConversationParticipantInline(admin.TabularInline):
+    model = ConversationParticipant
+    extra = 0
 
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
     list_display = ("id", "created_at")
+    inlines = [ConversationParticipantInline]
 
 
 @admin.register(Message)

@@ -12,10 +12,12 @@ Requires Python 3.11+.
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+cp .env.example .env               # then edit .env if needed (SECRET_KEY, email, etc.)
 python manage.py migrate
-export DJANGO_DEBUG=True           # Windows (PowerShell): $env:DJANGO_DEBUG="True"
 python manage.py runserver
 ```
+
+Environment variables are loaded from `.env` (see [`.env.example`](.env.example)). With `EMAIL_HOST` left empty, outbound email is printed to the console — fine for local auth spikes.
 
 If migrations were reset on a branch (no production data yet), reset your local DB:
 
@@ -28,14 +30,26 @@ Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Global health: `/api/heal
 
 See [docs/architecture.md](docs/architecture.md) for URL layout and ownership.
 
+## Chat & Connect preview (FE2)
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://localhost:5173/chat-mock` for three incoming requests and a five-message thread. See [frontend setup and demo](frontend/README.md), [wireframes](docs/chat-connect-wireframes.md), and the [API contract proposal awaiting owner sign-off](docs/api-contract-chat.md).
+
 ## Environment variables
 
 | Variable | Required on staging | Local default | Purpose |
 |---|---|---|---|
-| `DJANGO_SECRET_KEY` | Yes | insecure dev key | Django's cryptographic signing key. Never commit the real one. |
-| `DJANGO_DEBUG` | No (defaults to `False`) | `False` | Turns debug mode on/off. Set to `True` locally for detailed error pages and admin styling. Never set to `True` on staging. |
+| `SECRET_KEY` | Yes | dev value from `.env.example` | Django's cryptographic signing key. The app will not start without it. Use a unique value on staging and never commit it. |
+| `DEBUG` | No (defaults to `False`) | `True` (from `.env.example`) | Turns debug mode on/off. Never set to `True` on staging. |
+| `ALLOWED_HOSTS` | Yes | `127.0.0.1,localhost` | Comma-separated hostnames Django will serve (no `https://`). Staging: `acm-packreferrals-production.up.railway.app`. If it's missing, every request returns 400 Bad Request. |
+| `FRONTEND_URL`, `EMAIL_*` | No | see `.env.example` | Frontend origin for links in emails, and SMTP settings. With `EMAIL_HOST` empty, email is printed to the console. |
 
-Allowed hosts (`localhost`, `127.0.0.1`, and the staging domain) and CSRF trusted origins (the staging URL) are hardcoded in `pack_referrals/settings.py`, not read from environment variables. The database path is also hardcoded for now (see [Database persistence](#database-persistence-showcase-day)).
+CSRF trusted origins (the staging URL) are hardcoded in `pack_referrals/settings.py`, not read from environment variables. The database path is also hardcoded for now (see [Database persistence](#database-persistence-showcase-day)).
 
 ## Running tests and lint
 
@@ -82,6 +96,7 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 ## Stack
 
 - Django 5.2 + Django REST Framework
+- React + Vite (frontend)
 - SQLite
 - Gunicorn (production server)
 - GitHub Actions (CI) + flake8 (linting)
@@ -95,4 +110,5 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 - `companies/` — companies (`/api/companies/…`)
 - `connections/` — connection requests, reports (`/api/connections/…`)
 - `chat/` — conversations, messages (`/api/chat/…`)
+- `frontend/` — React frontend (see [frontend/README.md](frontend/README.md))
 - `manage.py` — Django CLI

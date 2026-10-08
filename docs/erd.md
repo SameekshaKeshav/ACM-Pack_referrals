@@ -16,7 +16,8 @@ erDiagram
     USER ||--o{ PASTROLE : "held"
     USER ||--o{ CONNECTIONREQUEST : "sent"
     USER ||--o{ CONNECTIONREQUEST : "received"
-    USER }o--o{ CONVERSATION : "participates in"
+    USER ||--o{ CONVERSATIONPARTICIPANT : "joins via"
+    CONVERSATION ||--o{ CONVERSATIONPARTICIPANT : "has"
     USER ||--o{ MESSAGE : "wrote"
     USER ||--o{ REPORT : "filed"
     USER ||--o{ REPORT : "reported in"
@@ -80,11 +81,17 @@ erDiagram
         datetime created_at
     }
 
+    CONVERSATIONPARTICIPANT {
+        int id PK
+        int conversation_id FK
+        int user_id FK
+    }
+
     MESSAGE {
         int id PK
         int conversation_id FK
         int sender_id FK
-        text body_text
+        string body_text "max 2000"
         datetime created_at
         bool read_status "default false"
     }
@@ -136,9 +143,8 @@ These affect the schema and are not settled yet:
   same two users. The spec lists this as an edge case to handle; a database-level
   unique constraint on (sender, recipient) filtered to `status='pending'` would
   enforce it rather than relying on view logic.
-- **`CONVERSATION` uses a plain many-to-many** to users. The Sprint 1 plan
-  describes a `ConversationParticipant` through-model, which would be needed to
-  store per-participant state such as "hidden after block" or last-read position.
+- **`ConversationParticipant`** is the M2M through-table for conversations.
+  Per-participant state (e.g. hidden after block, last-read) can be added there later.
 - **`account_status` naming.** The spec describes the lifecycle as
   `unverified → verified → (active/suspended)`, while the sprint tracker says
   verification sets the status to `active`. This implementation treats `active`
