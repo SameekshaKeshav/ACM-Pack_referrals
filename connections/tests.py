@@ -30,8 +30,14 @@ class ConnectionTests(TestCase):
     def test_create_duplicate_request(self):
         payload = {"recipient": self.recipient.pk, "message_text": "Hello"}
 
-        self.assertEqual(self.client.post("/api/connections/", payload, format="json"), 201)
-        self.assertEqual(self.client.post("/api/connections/", payload, format="json"), 409)
+        self.assertEqual(
+            self.client.post("/api/connections/", payload, format="json").status_code,
+            201,
+        )
+        self.assertEqual(
+            self.client.post("/api/connections/", payload, format="json").status_code,
+            409,
+        )
 
     def test_incoming_connection_list(self):
         self.client.post(
