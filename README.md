@@ -90,9 +90,9 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 
 **Decision: Option 1 (Railway volume).** A volume is mounted at `/data`, and the plan is for Django to read the database location from a `SQLITE_PATH` environment variable set to `/data/db.sqlite3`. Data will then persist across redeploys, so the team can keep shipping fixes up to showcase day without wiping demo data. We rejected the deploy freeze because it blocks last-minute bug fixes, and a single accidental merge would erase everything.
 
-**Status: not done yet.** `pack_referrals/settings.py` still hardcodes the database to `db.sqlite3` in the project root and does not read `SQLITE_PATH`. Until it does, staging data is still wiped on every redeploy.
+**Status: done.** `pack_referrals/settings.py` reads `SQLITE_PATH`, and staging sets it to `/data/db.sqlite3`. Verified on staging: a company created after the fix deployed was still there after the next redeploy.
 
-**Note:** Once this is in place, migrations will run on every deploy against the volume's database. Test migrations locally before merging so a bad migration doesn't break staging data.
+**Note:** Migrations run on every deploy against the volume's database. Test migrations locally before merging so a bad migration doesn't break staging data.
 
 ## Stack
 
