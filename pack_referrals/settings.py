@@ -52,6 +52,8 @@ CSRF_TRUSTED_ORIGINS = ["https://acm-packreferrals-production.up.railway.app"]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
+COMMIT_HASH = os.getenv("RAILWAY_GIT_COMMIT_SHA")
+
 # Application definition
 
 INSTALLED_APPS = [
