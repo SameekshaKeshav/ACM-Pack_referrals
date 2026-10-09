@@ -26,7 +26,7 @@ rm -f db.sqlite3
 python manage.py migrate
 ```
 
-Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Global health: `/api/health/`. Django admin: `/admin/`.
+Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Global health: `/api/health/` (includes `commit_hash`, which is `null` locally). Django admin: `/admin/`.
 
 See [docs/architecture.md](docs/architecture.md) for URL layout and ownership.
 
@@ -48,8 +48,9 @@ Open `http://localhost:5173/chat-mock` for three incoming requests and a five-me
 | `DEBUG` | No (defaults to `False`) | `True` (from `.env.example`) | Turns debug mode on/off. Never set to `True` on staging. |
 | `ALLOWED_HOSTS` | Yes | `127.0.0.1,localhost` | Comma-separated hostnames Django will serve (no `https://`). Staging: `acm-packreferrals-production.up.railway.app`. If it's missing, every request returns 400 Bad Request. |
 | `FRONTEND_URL`, `EMAIL_*` | No | see `.env.example` | Frontend origin for links in emails, and SMTP settings. With `EMAIL_HOST` empty, email is printed to the console. |
+| `SQLITE_PATH` | Yes (`/data/db.sqlite3`) | unset (uses `db.sqlite3` in the project root) | Where the SQLite database file lives. On staging it must point at the `/data` volume, or data is wiped on every redeploy (see [Database persistence](#database-persistence-showcase-day)). |
 
-CSRF trusted origins (the staging URL) are hardcoded in `pack_referrals/settings.py`, not read from environment variables. The database path is also hardcoded for now (see [Database persistence](#database-persistence-showcase-day)).
+CSRF trusted origins (the staging URL) are hardcoded in `pack_referrals/settings.py`, not read from environment variables.
 
 ## Running tests and lint
 
