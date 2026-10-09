@@ -77,7 +77,7 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 - **Start command:** `python manage.py collectstatic --noinput && python manage.py migrate && gunicorn pack_referrals.wsgi`
 - **Static files:** `collectstatic` copies them into `staticfiles/`, and [WhiteNoise](https://whitenoise.readthedocs.io/) serves them, since Django doesn't serve static files itself when `DEBUG` is off. Without this, the Django admin is unstyled.
 - **Environment variables:** see the table above
-- **Volume:** mounted at `/data` (intended for the SQLite database; see below)
+- **Volume:** mounted at `/data`, which holds the SQLite database (see below)
 
 ## Database persistence (showcase day)
 
@@ -93,6 +93,8 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 **Status: done.** `pack_referrals/settings.py` reads `SQLITE_PATH`, and staging sets it to `/data/db.sqlite3`. Verified on staging on 2026-10-08: after the fix (`542f3f2`) deployed, a test company named `probe-after-fix` was created. It was still listed at `/api/companies/` after the next two redeploys (`85b0d38` and `f2c33c9`).
 
 **How to repeat the check:**
+
+> **Note:** Steps 2 and 6 send `POST` and `DELETE` requests without logging in. That works only because the API is currently unauthenticated (`AllowAny`). Once `IsAuthenticated` is added to these endpoints, those requests will be rejected (401 or 403): send an auth token with them, or create and delete the test company in the Django admin instead. Always delete the test company afterward so no test data is left on staging.
 
 ```bash
 STAGING=https://acm-packreferrals-production.up.railway.app
