@@ -74,7 +74,8 @@ Both must be green before merging. Results appear in the PR's **Checks** tab.
 
 Staging is hosted on [Railway](https://railway.app) and redeploys automatically when `main` is updated.
 
-- **Start command:** `python manage.py migrate && gunicorn pack_referrals.wsgi`
+- **Start command:** `python manage.py collectstatic --noinput && python manage.py migrate && gunicorn pack_referrals.wsgi`
+- **Static files:** `collectstatic` copies them into `staticfiles/`, and [WhiteNoise](https://whitenoise.readthedocs.io/) serves them, since Django doesn't serve static files itself when `DEBUG` is off. Without this, the Django admin is unstyled.
 - **Environment variables:** see the table above
 - **Volume:** mounted at `/data` (intended for the SQLite database; see below)
 
