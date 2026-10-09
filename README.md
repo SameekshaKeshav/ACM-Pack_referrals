@@ -92,7 +92,29 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 
 **Status: done.** `pack_referrals/settings.py` reads `SQLITE_PATH`, and staging sets it to `/data/db.sqlite3`. Verified on staging: a company created after the fix deployed was still there after the next redeploy.
 
+**How to repeat the check:**
+
+```bash
+STAGING=https://acm-packreferrals-production.up.railway.app
+```
+
+1. Note the deployed commit: `curl -s $STAGING/api/health/`. Write down `commit_hash`.
+2. Create a test company and note the `id` in the response:
+
+   ```bash
+   curl -s -X POST $STAGING/api/companies/ \
+     -H "Content-Type: application/json" \
+     -d '{"name": "Persistence Check"}'
+   ```
+
+3. Trigger a real redeploy by merging any PR into `main`. A Railway restart doesn't count: the check is whether data survives a new container.
+4. Run `curl -s $STAGING/api/health/` until `commit_hash` shows the new `main` commit. That confirms a new deploy is live.
+5. Run `curl -s $STAGING/api/companies/`. "Persistence Check" should still be in the list. If it's missing, check that `SQLITE_PATH` is set on Railway and the volume is mounted at `/data`.
+6. Clean up: `curl -s -X DELETE $STAGING/api/companies/<id>/`.
+
 **Note:** Migrations run on every deploy against the volume's database. Test migrations locally before merging so a bad migration doesn't break staging data.
+
+**Never run a seed command (such as `seed_demo_data`) on staging.** The database lives on the volume, so anything a seed writes stays there for good.
 
 ## Stack
 
