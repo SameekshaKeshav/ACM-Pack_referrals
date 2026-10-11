@@ -1,9 +1,14 @@
+import ProfileView from '../components/profile/ProfileView';
+import ProfileEditForm from '../components/profile/ProfileEditForm';
 
 const Profile = () => {
     
     return (
-        <div>Profile</div>
+        <div>
+            <ProfileView />
+            <ProfileEditForm />
+        </div>
     )
 }
 
-export default Profile
+export default Profile; 
