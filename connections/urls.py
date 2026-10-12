@@ -16,13 +16,13 @@ router.register("reports", ReportViewSet, basename="report")
 urlpatterns = [
     path("health/", AppHealthView.as_view(), name="health"),
     path(
-        "<int:connection_id>/accept/", 
-        ConnectionRequestViewSet.as_view({"patch": "patch"}), 
+        "<int:connection_id>/accept/",
+        ConnectionRequestViewSet.as_view({"patch": "patch"}),
         name="connection-request-accept"
         ),
     path(
-        "", 
-        ConnectionRequestViewSet.as_view({"get": "list", "post": "create"}), 
+        "",
+        ConnectionRequestViewSet.as_view({"get": "list", "post": "create"}),
         name="connection-request-list-and-create"
         ),
     path("", include(router.urls)),
