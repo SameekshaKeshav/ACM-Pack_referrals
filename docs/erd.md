@@ -16,10 +16,12 @@ erDiagram
     USER ||--o{ PASTROLE : "held"
     USER ||--o{ CONNECTIONREQUEST : "sent"
     USER ||--o{ CONNECTIONREQUEST : "received"
-    USER }o--o{ CONVERSATION : "participates in"
+    USER ||--o{ CONVERSATIONPARTICIPANT : "joins via"
+    CONVERSATION ||--o{ CONVERSATIONPARTICIPANT : "has"
     USER ||--o{ MESSAGE : "wrote"
     USER ||--o{ REPORT : "filed"
     USER ||--o{ REPORT : "reported in"
+    USER ||--o{ VERIFICATIONCODE : "issued"
 
     COMPANY ||--o{ PASTROLE : "employed"
     COMPANY ||--o{ PROFILE : "currently employs"
@@ -33,6 +35,14 @@ erDiagram
         string username
         string email "must be @ncsu.edu"
         string password "hashed by Django"
+    }
+
+    VERIFICATIONCODE {
+        int id PK
+        int user_id FK
+        string code_hash "PBKDF2 hash; plaintext is emailed, never stored"
+        datetime expires_at "issued_at + VERIFICATION_CODE_TTL_MINUTES"
+        datetime created_at
     }
 
     PROFILE {
@@ -80,11 +90,17 @@ erDiagram
         datetime created_at
     }
 
+    CONVERSATIONPARTICIPANT {
+        int id PK
+        int conversation_id FK
+        int user_id FK
+    }
+
     MESSAGE {
         int id PK
         int conversation_id FK
         int sender_id FK
-        text body_text
+        string body_text "max 2000"
         datetime created_at
         bool read_status "default false"
     }
@@ -105,6 +121,11 @@ erDiagram
 **`USER` is Django's built-in model**, not one we define. It supplies
 authentication, password hashing and the admin integration. `PROFILE` extends it
 one-to-one with our domain fields rather than replacing it.
+
+**`VERIFICATIONCODE` holds only a hash.** The six-digit code is generated with
+`secrets`, emailed in plaintext, and stored as a PBKDF2 hash using the same
+hasher as passwords. Issuing a new code deletes any outstanding one, and a
+successful verification deletes it, so a code is strictly single-use.
 
 **`PROFILE.account_status` gates everything.** A new account starts
 `unverified` and cannot be treated as a real member until the `@ncsu.edu`
@@ -136,9 +157,8 @@ These affect the schema and are not settled yet:
   same two users. The spec lists this as an edge case to handle; a database-level
   unique constraint on (sender, recipient) filtered to `status='pending'` would
   enforce it rather than relying on view logic.
-- **`CONVERSATION` uses a plain many-to-many** to users. The Sprint 1 plan
-  describes a `ConversationParticipant` through-model, which would be needed to
-  store per-participant state such as "hidden after block" or last-read position.
+- **`ConversationParticipant`** is the M2M through-table for conversations.
+  Per-participant state (e.g. hidden after block, last-read) can be added there later.
 - **`account_status` naming.** The spec describes the lifecycle as
   `unverified → verified → (active/suspended)`, while the sprint tracker says
   verification sets the status to `active`. This implementation treats `active`

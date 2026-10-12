@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1050" viewBox="0 0 1280 1050" role="img" aria-labelledby="title desc">
+  <title id="title">Pack Referrals Chat and Connect wireframes</title>
+  <desc id="desc">Four labeled low-fidelity panels: incoming queue with three cards, outgoing list, conversation sidebar and a five-message chat window.</desc>
+  <defs><style>text{font-family:Arial,sans-serif;fill:#30343a}.title{font-size:26px;font-weight:700}.h{font-size:18px;font-weight:700}.t{font-size:14px}.s{font-size:12px;fill:#6c737a}.box{fill:white;stroke:#bfc5cb}.line{stroke:#bfc5cb}.ghost{fill:#edf0f2}.red{fill:#bb2027}.white{fill:white}.label{font-size:12px;font-weight:700;letter-spacing:1px;fill:#a62127}</style></defs>
+  <rect width="1280" height="1050" fill="#f5f6f7"/>
+  <text x="40" y="48" class="title">Pack Referrals / Chat &amp; Connect</text>
+  <text x="40" y="76" class="s">FE2 layout review · fictional data · local mock actions · 07 Oct 2026</text>
+  <text x="40" y="120" class="label">01 / INCOMING REQUEST QUEUE</text>
+  <rect x="40" y="139" width="1200" height="251" rx="8" class="box"/>
+  <text x="61" y="169" class="h">Connection requests</text>
+  <text x="61" y="197" class="t">Incoming (3)</text><text x="180" y="197" class="s">Outgoing (2)</text>
+  <line x1="61" y1="209" x2="166" y2="209" stroke="#bb2027" stroke-width="3"/>
+  <rect x="61" y="224" width="369" height="147" rx="6" class="box"/>
+  <circle cx="88" cy="252" r="14" class="ghost"/><text x="112" y="252" class="t">Maya Patel / IBM</text>
+  <text x="80" y="289" class="s">Personal note / 500 characters maximum</text>
+  <text x="80" y="346" class="s">Today</text><rect x="251" y="323" width="78" height="32" rx="4" class="box"/><text x="267" y="344" class="s">Decline</text><rect x="338" y="323" width="74" height="32" rx="4" class="red"/><text x="354" y="344" class="s white">Accept</text>
+  <rect x="451" y="224" width="369" height="147" rx="6" class="box"/>
+  <circle cx="478" cy="252" r="14" class="ghost"/><text x="502" y="252" class="t">Alex Rivera / Red Hat</text>
+  <text x="470" y="289" class="s">Personal note / pending</text><text x="470" y="346" class="s">Yesterday</text><rect x="641" y="323" width="78" height="32" rx="4" class="box"/><text x="657" y="344" class="s">Decline</text><rect x="728" y="323" width="74" height="32" rx="4" class="red"/><text x="744" y="344" class="s white">Accept</text>
+  <rect x="841" y="224" width="377" height="147" rx="6" class="box"/>
+  <circle cx="868" cy="252" r="14" class="ghost"/><text x="892" y="252" class="t">Jordan Lee / Cisco</text>
+  <text x="860" y="289" class="s">Personal note / pending</text><text x="860" y="346" class="s">Yesterday</text><rect x="1039" y="323" width="78" height="32" rx="4" class="box"/><text x="1055" y="344" class="s">Decline</text><rect x="1126" y="323" width="74" height="32" rx="4" class="red"/><text x="1142" y="344" class="s white">Accept</text>
+  <text x="40" y="425" class="label">02 / OUTGOING REQUESTS (SEPARATE TAB)</text>
+  <rect x="40" y="444" width="570" height="175" rx="8" class="box"/>
+  <text x="61" y="475" class="h">Outgoing (2)</text>
+  <line x1="61" y1="489" x2="589" y2="489" class="line"/>
+  <text x="61" y="517" class="t">Priya Shah / Microsoft</text><text x="483" y="517" class="s">Pending</text>
+  <text x="61" y="539" class="s">Your sent note · Today</text>
+  <text x="61" y="577" class="t">Ethan Brooks / SAS</text><text x="481" y="577" class="s">Accepted</text>
+  <text x="61" y="599" class="s">Your sent note · Oct 5 · no Accept/Decline actions</text>
+  <rect x="638" y="444" width="602" height="175" rx="8" class="box"/>
+  <text x="659" y="475" class="h">Send Request</text><text x="659" y="501" class="s">Recipient test ID (profile supplies this after integration)</text>
+  <rect x="659" y="514" width="560" height="52" rx="5" class="box"/><text x="674" y="542" class="s">Write a short note...</text>
+  <text x="659" y="593" class="s">500 remaining / 501st character blocked</text><rect x="1100" y="575" width="119" height="30" rx="4" class="red"/><text x="1114" y="595" class="s white">Send Request</text>
+  <text x="40" y="656" class="label">03 / CONVERSATION SIDEBAR</text>
+  <text x="402" y="656" class="label">04 / CHAT WINDOW</text>
+  <rect x="40" y="675" width="337" height="327" rx="8" class="box"/>
+  <text x="61" y="706" class="h">Messages (3)</text>
+  <rect x="41" y="721" width="335" height="81" fill="#f9ecea"/><rect x="41" y="721" width="4" height="81" class="red"/>
+  <circle cx="74" cy="750" r="15" class="ghost"/><text x="101" y="747" class="t">Avery Chen</text><text x="101" y="768" class="s">Red Hat · last message preview</text><text x="101" y="788" class="s">Selected / 10:34 AM</text>
+  <circle cx="74" cy="835" r="15" class="ghost"/><text x="101" y="832" class="t">Sam Wilson</text><text x="101" y="854" class="s">IBM · preview</text><circle cx="343" cy="838" r="10" class="red"/><text x="339" y="842" class="s white">2</text>
+  <circle cx="74" cy="919" r="15" class="ghost"/><text x="101" y="916" class="t">Nina Davis</text><text x="101" y="938" class="s">Cisco · preview</text>
+  <rect x="402" y="675" width="838" height="327" rx="8" class="box"/>
+  <text x="425" y="707" class="h">Avery Chen / Red Hat</text><text x="1152" y="705" class="s">Connected</text><line x1="403" y1="721" x2="1239" y2="721" class="line"/>
+  <rect x="425" y="735" width="450" height="29" rx="6" class="ghost"/><text x="437" y="754" class="s">1. Hi Sanjana! What would you like to know?</text>
+  <rect x="752" y="775" width="465" height="29" rx="6" class="red"/><text x="764" y="794" class="s white">2. How was your software engineering internship?</text>
+  <rect x="425" y="815" width="450" height="29" rx="6" class="ghost"/><text x="437" y="834" class="s">3. Hands-on learning and a great mentor.</text>
+  <rect x="752" y="855" width="465" height="29" rx="6" class="red"/><text x="764" y="874" class="s white">4. Could I ask about the application process?</text>
+  <rect x="425" y="895" width="450" height="29" rx="6" class="ghost"/><text x="437" y="914" class="s">5. Happy to help. Send me the role!</text>
+  <rect x="425" y="946" width="674" height="36" rx="5" class="box"/><text x="439" y="969" class="s">Message Avery... / local input</text><rect x="1112" y="946" width="105" height="36" rx="5" class="ghost"/><text x="1132" y="969" class="s">Send (off)</text>
+  <text x="40" y="1030" class="s">Mobile: cards stack, sidebar above chat. Accept removes locally and logs PATCH. Chat input stays at the bottom of the panel.</text>
+</svg>
