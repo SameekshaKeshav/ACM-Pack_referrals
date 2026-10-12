@@ -18,6 +18,7 @@ class AppHealthView(APIView):
     def get(self, request):
         return Response({"app": "connections", "status": "ok"})
 
+
 class ConnectionRequestViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
@@ -75,7 +76,7 @@ class ConnectionRequestViewSet(
         if request_type == "incoming":
             queryset = self.get_queryset().filter(
                 recipient=request.user,
-                status=ConnectionRequest.Status.PENDING 
+                status=ConnectionRequest.Status.PENDING
             ).select_related(
                 "sender",
                 "sender__profile",
@@ -92,7 +93,7 @@ class ConnectionRequestViewSet(
                 {"detail": "type must be either incoming or outgoing."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        
+
         serializer_class = (
             IncomingConnectionRequestListSerializer
             if request_type == "incoming"
@@ -100,7 +101,7 @@ class ConnectionRequestViewSet(
         )
         serializer = serializer_class(queryset, many=True)
         return Response(serializer.data)
-    
+
     def patch(self, request, connection_id):
         return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
 

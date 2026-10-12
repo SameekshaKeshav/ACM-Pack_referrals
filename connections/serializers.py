@@ -31,7 +31,6 @@ class ConnectionRequestSerializer(serializers.ModelSerializer):
     message_text = serializers.CharField(required=True, allow_blank=False, max_length=500)
 
 
-
 class IncomingConnectionRequestListSerializer(serializers.ModelSerializer):
     sender = ConnectionSenderSerializer(read_only=True)
 
