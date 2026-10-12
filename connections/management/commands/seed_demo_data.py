@@ -1,9 +1,10 @@
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
 from accounts.models import Profile
 from companies.models import Company
 from connections.models import ConnectionRequest
-from django.contrib.auth import get_user_model
 
 
 User = get_user_model()
@@ -13,6 +14,10 @@ class Command(BaseCommand):
     help = "Create repeatable local fixtures for API and Postman testing."
 
     def handle(self, *args, **options):
+        if not settings.DEBUG:
+            self.stdout.write("Demo data seeding is disabled when DEBUG is false.")
+            return
+
         company, _ = Company.objects.update_or_create(
             name="Acme",
             defaults={"industry_tag": "Technology"},

@@ -16,6 +16,10 @@ class ConnectionSenderSerializer(serializers.Serializer):
         return company.name if company else None
 
 
+class ConnectionRecipientSerializer(ConnectionSenderSerializer):
+    id = serializers.IntegerField(source="pk", read_only=True)
+
+
 class ConnectionRequestSerializer(serializers.ModelSerializer):
     sender = ConnectionSenderSerializer(read_only=True)
 
@@ -24,15 +28,24 @@ class ConnectionRequestSerializer(serializers.ModelSerializer):
         fields = ("id", "sender", "recipient", "message_text", "status", "created_at")
         read_only_fields = ("id", "sender", "status", "created_at")
 
-    message_text = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    message_text = serializers.CharField(required=True, allow_blank=False, max_length=500)
 
 
-class ConnectionRequestListSerializer(serializers.ModelSerializer):
+
+class IncomingConnectionRequestListSerializer(serializers.ModelSerializer):
     sender = ConnectionSenderSerializer(read_only=True)
 
     class Meta:
         model = ConnectionRequest
         fields = ("id", "sender", "message_text", "status", "created_at")
+
+
+class OutgoingConnectionRequestListSerializer(serializers.ModelSerializer):
+    recipient = ConnectionRecipientSerializer(read_only=True)
+
+    class Meta:
+        model = ConnectionRequest
+        fields = ("id", "recipient", "message_text", "status", "created_at")
 
 
 class ReportSerializer(serializers.ModelSerializer):

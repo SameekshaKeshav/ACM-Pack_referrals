@@ -1,4 +1,5 @@
-from rest_framework import viewsets
+from django.db.models import Q
+from rest_framework import mixins, viewsets
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -6,8 +7,9 @@ from rest_framework.views import APIView
 
 from .models import ConnectionRequest, Report
 from .serializers import (
-    ConnectionRequestListSerializer,
+    IncomingConnectionRequestListSerializer,
     ConnectionRequestSerializer,
+    OutgoingConnectionRequestListSerializer,
     ReportSerializer,
 )
 
@@ -16,19 +18,33 @@ class AppHealthView(APIView):
     def get(self, request):
         return Response({"app": "connections", "status": "ok"})
 
-class ConnectionRequestViewSet(viewsets.ModelViewSet):
-    queryset = ConnectionRequest.objects.all()
+class ConnectionRequestViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = ConnectionRequestSerializer
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ConnectionRequest.objects.filter(
+            Q(sender=self.request.user) | Q(recipient=self.request.user)
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         recipient = serializer.validated_data["recipient"]
 
+        if recipient == request.user:
+            return Response(
+                {"detail": "You cannot send a connection request to yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if ConnectionRequest.objects.filter(
-            sender=request.user,
-            recipient=recipient,
+            Q(sender=request.user, recipient=recipient)
+            | Q(sender=recipient, recipient=request.user),
             status=ConnectionRequest.Status.PENDING,
         ).exists():
             return Response(
@@ -57,21 +73,32 @@ class ConnectionRequestViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         request_type = request.query_params.get("type")
         if request_type == "incoming":
-            queryset = self.get_queryset().filter(recipient=request.user)
+            queryset = self.get_queryset().filter(
+                recipient=request.user,
+                status=ConnectionRequest.Status.PENDING 
+            ).select_related(
+                "sender",
+                "sender__profile",
+                "sender__profile__current_company",
+            )
         elif request_type == "outgoing":
-            queryset = self.get_queryset().filter(sender=request.user)
+            queryset = self.get_queryset().filter(sender=request.user).select_related(
+                "recipient",
+                "recipient__profile",
+                "recipient__profile__current_company",
+            )
         else:
             return Response(
                 {"detail": "type must be either incoming or outgoing."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        queryset = queryset.select_related(
-            "sender",
-            "sender__profile",
-            "sender__profile__current_company",
+        
+        serializer_class = (
+            IncomingConnectionRequestListSerializer
+            if request_type == "incoming"
+            else OutgoingConnectionRequestListSerializer
         )
-        serializer = ConnectionRequestListSerializer(queryset, many=True)
+        serializer = serializer_class(queryset, many=True)
         return Response(serializer.data)
     
     def patch(self, request, connection_id):
