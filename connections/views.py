@@ -19,11 +19,15 @@ class AppHealthView(APIView):
         return Response({"app": "connections", "status": "ok"})
 
 
-class ConnectionRequestViewSet(
-    mixins.CreateModelMixin,
-    mixins.ListModelMixin,
-    viewsets.GenericViewSet,
-):
+class ConnectionRequestView(viewsets.ModelViewSet):
+    queryset = ConnectionRequest.objects.all()
+    serializer_class = ConnectionRequestSerializer
+
+    def patch(self, request, connection_id):
+        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
+    
+
+class ConnectionsView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = ConnectionRequestSerializer
     permission_classes = [IsAuthenticated]
 
@@ -101,9 +105,6 @@ class ConnectionRequestViewSet(
         )
         serializer = serializer_class(queryset, many=True)
         return Response(serializer.data)
-
-    def patch(self, request, connection_id):
-        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
 
 
 class ReportViewSet(viewsets.ModelViewSet):
