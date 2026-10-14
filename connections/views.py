@@ -25,7 +25,7 @@ class ConnectionRequestView(viewsets.ModelViewSet):
 
     def patch(self, request, connection_id):
         return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
-    
+
 
 class ConnectionsView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = ConnectionRequestSerializer
