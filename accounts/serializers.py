@@ -23,6 +23,13 @@ class SignupSerializer(serializers.Serializer):
         return normalize_email(value)
 
 
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(validators=[validate_ncsu_email])
+
+    def validate_email(self, value):
+        return normalize_email(value)
+
+
 class VerifySerializer(serializers.Serializer):
     email = serializers.EmailField(validators=[validate_ncsu_email])
     code = serializers.CharField(

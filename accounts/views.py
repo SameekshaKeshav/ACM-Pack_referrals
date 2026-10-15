@@ -16,6 +16,7 @@ from .models import PastRole, Profile, VerificationCode
 from .serializers import (
     PastRoleSerializer,
     ProfileSerializer,
+    LoginSerializer,
     SignupSerializer,
     VerifySerializer,
 )
@@ -106,6 +107,29 @@ class SignupView(APIView):
         return Response(
             {"detail": "Verification code sent.", "email": email},
             status=status.HTTP_201_CREATED,
+        )
+
+
+class LoginView(APIView):
+    """Send a returning user a fresh code. There is no password to check."""
+
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+
+        user = User.objects.filter(email__iexact=email).first()
+        if user is not None:
+            _, code = VerificationCode.issue(user)
+            _send_code(email, code)
+
+        # Identical response either way, so this endpoint cannot be used to
+        # discover which addresses are registered.
+        return Response(
+            {"detail": "If that account exists, a verification code has been sent."},
+            status=status.HTTP_200_OK,
         )
 
 
