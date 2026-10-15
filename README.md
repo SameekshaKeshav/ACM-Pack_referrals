@@ -51,6 +51,8 @@ Open `http://localhost:5173/chat-mock` for three incoming requests and a five-me
 | `FRONTEND_URL`, `EMAIL_*` | No | see `.env.example` | Frontend origin for links in emails, and SMTP settings. With `EMAIL_HOST` empty, email is printed to the console. |
 | `SQLITE_PATH` | Yes (`/data/db.sqlite3`) | unset (uses `db.sqlite3` in the project root) | Where the SQLite database file lives. On staging it must point at the `/data` volume, or data is wiped on every redeploy (see [Database persistence](#database-persistence-showcase-day)). |
 | `LOG_LEVEL` | No (defaults to `INFO`) | `INFO` | Level for the request log (see [Logging](#logging)). `WARNING` hides the per-request lines; CI sets this to keep test output readable. An invalid value stops the app from starting. |
+| `SENTRY_DSN` | Yes | unset (Sentry disabled) | Where errors are sent (see [Error tracking](#error-tracking)). Leave it unset locally and in CI; some tests raise exceptions on purpose. |
+| `SENTRY_ENVIRONMENT` | Yes (`staging`) | unset | Environment name on Sentry events. If it's missing, Sentry labels them `production`. |
 
 ## Running tests and lint
 
@@ -89,6 +91,10 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 ```
 
 Static files served by WhiteNoise aren't logged. Under `runserver` you'll also see Django's own plain-text request lines; those don't appear on staging (gunicorn).
+
+## Error tracking
+
+When `SENTRY_DSN` is set, unhandled exceptions are sent to [Sentry](https://sentry.io) with the stack trace and request URL. Each event is tagged with the environment (`SENTRY_ENVIRONMENT`) and the release (the deployed commit, the same `commit_hash` as `/api/health/`). User details, IP addresses and cookies aren't sent (`send_default_pii` is off).
 
 ## Database persistence (showcase day)
 

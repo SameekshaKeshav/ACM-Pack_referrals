@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import sentry_sdk
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -202,3 +203,14 @@ LOGGING = {
         },
     },
 }
+
+# --- Error tracking (Sentry) ----------------------------------------------
+# Only enabled when SENTRY_DSN is set, so CI and local runs without it don't
+# report to Sentry (some tests raise exceptions on purpose).
+SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        release=COMMIT_HASH,
+    )
