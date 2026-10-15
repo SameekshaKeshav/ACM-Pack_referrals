@@ -8,10 +8,3 @@ class HealthCheckView(APIView):
 
     def get(self, request):
         return Response({"status": "ok", "commit_hash": settings.COMMIT_HASH})
-
-
-# TEMPORARY: lets us confirm Sentry receives errors from staging.
-# Remove (with its URL) once verified.
-class SentryTestView(APIView):
-    def get(self, request):
-        raise Exception("test")

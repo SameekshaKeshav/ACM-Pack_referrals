@@ -1,9 +1,7 @@
 from django.urls import path
 
-from .views import HealthCheckView, SentryTestView
+from .views import HealthCheckView
 
 urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="health"),
-    # TEMPORARY: see SentryTestView.
-    path("debug/sentry/", SentryTestView.as_view(), name="sentry-test"),
 ]
