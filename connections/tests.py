@@ -115,7 +115,7 @@ class ConnectionTests(TestCase):
     def test_connection_request_endpoint_is_not_exposed(self):
         self.assertEqual(
             self.client.get(
-                f"/api/connections/connection-requests"
+                "/api/connections/connection-requests"
             ).status_code,
             404,
         )
