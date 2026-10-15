@@ -2,8 +2,10 @@ import re
 from datetime import timedelta
 from unittest import mock
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
+from django.core.cache import cache
 from django.db import IntegrityError
 from django.urls import reverse
 from django.utils import timezone
@@ -20,6 +22,7 @@ EMAIL = "testuser@ncsu.edu"
 
 class AuthFlowTests(APITestCase):
     def setUp(self):
+        cache.clear()  # throttle history is process-wide; isolate each test
         self.signup_url = reverse("accounts:auth-signup")
         self.verify_url = reverse("accounts:auth-verify")
 
@@ -174,6 +177,7 @@ class AuthFlowTests(APITestCase):
 
 class LoginTests(APITestCase):
     def setUp(self):
+        cache.clear()  # throttle history is process-wide; isolate each test
         self.signup_url = reverse("accounts:auth-signup")
         self.login_url = reverse("accounts:auth-login")
         self.verify_url = reverse("accounts:auth-verify")
@@ -234,6 +238,7 @@ class LoginTests(APITestCase):
 
 class TokenRefreshTests(APITestCase):
     def setUp(self):
+        cache.clear()  # throttle history is process-wide; isolate each test
         self.refresh_url = reverse("accounts:auth-refresh")
         self.signup_url = reverse("accounts:auth-signup")
         self.verify_url = reverse("accounts:auth-verify")
@@ -274,3 +279,93 @@ class TokenRefreshTests(APITestCase):
             self.refresh_url, {"refresh": "not.a.real.token"}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class ThrottleTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.signup_url = reverse("accounts:auth-signup")
+        self.login_url = reverse("accounts:auth-login")
+        self.verify_url = reverse("accounts:auth-verify")
+
+    def test_a_sixth_code_request_in_the_window_is_rejected(self):
+        for i in range(5):
+            response = self.client.post(
+                self.signup_url, {"email": f"user{i}@ncsu.edu"}, format="json"
+            )
+            self.assertNotEqual(response.status_code, 429, f"request {i + 1} was throttled")
+
+        sixth = self.client.post(
+            self.signup_url, {"email": "user5@ncsu.edu"}, format="json"
+        )
+        self.assertEqual(sixth.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_signup_and_login_share_one_budget(self):
+        """Both send mail, so they are throttled together rather than 5 each."""
+        for i in range(5):
+            self.client.post(self.signup_url, {"email": f"u{i}@ncsu.edu"}, format="json")
+
+        response = self.client.post(self.login_url, {"email": EMAIL}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_verify_has_its_own_budget(self):
+        """Being throttled on signup must not lock a user out of verifying."""
+        self.client.post(self.signup_url, {"email": EMAIL}, format="json")
+        code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+        for i in range(1, 5):
+            self.client.post(self.signup_url, {"email": f"x{i}@ncsu.edu"}, format="json")
+
+        response = self.client.post(
+            self.verify_url, {"email": EMAIL, "code": code}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class VerifyAttemptCapTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.signup_url = reverse("accounts:auth-signup")
+        self.verify_url = reverse("accounts:auth-verify")
+        self.client.post(self.signup_url, {"email": EMAIL}, format="json")
+        self.code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+        self.user = User.objects.get(email=EMAIL)
+
+    def _guess(self, code="000000"):
+        return self.client.post(
+            self.verify_url, {"email": EMAIL, "code": code}, format="json"
+        )
+
+    def test_failed_attempts_are_counted(self):
+        self._guess()
+        self.assertEqual(self.user.verification_codes.first().attempts, 1)
+        self._guess()
+        self.assertEqual(self.user.verification_codes.first().attempts, 2)
+
+    def test_the_code_is_destroyed_after_the_cap(self):
+        for _ in range(settings.VERIFICATION_MAX_ATTEMPTS):
+            self._guess()
+        self.assertEqual(self.user.verification_codes.count(), 0)
+
+    def test_the_correct_code_no_longer_works_once_the_cap_is_hit(self):
+        """This is the point: guessing cannot be continued past the cap."""
+        for _ in range(settings.VERIFICATION_MAX_ATTEMPTS):
+            self._guess()
+
+        response = self._guess(self.code)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+
+    def test_exhausting_a_code_does_not_lock_the_account_out(self):
+        for _ in range(settings.VERIFICATION_MAX_ATTEMPTS):
+            self._guess()
+
+        self.client.post(self.signup_url, {"email": EMAIL}, format="json")
+        fresh = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+        response = self._guess(fresh)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_a_successful_verify_does_not_count_as_a_failure(self):
+        self._guess()
+        response = self._guess(self.code)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
