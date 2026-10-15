@@ -45,7 +45,8 @@ class HealthCheckTests(TestCase):
         "/api/accounts/profiles/",
         "/api/accounts/past-roles/",
         "/api/companies/",
-        "/api/connections/connection-requests/",
+        # /api/connections/connection-requests/ is intentionally absent: #10
+        # replaced the generic list route, so it 404s rather than 401s.
         "/api/connections/reports/",
         "/api/chat/conversations/",
         "/api/chat/messages/",
