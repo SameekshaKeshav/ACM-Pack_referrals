@@ -1,9 +1,12 @@
 from django.conf import settings
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 
 class HealthCheckView(APIView):
+    permission_classes = [AllowAny]
+
     """Project-wide API health; domain routes live under /api/<app>/."""
 
     def get(self, request):

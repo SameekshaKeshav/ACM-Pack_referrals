@@ -7,6 +7,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -44,6 +45,8 @@ def _send_code(email, code):
 
 
 class AppHealthView(APIView):
+    permission_classes = [AllowAny]  # monitoring polls this
+
     def get(self, request):
         return Response({"app": "accounts", "status": "ok"})
 
@@ -59,6 +62,8 @@ class PastRoleViewSet(viewsets.ModelViewSet):
 
 
 class SignupView(APIView):
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+
     """Create an unverified account and email it a one-time code."""
 
     def post(self, request):
@@ -105,6 +110,8 @@ class SignupView(APIView):
 
 
 class VerifyView(APIView):
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+
     """Exchange a valid code for JWT credentials and activate the account."""
 
     def post(self, request):
