@@ -50,6 +50,7 @@ Open `http://localhost:5173/chat-mock` for three incoming requests and a five-me
 | `CSRF_TRUSTED_ORIGINS` | Yes | unset (empty list) | Comma-separated origins trusted for form POSTs such as the admin login. Unlike `ALLOWED_HOSTS`, each value must include the scheme. Staging: `https://acm-packreferrals-production.up.railway.app`. If it's missing or wrong, admin login fails with 403 CSRF verification failed. |
 | `FRONTEND_URL`, `EMAIL_*` | No | see `.env.example` | Frontend origin for links in emails, and SMTP settings. With `EMAIL_HOST` empty, email is printed to the console. |
 | `SQLITE_PATH` | Yes (`/data/db.sqlite3`) | unset (uses `db.sqlite3` in the project root) | Where the SQLite database file lives. On staging it must point at the `/data` volume, or data is wiped on every redeploy (see [Database persistence](#database-persistence-showcase-day)). |
+| `LOG_LEVEL` | No (defaults to `INFO`) | `INFO` | Level for the request log (see [Logging](#logging)). `WARNING` hides the per-request lines; CI sets this to keep test output readable. An invalid value stops the app from starting. |
 
 ## Running tests and lint
 
@@ -78,6 +79,16 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 - **Static files:** `collectstatic` copies them into `staticfiles/`, and [WhiteNoise](https://whitenoise.readthedocs.io/) serves them, since Django doesn't serve static files itself when `DEBUG` is off. Without this, the Django admin is unstyled.
 - **Environment variables:** see the table above
 - **Volume:** mounted at `/data`, which holds the SQLite database (see below)
+
+## Logging
+
+`pack_referrals/middleware.py` logs one JSON line to stdout per request, which Railway shows in the service's logs. Each line has `method`, `path` (without the query string, so tokens or codes in the URL aren't logged), `status_code` and `duration_ms`:
+
+```json
+{"asctime": "2026-10-15 03:26:23,621", "levelname": "INFO", "name": "pack_referrals.middleware", "message": "GET /api/health/ 200 13.7ms", "method": "GET", "path": "/api/health/", "status_code": 200, "duration_ms": 13.7}
+```
+
+Static files served by WhiteNoise aren't logged. Under `runserver` you'll also see Django's own plain-text request lines; those don't appear on staging (gunicorn).
 
 ## Database persistence (showcase day)
 

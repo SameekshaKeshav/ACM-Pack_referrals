@@ -78,6 +78,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Below WhiteNoise so static file requests are served before reaching it
+    # and don't flood the request log.
+    "pack_referrals.middleware.RequestLoggingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -169,3 +172,33 @@ SIMPLE_JWT = {
 # EMAIL_BACKEND is set above from EMAIL_HOST: SMTP when configured, console
 # otherwise, so verification codes print to the runserver output in development.
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@packreferrals.ncsu.edu")
+
+# --- Logging --------------------------------------------------------------
+# Level for the request log (pack_referrals.middleware). WARNING hides the
+# per-request INFO lines, e.g. in CI.
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").strip().upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "class": "pythonjsonlogger.json.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "loggers": {
+        "pack_referrals.middleware": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
