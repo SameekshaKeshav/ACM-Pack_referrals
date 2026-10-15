@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import PastRole, Profile, VerificationCode
+from .throttling import CodeRequestThrottle, VerifyAttemptThrottle
 from .serializers import (
     PastRoleSerializer,
     ProfileSerializer,
@@ -64,6 +65,7 @@ class PastRoleViewSet(viewsets.ModelViewSet):
 
 class SignupView(APIView):
     permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [CodeRequestThrottle]
 
     """Create an unverified account and email it a one-time code."""
 
@@ -114,6 +116,7 @@ class LoginView(APIView):
     """Send a returning user a fresh code. There is no password to check."""
 
     permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [CodeRequestThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -135,6 +138,7 @@ class LoginView(APIView):
 
 class VerifyView(APIView):
     permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [VerifyAttemptThrottle]
 
     """Exchange a valid code for JWT credentials and activate the account."""
 
@@ -156,7 +160,10 @@ class VerifyView(APIView):
             # time does not reveal whether the address is registered.
             check_password(code, _decoy_hash())
             return invalid
-        if verification.is_expired() or not verification.matches(code):
+        if verification.is_expired():
+            return invalid
+        if not verification.matches(code):
+            verification.register_failed_attempt()
             return invalid
 
         with transaction.atomic():

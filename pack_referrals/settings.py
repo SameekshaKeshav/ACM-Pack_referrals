@@ -159,7 +159,20 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # Applied per view via throttle classes in accounts.throttling.
+    "DEFAULT_THROTTLE_RATES": {
+        # Requesting a code emails a stranger and runs a slow hash, so it is
+        # both an abuse vector and a cheap way to burn server CPU.
+        "code_request": os.getenv("THROTTLE_CODE_REQUEST", "5/15min"),
+        # Submitting a code. The per-code attempt cap is the real defence
+        # against guessing; this bounds flooding from one source.
+        "verify_attempt": os.getenv("THROTTLE_VERIFY_ATTEMPT", "10/15min"),
+    },
 }
+
+# A code is destroyed after this many wrong guesses, so a six-digit code
+# cannot be brute-forced regardless of how many addresses an attacker has.
+VERIFICATION_MAX_ATTEMPTS = int(os.getenv("VERIFICATION_MAX_ATTEMPTS") or 5)
 
 # --- Authentication (BE1) -------------------------------------------------
 # Signup is restricted to this domain; see accounts/validators.py.
