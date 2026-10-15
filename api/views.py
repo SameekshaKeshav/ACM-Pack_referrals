@@ -5,9 +5,9 @@ from rest_framework.views import APIView
 
 
 class HealthCheckView(APIView):
-    permission_classes = [AllowAny]
-
     """Project-wide API health; domain routes live under /api/<app>/."""
+
+    permission_classes = [AllowAny]
 
     def get(self, request):
         return Response({"status": "ok", "commit_hash": settings.COMMIT_HASH})

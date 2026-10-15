@@ -64,10 +64,10 @@ class PastRoleViewSet(viewsets.ModelViewSet):
 
 
 class SignupView(APIView):
+    """Create an unverified account and email it a one-time code."""
+
     permission_classes = [AllowAny]  # the caller has no token yet - that is the point
     throttle_classes = [CodeRequestThrottle]
-
-    """Create an unverified account and email it a one-time code."""
 
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
@@ -137,10 +137,10 @@ class LoginView(APIView):
 
 
 class VerifyView(APIView):
+    """Exchange a valid code for JWT credentials and activate the account."""
+
     permission_classes = [AllowAny]  # the caller has no token yet - that is the point
     throttle_classes = [VerifyAttemptThrottle]
-
-    """Exchange a valid code for JWT credentials and activate the account."""
 
     def post(self, request):
         serializer = VerifySerializer(data=request.data)
