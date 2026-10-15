@@ -78,7 +78,7 @@ trap 'rm -f "$response_file"; cleanup' EXIT
 status=$(request "$response_file" \
     -u postman_sender:SenderPass123! \
     -H "Content-Type: application/json" \
-    -d '{"recipient":2,"message_text":"Hello"}' \
+    -d '{"recipient_id":2,"message_text":"Hello"}' \
     "${BASE_URL}/api/connections/")
 assert_status "201" "$status" "create connection request" "$response_file"
 connection_id=$(python - "$response_file" <<'PY'
@@ -93,7 +93,7 @@ PY
 status=$(request "$response_file" \
     -u postman_sender:SenderPass123! \
     -H "Content-Type: application/json" \
-    -d '{"recipient":2,"message_text":"Hello"}' \
+    -d '{"recipient_id":2,"message_text":"Hello"}' \
     "${BASE_URL}/api/connections/")
 assert_status "409" "$status" "reject duplicate connection request" "$response_file"
 

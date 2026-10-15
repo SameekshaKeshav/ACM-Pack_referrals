@@ -1,10 +1,15 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from django.db.models import Q
 from rest_framework import mixins, viewsets
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from accounts.models import Profile
 from .models import ConnectionRequest, Report
 from .serializers import (
     IncomingConnectionRequestListSerializer,
@@ -19,15 +24,11 @@ class AppHealthView(APIView):
         return Response({"app": "connections", "status": "ok"})
 
 
-class ConnectionRequestView(viewsets.ModelViewSet):
-    queryset = ConnectionRequest.objects.all()
-    serializer_class = ConnectionRequestSerializer
-
-    def patch(self, request, connection_id):
-        return Response(status=status.HTTP_501_NOT_IMPLEMENTED)
-
-
-class ConnectionsView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class ConnectionRequestViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
     serializer_class = ConnectionRequestSerializer
     permission_classes = [IsAuthenticated]
 
@@ -38,7 +39,14 @@ class ConnectionsView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            recipient_errors = serializer.errors.get("recipient_id", [])
+            if any(error.code == "does_not_exist" for error in recipient_errors):
+                return Response(
+                    {"detail": "Recipient not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            raise ValidationError(serializer.errors)
         recipient = serializer.validated_data["recipient"]
 
         if recipient == request.user:
@@ -50,18 +58,45 @@ class ConnectionsView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
         if ConnectionRequest.objects.filter(
             Q(sender=request.user, recipient=recipient)
             | Q(sender=recipient, recipient=request.user),
-            status=ConnectionRequest.Status.PENDING,
+            status__in=(
+                ConnectionRequest.Status.PENDING,
+                ConnectionRequest.Status.ACCEPTED,
+            ),
         ).exists():
             return Response(
-                {"detail": "A pending connection request already exists."},
+                {"detail": "A connection request or connection already exists."},
                 status=status.HTTP_409_CONFLICT,
             )
 
         profile = getattr(recipient, "profile", None)
-        if not profile or profile.open_to_connect is not True:
+        if (
+            not profile
+            or profile.open_to_connect is not True
+            or profile.account_status == Profile.AccountStatus.SUSPENDED
+        ):
             return Response(
                 {"detail": "This user is not open to connection requests."},
                 status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if ConnectionRequest.objects.filter(
+            Q(sender=request.user, recipient=recipient)
+            | Q(sender=recipient, recipient=request.user),
+            status=ConnectionRequest.Status.DECLINED,
+        ).exists():
+            return Response(
+                {"detail": "This connection is not available."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        request_window_start = timezone.now() - timedelta(hours=24)
+        if ConnectionRequest.objects.filter(
+            sender=request.user,
+            created_at__gte=request_window_start,
+        ).count() >= 10:
+            return Response(
+                {"detail": "You have reached the connection request limit."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
         connection_request = serializer.save(
@@ -70,7 +105,7 @@ class ConnectionsView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
         )
         headers = self.get_success_headers(serializer.data)
         return Response(
-            self.get_serializer(connection_request).data,
+            {"id": connection_request.id, "status": connection_request.status},
             status=status.HTTP_201_CREATED,
             headers=headers,
         )
@@ -87,7 +122,11 @@ class ConnectionsView(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.G
                 "sender__profile__current_company",
             )
         elif request_type == "outgoing":
-            queryset = self.get_queryset().filter(sender=request.user).select_related(
+            queryset = self.get_queryset().filter(
+                sender=request.user,
+            ).exclude(
+                status=ConnectionRequest.Status.DECLINED,
+            ).select_related(
                 "recipient",
                 "recipient__profile",
                 "recipient__profile__current_company",

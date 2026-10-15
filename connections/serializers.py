@@ -1,9 +1,24 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from .models import ConnectionRequest, Report
 
 
+User = get_user_model()
+
+
+class PositivePrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
+    def to_internal_value(self, data):
+        if isinstance(data, bool) or not isinstance(data, int) or data < 1:
+            raise serializers.ValidationError(
+                "This field must be a positive integer.",
+                code="invalid",
+            )
+        return super().to_internal_value(data)
+
+
 class ConnectionSenderSerializer(serializers.Serializer):
+    id = serializers.IntegerField(source="pk", read_only=True)
     name = serializers.SerializerMethodField()
     company = serializers.SerializerMethodField()
 
@@ -17,7 +32,7 @@ class ConnectionSenderSerializer(serializers.Serializer):
 
 
 class ConnectionRecipientSerializer(ConnectionSenderSerializer):
-    id = serializers.IntegerField(source="pk", read_only=True)
+    pass
 
 
 class ConnectionRequestSerializer(serializers.ModelSerializer):
@@ -25,10 +40,25 @@ class ConnectionRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ConnectionRequest
-        fields = ("id", "sender", "recipient", "message_text", "status", "created_at")
+        fields = ("id", "sender", "recipient_id", "message_text", "status", "created_at")
         read_only_fields = ("id", "sender", "status", "created_at")
 
-    message_text = serializers.CharField(required=True, allow_blank=False, max_length=500)
+    message_text = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=500,
+        trim_whitespace=False,
+    )
+    recipient_id = PositivePrimaryKeyRelatedField(
+        source="recipient",
+        queryset=User.objects.all(),
+        write_only=True,
+    )
+
+    def validate_message_text(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("This field may not be blank.")
+        return value
 
 
 class IncomingConnectionRequestListSerializer(serializers.ModelSerializer):
