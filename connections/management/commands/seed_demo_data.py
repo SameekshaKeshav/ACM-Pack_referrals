@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import Profile
 from companies.models import Company
@@ -63,3 +64,7 @@ class Command(BaseCommand):
         self.stdout.write(f"recipient: {recipient.username} (id={recipient.pk})")
         self.stdout.write("sender password: SenderPass123!")
         self.stdout.write("recipient password: RecipientPass123!")
+        # There is no password login (auth is email code -> JWT), so print
+        # Bearer tokens for these local-only users to paste into Postman.
+        self.stdout.write(f"sender_token: {AccessToken.for_user(sender)}")
+        self.stdout.write(f"recipient_token: {AccessToken.for_user(recipient)}")

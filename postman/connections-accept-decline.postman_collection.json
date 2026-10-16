@@ -1,0 +1,133 @@
+{
+  "info": {
+    "name": "Pack Referrals - connection accept/decline",
+    "description": "Week 5 deliverable. Run with `python manage.py seed_demo_data` first; it resets the postman_sender -> postman_recipient request and prints sender_token and recipient_token. Set collection variables base_url, sender_token, recipient_token and recipient_id, then run the folder in order.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "sender_token", "value": "" },
+    { "key": "recipient_token", "value": "" },
+    { "key": "recipient_id", "value": "" },
+    { "key": "connection_id", "value": "" },
+    { "key": "conversation_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Sender sends a request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('request created (201)', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.test('status is pending', function () { pm.expect(body.status).to.eql('pending'); });",
+              "pm.collectionVariables.set('connection_id', body.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{sender_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"recipient_id\": {{recipient_id}}, \"message_text\": \"Hi, could we chat about referrals?\"}"
+        },
+        "url": "{{base_url}}/api/connections/"
+      }
+    },
+    {
+      "name": "2. Recipient accepts",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accept returns 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test('response has a real conversation_id', function () {",
+              "  pm.expect(body.conversation_id).to.be.a('number');",
+              "  pm.expect(body.conversation_id).to.be.above(0);",
+              "});",
+              "pm.collectionVariables.set('conversation_id', body.conversation_id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{recipient_token}}" }],
+        "url": "{{base_url}}/api/connections/{{connection_id}}/accept/"
+      }
+    },
+    {
+      "name": "3. GET the request afterwards shows accepted",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('detail returns 200', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "pm.test(\"status is 'accepted'\", function () { pm.expect(body.status).to.eql('accepted'); });",
+              "pm.test('linked conversation matches the accept response', function () {",
+              "  pm.expect(String(body.conversation_id)).to.eql(String(pm.collectionVariables.get('conversation_id')));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{recipient_token}}" }],
+        "url": "{{base_url}}/api/connections/{{connection_id}}/"
+      }
+    },
+    {
+      "name": "4. Accepting again is rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('second accept returns 409', function () { pm.response.to.have.status(409); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{recipient_token}}" }],
+        "url": "{{base_url}}/api/connections/{{connection_id}}/accept/"
+      }
+    },
+    {
+      "name": "5. Sender cannot accept their own request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('sender gets 403', function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{sender_token}}" }],
+        "url": "{{base_url}}/api/connections/{{connection_id}}/accept/"
+      }
+    }
+  ]
+}

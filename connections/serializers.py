@@ -1,6 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from chat.models import Conversation
+
 from .models import ConnectionRequest, Report
 
 
@@ -75,6 +77,32 @@ class OutgoingConnectionRequestListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConnectionRequest
         fields = ("id", "recipient", "message_text", "status", "created_at")
+
+
+class ConnectionRequestDetailSerializer(serializers.ModelSerializer):
+    sender = ConnectionSenderSerializer(read_only=True)
+    recipient = ConnectionRecipientSerializer(read_only=True)
+    conversation_id = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ConnectionRequest
+        fields = (
+            "id",
+            "sender",
+            "recipient",
+            "message_text",
+            "status",
+            "created_at",
+            "resolved_at",
+            "conversation_id",
+        )
+
+    def get_conversation_id(self, connection_request):
+        return (
+            Conversation.objects.filter(created_from_connection_request=connection_request)
+            .values_list("pk", flat=True)
+            .first()
+        )
 
 
 class ReportSerializer(serializers.ModelSerializer):
