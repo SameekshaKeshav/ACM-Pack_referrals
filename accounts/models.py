@@ -72,6 +72,7 @@ class VerificationCode(models.Model):
     code_hash = models.CharField(max_length=128)
     expires_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         ordering = ["-created_at"]
@@ -94,6 +95,21 @@ class VerificationCode(models.Model):
 
     def matches(self, raw_code):
         return check_password(raw_code, self.code_hash)
+
+    def register_failed_attempt(self):
+        """Count a wrong guess, destroying the code once the cap is reached.
+
+        Rate limiting is keyed by IP and so is defeated by an attacker with
+        many of them. This cap is keyed by the code itself, which bounds
+        guessing at VERIFICATION_MAX_ATTEMPTS out of a million regardless of
+        where the requests come from.
+        """
+        self.attempts += 1
+        if self.attempts >= settings.VERIFICATION_MAX_ATTEMPTS:
+            self.delete()
+            return True
+        self.save(update_fields=["attempts"])
+        return False
 
     def __str__(self):
         return f"code for {self.user.get_username()} (expires {self.expires_at:%Y-%m-%d %H:%M})"

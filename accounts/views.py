@@ -7,14 +7,17 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 from rest_framework import status, viewsets
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import PastRole, Profile, VerificationCode
+from .throttling import CodeRequestThrottle, VerifyAttemptThrottle
 from .serializers import (
     PastRoleSerializer,
     ProfileSerializer,
+    LoginSerializer,
     SignupSerializer,
     VerifySerializer,
 )
@@ -44,6 +47,8 @@ def _send_code(email, code):
 
 
 class AppHealthView(APIView):
+    permission_classes = [AllowAny]  # monitoring polls this
+
     def get(self, request):
         return Response({"app": "accounts", "status": "ok"})
 
@@ -60,6 +65,9 @@ class PastRoleViewSet(viewsets.ModelViewSet):
 
 class SignupView(APIView):
     """Create an unverified account and email it a one-time code."""
+
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [CodeRequestThrottle]
 
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
@@ -104,8 +112,35 @@ class SignupView(APIView):
         )
 
 
+class LoginView(APIView):
+    """Send a returning user a fresh code. There is no password to check."""
+
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [CodeRequestThrottle]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+
+        user = User.objects.filter(email__iexact=email).first()
+        if user is not None:
+            _, code = VerificationCode.issue(user)
+            _send_code(email, code)
+
+        # Identical response either way, so this endpoint cannot be used to
+        # discover which addresses are registered.
+        return Response(
+            {"detail": "If that account exists, a verification code has been sent."},
+            status=status.HTTP_200_OK,
+        )
+
+
 class VerifyView(APIView):
     """Exchange a valid code for JWT credentials and activate the account."""
+
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [VerifyAttemptThrottle]
 
     def post(self, request):
         serializer = VerifySerializer(data=request.data)
@@ -125,7 +160,10 @@ class VerifyView(APIView):
             # time does not reveal whether the address is registered.
             check_password(code, _decoy_hash())
             return invalid
-        if verification.is_expired() or not verification.matches(code):
+        if verification.is_expired():
+            return invalid
+        if not verification.matches(code):
+            verification.register_failed_attempt()
             return invalid
 
         with transaction.atomic():
