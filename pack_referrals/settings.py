@@ -148,13 +148,31 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
+    # JWT is how API clients authenticate. SessionAuthentication stays so the
+    # Django admin and the DRF browsable API keep working in development.
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    # Closed by default. Endpoints that must stay public set AllowAny
+    # explicitly: auth signup/verify and the health checks.
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticated",
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
+    # Applied per view via throttle classes in accounts.throttling.
+    "DEFAULT_THROTTLE_RATES": {
+        # Requesting a code emails a stranger and runs a slow hash, so it is
+        # both an abuse vector and a cheap way to burn server CPU.
+        "code_request": os.getenv("THROTTLE_CODE_REQUEST", "5/15min"),
+        # Submitting a code. The per-code attempt cap is the real defence
+        # against guessing; this bounds flooding from one source.
+        "verify_attempt": os.getenv("THROTTLE_VERIFY_ATTEMPT", "10/15min"),
+    },
 }
+
+# A code is destroyed after this many wrong guesses, so a six-digit code
+# cannot be brute-forced regardless of how many addresses an attacker has.
+VERIFICATION_MAX_ATTEMPTS = int(os.getenv("VERIFICATION_MAX_ATTEMPTS") or 5)
 
 # --- Authentication (BE1) -------------------------------------------------
 # Signup is restricted to this domain; see accounts/validators.py.

@@ -1,6 +1,8 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import path as url_path
 from rest_framework.test import APIClient
+from rest_framework_simplejwt.tokens import AccessToken
 
 
 def raise_exception_view(request):
@@ -39,19 +41,32 @@ class HealthCheckTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok", "commit_hash": "abc123"})
 
-    def test_domain_resource_routes(self):
+    DOMAIN_RESOURCE_ROUTES = (
+        "/api/accounts/profiles/",
+        "/api/accounts/past-roles/",
+        "/api/companies/",
+        # /api/connections/connection-requests/ is intentionally absent: #10
+        # replaced the generic list route, so it 404s rather than 401s.
+        "/api/connections/reports/",
+        "/api/chat/conversations/",
+        "/api/chat/messages/",
+    )
+
+    def test_domain_resource_routes_reject_anonymous_callers(self):
         client = APIClient()
-        for path in (
-            "/api/accounts/profiles/",
-            "/api/accounts/past-roles/",
-            "/api/companies/",
-            "/api/connections/reports/",
-            "/api/chat/conversations/",
-            "/api/chat/messages/",
-        ):
+        for path in self.DOMAIN_RESOURCE_ROUTES:
             with self.subTest(path=path):
-                response = client.get(path)
-                self.assertEqual(response.status_code, 200)
+                self.assertEqual(client.get(path).status_code, 401)
+
+    def test_domain_resource_routes_accept_a_valid_token(self):
+        user = get_user_model().objects.create_user(username="router", email="r@ncsu.edu")
+        client = APIClient()
+        client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(user)}"
+        )
+        for path in self.DOMAIN_RESOURCE_ROUTES:
+            with self.subTest(path=path):
+                self.assertEqual(client.get(path).status_code, 200)
 
 
 class RequestLoggingMiddlewareTests(TestCase):

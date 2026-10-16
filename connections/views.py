@@ -5,7 +5,7 @@ from django.db.models import Q
 from rest_framework import mixins, viewsets
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -20,6 +20,8 @@ from .serializers import (
 
 
 class AppHealthView(APIView):
+    permission_classes = [AllowAny]
+
     def get(self, request):
         return Response({"app": "connections", "status": "ok"})
 
