@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import sentry_sdk
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -78,6 +79,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Below WhiteNoise so static file requests are served before reaching it
+    # and don't flood the request log.
+    "pack_referrals.middleware.RequestLoggingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -147,6 +151,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
 }
 
 # --- Authentication (BE1) -------------------------------------------------
@@ -169,3 +176,44 @@ SIMPLE_JWT = {
 # EMAIL_BACKEND is set above from EMAIL_HOST: SMTP when configured, console
 # otherwise, so verification codes print to the runserver output in development.
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@packreferrals.ncsu.edu")
+
+# --- Logging --------------------------------------------------------------
+# Level for the request log (pack_referrals.middleware). WARNING hides the
+# per-request INFO lines, e.g. in CI.
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").strip().upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "class": "pythonjsonlogger.json.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "loggers": {
+        "pack_referrals.middleware": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
+
+# --- Error tracking (Sentry) ----------------------------------------------
+# Only enabled when SENTRY_DSN is set, so CI and local runs without it don't
+# report to Sentry (some tests raise exceptions on purpose).
+SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        release=COMMIT_HASH,
+    )
