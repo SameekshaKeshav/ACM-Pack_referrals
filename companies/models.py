@@ -20,6 +20,26 @@ class Company(models.Model):
         normalized = " ".join(value.split()).lower().replace(".", "").replace(",", "")
         return cls.SUFFIX_RE.sub("", normalized).strip()
 
+    @classmethod
+    def find_or_create(cls, raw_name):
+        """Resolve a user-typed company name to a single Company row.
+
+        Matching is on the normalized key, so "Google", "  google " and
+        "Google Inc." all resolve to the same company rather than creating
+        three. The first spelling seen becomes the display name.
+
+        Returns (company, created). Raises ValueError if the name normalizes
+        to nothing, which would otherwise collide with any other blank name on
+        the unique constraint.
+        """
+        normalized = cls.normalize_name(raw_name)
+        if not normalized:
+            raise ValueError("Company name cannot be blank.")
+        return cls.objects.get_or_create(
+            name_normalized=normalized,
+            defaults={"name": " ".join(raw_name.split())},
+        )
+
     def save(self, *args, **kwargs):
         self.name_normalized = self.normalize_name(self.name)
         super().save(*args, **kwargs)

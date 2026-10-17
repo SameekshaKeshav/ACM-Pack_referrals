@@ -138,6 +138,11 @@ automatically from `name` on save — lowercased, whitespace collapsed, trailing
 so that `Google`, `google ` and `Google Inc.` resolve to one company rather than
 three.
 
+**`COMPANY.name_normalized` is how a company is looked up, not `name`.**
+Adding a role resolves the typed name through `Company.find_or_create`, which
+matches on the normalized key, so a company is created only when no existing
+one matches. The first spelling seen becomes the display name.
+
 **Company affiliation is derived, not stored.** There is no explicit
 `CompanyAffiliation` table — "who from NC State works here" is a query across
 `PASTROLE` plus `PROFILE.current_company`.

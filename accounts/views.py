@@ -59,8 +59,21 @@ class ProfileViewSet(viewsets.ModelViewSet):
 
 
 class PastRoleViewSet(viewsets.ModelViewSet):
-    queryset = PastRole.objects.all()
+    """Roles are readable by any verified member - that is what the company
+    directory is - but only the owner may add, change or remove their own.
+    """
+
     serializer_class = PastRoleSerializer
+
+    def get_queryset(self):
+        queryset = PastRole.objects.select_related("company", "user")
+        if self.action in ("update", "partial_update", "destroy"):
+            return queryset.filter(user=self.request.user)
+        return queryset
+
+    def perform_create(self, serializer):
+        # Identity comes from the token, never from the request body.
+        serializer.save(user=self.request.user)
 
 
 class SignupView(APIView):
