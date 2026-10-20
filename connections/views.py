@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 from django.db.models import Q
-from rest_framework import mixins, viewsets
+from rest_framework import generics, mixins, viewsets
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -12,10 +12,16 @@ from rest_framework.views import APIView
 from accounts.models import Profile
 from .models import ConnectionRequest, Report
 from .serializers import (
+    ConnectionRequestDetailSerializer,
     IncomingConnectionRequestListSerializer,
     ConnectionRequestSerializer,
     OutgoingConnectionRequestListSerializer,
     ReportSerializer,
+)
+from .services import (
+    ConnectionActionError,
+    accept_connection_request,
+    decline_connection_request,
 )
 
 
@@ -146,6 +152,62 @@ class ConnectionRequestViewSet(
         )
         serializer = serializer_class(queryset, many=True)
         return Response(serializer.data)
+
+
+class ConnectionRequestDetailView(generics.RetrieveAPIView):
+    """GET /api/connections/<id>/ - only the sender and recipient can see it."""
+
+    serializer_class = ConnectionRequestDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = "pk"
+    lookup_url_kwarg = "connection_id"
+
+    def get_queryset(self):
+        return ConnectionRequest.objects.filter(
+            Q(sender=self.request.user) | Q(recipient=self.request.user)
+        ).select_related(
+            "sender__profile__current_company",
+            "recipient__profile__current_company",
+        )
+
+
+class _ConnectionActionView(APIView):
+    """Shared error handling for accept/decline."""
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, connection_id):
+        try:
+            return self.perform(request, connection_id)
+        except ConnectionRequest.DoesNotExist:
+            return Response(
+                {"detail": "Connection request not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except ConnectionActionError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+
+    def perform(self, request, connection_id):
+        raise NotImplementedError
+
+
+class AcceptConnectionRequestView(_ConnectionActionView):
+    """PATCH /api/connections/<id>/accept/ - recipient accepts, a conversation is created."""
+
+    def perform(self, request, connection_id):
+        _, conversation = accept_connection_request(connection_id, request.user)
+        return Response({"conversation_id": conversation.pk}, status=status.HTTP_200_OK)
+
+
+class DeclineConnectionRequestView(_ConnectionActionView):
+    """PATCH /api/connections/<id>/decline/ - recipient declines, no conversation."""
+
+    def perform(self, request, connection_id):
+        connection_request = decline_connection_request(connection_id, request.user)
+        return Response(
+            {"id": connection_request.pk, "status": connection_request.status},
+            status=status.HTTP_200_OK,
+        )
 
 
 class ReportViewSet(viewsets.ModelViewSet):

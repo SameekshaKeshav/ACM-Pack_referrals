@@ -231,3 +231,6 @@ docs/recent-updates.md
 
 # Local demo aid, not part of the project
 demo_auth.sh
+
+# Local video generation credentials
+output/sameeksha-intro/.env.local
