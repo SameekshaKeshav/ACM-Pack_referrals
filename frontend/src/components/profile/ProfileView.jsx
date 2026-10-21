@@ -13,8 +13,8 @@ const ProfileView = ({ profile, onEdit }) => {
       <p>{profile.bio}</p>
 
       <h2>Job Roles</h2>
-      {profile.past_roles.map((role, index) => (
-        <PastRoleEntry key={index} role={role} />
+      {profile.past_roles.map((role) => (
+        <PastRoleEntry key={role.id} role={role} />
       ))}
 
     </div>

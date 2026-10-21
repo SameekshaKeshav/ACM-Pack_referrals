@@ -16,14 +16,14 @@ const ProfileEditForm = ({ profile, onSave, onCancel }) => {
   };
 
   const addRole = () => {
-    setForm({
-      ...form,
-      past_roles: [
-        ...form.past_roles,
-        { company: '', role_title: '', start_date: '', end_date: '' },
-      ],
-    });
-  };
+  setForm({
+    ...form,
+    past_roles: [
+      ...form.past_roles,
+      { id: crypto.randomUUID(), company: '', role_title: '', start_date: '', end_date: '' },
+    ],
+  });
+};
 
   const removeRole = (index) => {
     setForm({
@@ -84,7 +84,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel }) => {
       <h2>Roles</h2>
       {form.past_roles.map((role, index) => (
         <PastRoleEntry
-          key={index}
+          key={role.id}
           role={role}
           editable
           onChange={(field, value) => handleRoleChange(index, field, value)}
