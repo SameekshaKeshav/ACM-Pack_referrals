@@ -232,7 +232,7 @@ class ConnectionTests(TestCase):
 
                 self.assertEqual(response.status_code, 400)
 
-    def test_eleventh_request_in_rolling_day_returns_too_many_requests(self):
+    def test_exceeding_request_rate_limit(self):
         ConnectionRequest.objects.bulk_create(
             [
                 ConnectionRequest(
