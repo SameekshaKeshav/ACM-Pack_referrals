@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.cache import cache
 from django.db import IntegrityError
+from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
@@ -81,7 +82,9 @@ class AuthFlowTests(APITestCase):
         second_code = self._emailed_code()
         self.assertNotEqual(first_code, second_code)
 
-        self.assertEqual(self._verify(first_code).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self._verify(first_code).status_code, status.HTTP_400_BAD_REQUEST
+        )
         self.assertEqual(self._verify(second_code).status_code, status.HTTP_200_OK)
 
     def test_an_expired_code_can_be_replaced_by_signing_up_again(self):
@@ -125,7 +128,9 @@ class AuthFlowTests(APITestCase):
     def test_verify_activates_the_account_and_returns_tokens(self):
         self._signup()
         response = self.client.post(
-            self.verify_url, {"email": EMAIL, "code": self._emailed_code()}, format="json"
+            self.verify_url,
+            {"email": EMAIL, "code": self._emailed_code()},
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -156,7 +161,9 @@ class AuthFlowTests(APITestCase):
             self.verify_url, {"email": EMAIL, "code": "000000"}, format="json"
         )
         unknown = self.client.post(
-            self.verify_url, {"email": "nobody@ncsu.edu", "code": "000000"}, format="json"
+            self.verify_url,
+            {"email": "nobody@ncsu.edu", "code": "000000"},
+            format="json",
         )
         self.assertEqual(known.status_code, unknown.status_code)
         self.assertEqual(known.data, unknown.data)
@@ -188,7 +195,9 @@ class LoginTests(APITestCase):
     def _verified_account(self):
         self.client.post(self.signup_url, {"email": EMAIL}, format="json")
         self.client.post(
-            self.verify_url, {"email": EMAIL, "code": self._emailed_code()}, format="json"
+            self.verify_url,
+            {"email": EMAIL, "code": self._emailed_code()},
+            format="json",
         )
 
     def test_login_sends_a_fresh_code_to_a_verified_account(self):
@@ -200,7 +209,9 @@ class LoginTests(APITestCase):
         self.assertEqual(len(mail.outbox), 1)
 
         verify = self.client.post(
-            self.verify_url, {"email": EMAIL, "code": self._emailed_code()}, format="json"
+            self.verify_url,
+            {"email": EMAIL, "code": self._emailed_code()},
+            format="json",
         )
         self.assertEqual(verify.status_code, status.HTTP_200_OK)
         self.assertIn("access", verify.data)
@@ -293,7 +304,9 @@ class ThrottleTests(APITestCase):
             response = self.client.post(
                 self.signup_url, {"email": f"user{i}@ncsu.edu"}, format="json"
             )
-            self.assertNotEqual(response.status_code, 429, f"request {i + 1} was throttled")
+            self.assertNotEqual(
+                response.status_code, 429, f"request {i + 1} was throttled"
+            )
 
         sixth = self.client.post(
             self.signup_url, {"email": "user5@ncsu.edu"}, format="json"
@@ -303,7 +316,9 @@ class ThrottleTests(APITestCase):
     def test_signup_and_login_share_one_budget(self):
         """Both send mail, so they are throttled together rather than 5 each."""
         for i in range(5):
-            self.client.post(self.signup_url, {"email": f"u{i}@ncsu.edu"}, format="json")
+            self.client.post(
+                self.signup_url, {"email": f"u{i}@ncsu.edu"}, format="json"
+            )
 
         response = self.client.post(self.login_url, {"email": EMAIL}, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
@@ -313,12 +328,46 @@ class ThrottleTests(APITestCase):
         self.client.post(self.signup_url, {"email": EMAIL}, format="json")
         code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
         for i in range(1, 5):
-            self.client.post(self.signup_url, {"email": f"x{i}@ncsu.edu"}, format="json")
+            self.client.post(
+                self.signup_url, {"email": f"x{i}@ncsu.edu"}, format="json"
+            )
 
         response = self.client.post(
             self.verify_url, {"email": EMAIL, "code": code}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+@override_settings(REST_FRAMEWORK={**settings.REST_FRAMEWORK, "NUM_PROXIES": 1})
+class ProxyThrottleTests(APITestCase):
+    """Behind one proxy, only the last X-Forwarded-For entry identifies the
+    client: the proxy appends it, and the client controls everything before it."""
+
+    def setUp(self):
+        cache.clear()
+        self.signup_url = reverse("accounts:auth-signup")
+
+    def signup(self, i, forwarded_for):
+        return self.client.post(
+            self.signup_url,
+            {"email": f"user{i}@ncsu.edu"},
+            format="json",
+            HTTP_X_FORWARDED_FOR=forwarded_for,
+        )
+
+    def test_a_spoofed_forwarded_for_does_not_reset_the_budget(self):
+        for i in range(5):
+            self.signup(i, f"10.0.0.{i}, 203.0.113.7")
+
+        response = self.signup(5, "10.0.0.99, 203.0.113.7")
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_each_real_client_gets_its_own_budget(self):
+        for i in range(5):
+            self.signup(i, "203.0.113.7")
+
+        response = self.signup(5, "198.51.100.1")
+        self.assertNotEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
 
 class VerifyAttemptCapTests(APITestCase):

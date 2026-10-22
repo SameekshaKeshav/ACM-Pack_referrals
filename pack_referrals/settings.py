@@ -172,6 +172,10 @@ REST_FRAMEWORK = {
         # Sending a chat message, per signed-in user (chat.throttling).
         "message_send": os.getenv("THROTTLE_MESSAGE_SEND", "30/min"),
     },
+    # How many proxies sit in front of the app. Throttles use it to find the
+    # client's IP in X-Forwarded-For. Unset, DRF keys on the whole header,
+    # which the client controls, so a new value each request skips the limit.
+    "NUM_PROXIES": int(os.getenv("NUM_PROXIES")) if os.getenv("NUM_PROXIES") else None,
 }
 
 # A code is destroyed after this many wrong guesses, so a six-digit code
