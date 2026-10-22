@@ -53,7 +53,9 @@ class ConnectionActionEndpointTests(TestCase):
         response = self.client.patch(self._accept_url(pk))
         self.assertEqual(response.status_code, 200)
         conversation_id = response.json()["conversation_id"]
-        self.assertEqual(list(response.json()), ["conversation_id"])
+        self.assertEqual(response.json(), {
+            "id": pk, "status": "accepted", "conversation_id": conversation_id,
+        })
         conversation = Conversation.objects.get(pk=conversation_id)
         self.assertEqual(conversation.created_from_connection_request_id, pk)
         self.assertCountEqual(
@@ -85,7 +87,9 @@ class ConnectionActionEndpointTests(TestCase):
         self._as(self.recipient)
         response = self.client.patch(self._decline_url(pk))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"id": pk, "status": "declined"})
+        self.assertEqual(
+            response.json(), {"id": pk, "status": "declined", "conversation_id": None}
+        )
         self.assertEqual(Conversation.objects.count(), 0)
 
         detail = self.client.get(f"/api/connections/{pk}/").json()

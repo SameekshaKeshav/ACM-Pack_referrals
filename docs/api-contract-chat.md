@@ -68,7 +68,7 @@ Outgoing may contain pending/accepted rows; see the silent-decline rule above. `
 `PATCH /api/connections/123/decline/`, no request body → **200**:
 
 ```json
-{"id":123,"status":"declined"}
+{"id":123,"status":"declined","conversation_id":null}
 ```
 
 Only recipient may resolve (403 otherwise); unknown ID → 404; already resolved → 409. Accept must atomically create exactly one conversation with the two participants. The recipient may see the declined response; the sender may not. Race/idempotency policy needs PM/BE2 confirmation.

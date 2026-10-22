@@ -1,8 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from chat.models import Conversation
-
 from .models import ConnectionRequest, Report
 
 
@@ -97,12 +95,13 @@ class ConnectionRequestDetailSerializer(serializers.ModelSerializer):
             "conversation_id",
         )
 
-    def get_conversation_id(self, connection_request):
-        return (
-            Conversation.objects.filter(created_from_connection_request=connection_request)
-            .values_list("pk", flat=True)
-            .first()
-        )
+    def get_conversation_id(self, connection_request) -> int | None:
+        # ``conversation`` is the reverse one-to-one from Conversation. With
+        # ``select_related("conversation")`` on the queryset this costs no extra query,
+        # so a list of N requests stays one query instead of N + 1. Without it, it
+        # falls back to one query per object, as before.
+        conversation = getattr(connection_request, "conversation", None)
+        return conversation.pk if conversation else None
 
 
 class ReportSerializer(serializers.ModelSerializer):

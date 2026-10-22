@@ -49,7 +49,8 @@ class HealthCheckTests(TestCase):
         # replaced the generic list route, so it 404s rather than 401s.
         "/api/connections/reports/",
         "/api/chat/conversations/",
-        "/api/chat/messages/",
+        # /api/chat/messages/ is intentionally absent: it is POST-only (send a
+        # message), so a GET returns 405 rather than 200.
     )
 
     def test_domain_resource_routes_reject_anonymous_callers(self):
@@ -67,6 +68,25 @@ class HealthCheckTests(TestCase):
         for path in self.DOMAIN_RESOURCE_ROUTES:
             with self.subTest(path=path):
                 self.assertEqual(client.get(path).status_code, 200)
+
+
+class ApiDocsTests(TestCase):
+    def test_schema_is_public_and_lists_the_chat_routes(self):
+        response = APIClient().get("/api/schema/?format=json")
+
+        self.assertEqual(response.status_code, 200)
+        paths = response.json()["paths"]
+        for path in (
+            "/api/chat/conversations/",
+            "/api/chat/conversations/{conversation_id}/messages/",
+            "/api/chat/conversations/{conversation_id}/read/",
+            "/api/chat/messages/",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, paths)
+
+    def test_swagger_ui_is_public(self):
+        self.assertEqual(APIClient().get("/api/docs/").status_code, 200)
 
 
 class RequestLoggingMiddlewareTests(TestCase):
