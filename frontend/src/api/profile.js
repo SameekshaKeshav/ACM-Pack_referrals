@@ -1,8 +1,10 @@
 // Mock stand-in for GET/PATCH /api/accounts/me/.
 // Week 6: replace the bodies with fetch calls like the ones in connections.js.
-// The accessToken argument is unused for now but matches the real call's signature.
+// The real call will also need an accessToken.
+// TODO: confirm with Karthik which fields go through /api/accounts/me/
+// and which (past_roles) go through the past-role endpoints.
 
-let mockProfile = {
+const initialProfile = {
   id: 1,
   name: 'Jane Doe',
   major: 'Computer Science',
@@ -15,16 +17,22 @@ let mockProfile = {
   ],
 };
 
+let mockProfile = structuredClone(initialProfile);
+
+const EDITABLE_FIELDS = ['name', 'major', 'grad_year', 'bio', 'open_to_connect', 'past_roles'];
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export async function getMyProfile({ accessToken } = {}) {
+export async function getMyProfile() {
   await delay(300);
-  return { ...mockProfile };
+  return structuredClone(mockProfile);
 }
 
-// The PATCH body is {major, grad_year, bio}.
-export async function updateMyProfile({ major, grad_year, bio, accessToken }) {
+export async function updateMyProfile(changes) {
   await delay(300);
-  mockProfile = { ...mockProfile, major, grad_year, bio };
-  return { ...mockProfile };
+  const patch = Object.fromEntries(
+    Object.entries(changes).filter(([key]) => EDITABLE_FIELDS.includes(key)),
+  );
+  mockProfile = { ...mockProfile, ...structuredClone(patch) };
+  return structuredClone(mockProfile);
 }
