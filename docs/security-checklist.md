@@ -124,7 +124,7 @@ Reading profiles and companies may be intended, since browsing affiliations is t
 
 The signup, login and verify throttles key on the client IP from DRF's `get_ident()` ([`accounts/throttling.py:29`](../accounts/throttling.py)). `NUM_PROXIES` is not set in `REST_FRAMEWORK`. When it's unset, DRF builds the client identity from a request header the client controls, so the throttles can't reliably tell clients apart. This weakens the rate limiting on the auth endpoints. See DRF's [throttling docs on identifying clients](https://www.django-rest-framework.org/api-guide/throttling/#how-clients-are-identified).
 
-**Fix:** set `"NUM_PROXIES": N` in `REST_FRAMEWORK`, where N is the number of proxies Railway puts in front of the app. Measure N on staging (for example, by temporarily logging the forwarding headers Railway adds) rather than assuming it. Add a test that confirms the throttle still applies when the client sends its own forwarding header.
+**Progress:** settings now read `NUM_PROXIES` from the environment (unset keeps the current behavior), with tests for spoofed headers and separate per-client budgets. **Remaining:** measure N on staging using the temporary forwarding-header logging in `pack_referrals/middleware.py`, set `NUM_PROXIES` on Railway, confirm on staging, then remove the logging.
 
 ## 5. Real email on staging — BLOCKED
 
