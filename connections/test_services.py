@@ -4,9 +4,11 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from chat.models import Conversation
+from chat.services import ConversationAlreadyExistsError
 
 from .models import ConnectionRequest
 from .services import (
+    ConnectionActionError,
     NotRecipientError,
     RequestNotPendingError,
     accept_connection_request,
@@ -68,16 +70,84 @@ class ConnectionServiceTests(TestCase):
             accept_connection_request(self.request.pk, self.recipient)
         self.assertEqual(Conversation.objects.count(), 0)
 
-    def test_accept_rolls_back_status_if_conversation_creation_fails(self):
+    def test_accept_rolls_back_status_if_conversation_already_exists(self):
         with mock.patch(
             "connections.services.create_conversation_from_request",
-            side_effect=ValueError("boom"),
+            side_effect=ConversationAlreadyExistsError("exists"),
         ):
+            # A conflict: reported as 409, not as bad input.
             with self.assertRaises(RequestNotPendingError):
                 accept_connection_request(self.request.pk, self.recipient)
         self.request.refresh_from_db()
         self.assertEqual(self.request.status, ConnectionRequest.Status.PENDING)
         self.assertIsNone(self.request.resolved_at)
+
+    def test_accept_maps_other_conversation_errors_to_400_not_409(self):
+        with mock.patch(
+            "connections.services.create_conversation_from_request",
+            side_effect=ValueError("Cannot create a conversation with yourself."),
+        ):
+            with self.assertRaises(ConnectionActionError) as caught:
+                accept_connection_request(self.request.pk, self.recipient)
+        self.assertNotIsInstance(caught.exception, RequestNotPendingError)
+        self.assertEqual(caught.exception.status_code, 400)
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.status, ConnectionRequest.Status.PENDING)
+
+    def test_accept_of_a_request_to_yourself_is_a_400(self):
+        # The API blocks these, but admin or a seed command can create one.
+        self_request = ConnectionRequest.objects.create(
+            sender=self.recipient, recipient=self.recipient, message_text="me"
+        )
+        with self.assertRaises(ConnectionActionError) as caught:
+            accept_connection_request(self_request.pk, self.recipient)
+        self.assertEqual(caught.exception.status_code, 400)
+        self.assertEqual(Conversation.objects.count(), 0)
+
+    # races: the loser must get a 409 and must not overwrite the winner
+
+    def test_decline_loses_to_an_accept_that_lands_first(self):
+        # Both calls pass the up-front pending check; the accept resolves in between.
+        real_lookup = decline_connection_request.__globals__["_get_request_for_recipient"]
+
+        competing = {"started": False}
+
+        def lookup_then_accept(connection_id, user):
+            found = real_lookup(connection_id, user)
+            if not competing["started"]:
+                competing["started"] = True
+                accept_connection_request(connection_id, self.recipient)
+            return found
+
+        with mock.patch(
+            "connections.services._get_request_for_recipient", side_effect=lookup_then_accept
+        ):
+            with self.assertRaises(RequestNotPendingError):
+                decline_connection_request(self.request.pk, self.recipient)
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.status, ConnectionRequest.Status.ACCEPTED)
+        self.assertEqual(Conversation.objects.count(), 1)
+
+    def test_accept_loses_to_a_decline_that_lands_first(self):
+        real_lookup = accept_connection_request.__globals__["_get_request_for_recipient"]
+
+        competing = {"started": False}
+
+        def lookup_then_decline(connection_id, user):
+            found = real_lookup(connection_id, user)
+            if not competing["started"]:
+                competing["started"] = True
+                decline_connection_request(connection_id, self.recipient)
+            return found
+
+        with mock.patch(
+            "connections.services._get_request_for_recipient", side_effect=lookup_then_decline
+        ):
+            with self.assertRaises(RequestNotPendingError):
+                accept_connection_request(self.request.pk, self.recipient)
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.status, ConnectionRequest.Status.DECLINED)
+        self.assertEqual(Conversation.objects.count(), 0)
 
     # decline
 
