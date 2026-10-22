@@ -13,6 +13,29 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class DirectoryEntrySerializer(serializers.ModelSerializer):
+    """One person as they appear in the directory - no bio, no contact details."""
+
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
+    name = serializers.SerializerMethodField()
+    current_company = CompanySerializer(read_only=True)
+
+    class Meta:
+        model = Profile
+        fields = (
+            "user_id",
+            "name",
+            "major",
+            "grad_year",
+            "current_role",
+            "current_company",
+            "open_to_connect",
+        )
+
+    def get_name(self, profile):
+        return profile.user.get_full_name() or profile.user.get_username()
+
+
 class PastRoleSerializer(serializers.ModelSerializer):
     """A role someone held at a company.
 

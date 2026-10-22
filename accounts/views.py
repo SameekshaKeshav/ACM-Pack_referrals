@@ -6,18 +6,21 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
-from rest_framework import status, viewsets
+from rest_framework import generics, status, viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import PastRole, Profile, VerificationCode
+from .directory import filter_directory
+from .pagination import DirectoryPagination
 from .throttling import CodeRequestThrottle, VerifyAttemptThrottle
 from .serializers import (
     PastRoleSerializer,
     ProfileSerializer,
     LoginSerializer,
+    DirectoryEntrySerializer,
     SignupSerializer,
     VerifySerializer,
 )
@@ -74,6 +77,21 @@ class PastRoleViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Identity comes from the token, never from the request body.
         serializer.save(user=self.request.user)
+
+
+class UserDirectoryView(generics.ListAPIView):
+    """Browse verified members, optionally filtered.
+
+    GET /api/accounts/users/?major=X&grad_year=Y&company_id=Z&limit=20&offset=0
+
+    All three filters are optional and combine with AND.
+    """
+
+    serializer_class = DirectoryEntrySerializer
+    pagination_class = DirectoryPagination
+
+    def get_queryset(self):
+        return filter_directory(self.request.query_params)
 
 
 class SignupView(APIView):

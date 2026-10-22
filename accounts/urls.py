@@ -8,6 +8,7 @@ from .views import (
     PastRoleViewSet,
     ProfileViewSet,
     SignupView,
+    UserDirectoryView,
     VerifyView,
 )
 
@@ -23,5 +24,6 @@ urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="auth-login"),
     path("auth/verify/", VerifyView.as_view(), name="auth-verify"),
     path("auth/refresh/", TokenRefreshView.as_view(), name="auth-refresh"),
+    path("users/", UserDirectoryView.as_view(), name="user-directory"),
     path("", include(router.urls)),
 ]
