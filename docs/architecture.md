@@ -27,7 +27,7 @@ Cross-app foreign keys use string references (e.g. `Report.reported_message` →
 | Prefix | Resources |
 |--------|-----------|
 | `/api/health/` | Global health |
-| `/api/accounts/` | `profiles/`, `past-roles/`, `users/` (directory), `auth/*`, `health/` |
+| `/api/accounts/` | `me/`, `profiles/` (read-only), `past-roles/`, `users/` (directory), `auth/*`, `health/` |
 | `/api/companies/` | company CRUD, `health/` |
 | `/api/connections/` | `connection-requests/`, `reports/`, `health/` |
 | `/api/chat/` | `conversations/`, `messages/`, `health/` |

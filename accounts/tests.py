@@ -484,3 +484,102 @@ class UserDirectoryTests(APITestCase):
         self.assertNotIn("bio", row)
         self.assertNotIn("email", row)
         self.assertIn("open_to_connect", row)
+
+
+class MeEndpointTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        from companies.models import Company
+        from accounts.models import PastRole
+
+        self.url = reverse("accounts:me")
+        self.user = User.objects.create_user(
+            username=EMAIL, email=EMAIL, first_name="Jane", last_name="Doe"
+        )
+        self.profile = Profile.objects.create(
+            user=self.user, major="Computer Science", grad_year=2028,
+            bio="Sophomore.", account_status=Profile.AccountStatus.ACTIVE,
+        )
+        self.google = Company.objects.create(name="Google")
+        PastRole.objects.create(
+            user=self.user, company=self.google, role_title="SWE Intern",
+            start_date="2025-05-01", end_date="2025-08-01",
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(self.user)}"
+        )
+
+    def test_get_returns_the_callers_own_profile_with_roles(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user_id"], self.user.pk)
+        self.assertEqual(response.data["name"], "Jane Doe")
+        self.assertEqual(len(response.data["past_roles"]), 1)
+        self.assertEqual(response.data["past_roles"][0]["company"]["name"], "Google")
+
+    def test_patch_updates_editable_fields(self):
+        response = self.client.patch(
+            self.url, {"bio": "Junior now.", "major": "Statistics", "grad_year": 2027},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.bio, "Junior now.")
+        self.assertEqual(self.profile.major, "Statistics")
+
+    def test_patch_updates_the_name_through_the_user_model(self):
+        self.client.patch(self.url, {"first_name": "Janet"}, format="json")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Janet")
+        self.assertEqual(self.client.get(self.url).data["name"], "Janet Doe")
+
+    def test_current_employer_is_set_by_name_and_deduped(self):
+        from companies.models import Company
+
+        response = self.client.patch(
+            self.url, {"current_company_name": "  google inc. "}, format="json"
+        )
+        self.assertEqual(response.data["current_company"]["id"], self.google.pk)
+        self.assertEqual(Company.objects.count(), 1)
+
+    def test_a_blank_employer_name_clears_it(self):
+        self.client.patch(self.url, {"current_company_name": "Google"}, format="json")
+        response = self.client.patch(self.url, {"current_company_name": ""}, format="json")
+        self.assertIsNone(response.data["current_company"])
+
+    def test_read_only_fields_cannot_be_written(self):
+        self.client.patch(
+            self.url,
+            {"email": "attacker@ncsu.edu", "account_status": "suspended"},
+            format="json",
+        )
+        self.user.refresh_from_db()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.user.email, EMAIL)
+        self.assertEqual(self.profile.account_status, Profile.AccountStatus.ACTIVE)
+
+    def test_put_is_not_allowed(self):
+        response = self.client.put(self.url, {"bio": "x"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_requires_a_token(self):
+        anon = self.client_class()
+        self.assertEqual(anon.get(self.url).status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_an_account_without_a_profile_gets_404(self):
+        stray = User.objects.create_user(username="stray")
+        client = self.client_class()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(stray)}")
+        self.assertEqual(client.get(self.url).status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_profiles_endpoint_is_read_only(self):
+        """Writes go through /me/, which cannot address anyone else's profile."""
+        victim = User.objects.create_user(username="victim")
+        other = Profile.objects.create(user=victim, bio="untouched")
+
+        response = self.client.patch(
+            f"/api/accounts/profiles/{other.pk}/", {"bio": "hacked"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        other.refresh_from_db()
+        self.assertEqual(other.bio, "untouched")

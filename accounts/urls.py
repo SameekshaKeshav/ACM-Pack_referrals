@@ -5,6 +5,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     AppHealthView,
     LoginView,
+    MeView,
     PastRoleViewSet,
     ProfileViewSet,
     SignupView,
@@ -24,6 +25,7 @@ urlpatterns = [
     path("auth/login/", LoginView.as_view(), name="auth-login"),
     path("auth/verify/", VerifyView.as_view(), name="auth-verify"),
     path("auth/refresh/", TokenRefreshView.as_view(), name="auth-refresh"),
+    path("me/", MeView.as_view(), name="me"),
     path("users/", UserDirectoryView.as_view(), name="user-directory"),
     path("", include(router.urls)),
 ]

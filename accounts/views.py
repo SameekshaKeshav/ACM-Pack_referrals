@@ -7,6 +7,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
 from rest_framework import generics, status, viewsets
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +22,7 @@ from .serializers import (
     ProfileSerializer,
     LoginSerializer,
     DirectoryEntrySerializer,
+    MeSerializer,
     SignupSerializer,
     VerifySerializer,
 )
@@ -56,8 +58,12 @@ class AppHealthView(APIView):
         return Response({"app": "accounts", "status": "ok"})
 
 
-class ProfileViewSet(viewsets.ModelViewSet):
-    queryset = Profile.objects.all()
+class ProfileViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only. A member edits their own profile through /me/, which cannot
+    address anyone else's by construction.
+    """
+
+    queryset = Profile.objects.select_related("user", "current_company")
     serializer_class = ProfileSerializer
 
 
@@ -77,6 +83,26 @@ class PastRoleViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Identity comes from the token, never from the request body.
         serializer.save(user=self.request.user)
+
+
+class MeView(generics.RetrieveUpdateAPIView):
+    """GET/PATCH /api/accounts/me/ - the caller's own profile.
+
+    Scoped to request.user, so there is no id to tamper with.
+    """
+
+    serializer_class = MeSerializer
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get_object(self):
+        profile = (
+            Profile.objects.select_related("user", "current_company")
+            .filter(user=self.request.user)
+            .first()
+        )
+        if profile is None:
+            raise NotFound("This account has no profile.")
+        return profile
 
 
 class UserDirectoryView(generics.ListAPIView):
