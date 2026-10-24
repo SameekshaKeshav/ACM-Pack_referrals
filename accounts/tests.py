@@ -418,3 +418,254 @@ class VerifyAttemptCapTests(APITestCase):
         self._guess()
         response = self._guess(self.code)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class UserDirectoryTests(APITestCase):
+    """The tracker's deliverable: combinable filters over 5+ members."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from companies.models import Company
+        from accounts.models import PastRole
+
+        cls.google = Company.objects.create(name="Google")
+        cls.ibm = Company.objects.create(name="IBM")
+
+        def member(username, major, grad_year, current=None, past=None, status_="active"):
+            user = User.objects.create_user(
+                username=username, first_name=username.title(), last_name="S"
+            )
+            Profile.objects.create(
+                user=user, major=major, grad_year=grad_year,
+                current_company=current, account_status=status_,
+            )
+            if past:
+                PastRole.objects.create(user=user, company=past, role_title="Intern")
+            return user
+
+        cls.alice = member("alice", "Computer Science", 2027, current=cls.google)
+        cls.bob = member("bob", "Computer Science", 2027, past=cls.google)
+        cls.carol = member("carol", "Computer Science", 2026, current=cls.google)
+        cls.dave = member("dave", "Statistics", 2027, current=cls.google)
+        cls.erin = member("erin", "Computer Science", 2027, current=cls.ibm)
+        member("frank", "Computer Science", 2027, current=cls.google, status_="unverified")
+        member("gina", "Computer Science", 2027, current=cls.google, status_="suspended")
+        cls.viewer = member("viewer", "", None)
+
+    def setUp(self):
+        cache.clear()
+        self.url = reverse("accounts:user-directory")
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(self.viewer)}"
+        )
+
+    def names(self, query=""):
+        response = self.client.get(f"{self.url}{query}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return sorted(row["name"] for row in response.data["results"])
+
+    def test_all_three_filters_combined(self):
+        """CS + 2027 + Google: alice is current there, bob held a role there.
+
+        Everyone else is excluded for exactly one reason: carol's year, dave's
+        major, erin's company, frank unverified, gina suspended.
+        """
+        got = self.names(
+            f"?major=Computer Science&grad_year=2027&company_id={self.google.pk}"
+        )
+        self.assertEqual(got, ["Alice S", "Bob S"])
+
+    def test_company_filter_matches_current_or_past(self):
+        got = self.names(f"?company_id={self.google.pk}")
+        self.assertEqual(got, ["Alice S", "Bob S", "Carol S", "Dave S"])
+
+    def test_major_filter_is_a_substring_match(self):
+        self.assertEqual(
+            self.names("?major=computer"),
+            ["Alice S", "Bob S", "Carol S", "Erin S"],
+        )
+
+    def test_grad_year_filter(self):
+        self.assertEqual(self.names("?grad_year=2026"), ["Carol S"])
+
+    def test_unverified_and_suspended_members_are_hidden(self):
+        everyone = self.names()
+        self.assertNotIn("Frank S", everyone)
+        self.assertNotIn("Gina S", everyone)
+
+    def test_someone_affiliated_twice_appears_once(self):
+        from accounts.models import PastRole
+
+        PastRole.objects.create(user=self.alice, company=self.google, role_title="Intern")
+        got = self.names(f"?company_id={self.google.pk}")
+        self.assertEqual(got.count("Alice S"), 1)
+
+    def test_pagination_limit_and_offset(self):
+        first = self.client.get(f"{self.url}?limit=2")
+        self.assertEqual(len(first.data["results"]), 2)
+        self.assertEqual(first.data["count"], 6)
+        self.assertIsNotNone(first.data["next"])
+
+        second = self.client.get(f"{self.url}?limit=2&offset=2")
+        self.assertEqual(len(second.data["results"]), 2)
+        self.assertNotEqual(
+            [r["user_id"] for r in first.data["results"]],
+            [r["user_id"] for r in second.data["results"]],
+        )
+
+    def test_limit_is_capped(self):
+        response = self.client.get(f"{self.url}?limit=100000")
+        self.assertLessEqual(len(response.data["results"]), 100)
+
+    def test_non_numeric_filters_are_rejected(self):
+        for query in ("?grad_year=abc", "?company_id=xyz", "?grad_year=-1"):
+            with self.subTest(query=query):
+                response = self.client.get(f"{self.url}{query}")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_the_directory_requires_a_token(self):
+        anon = self.client_class()
+        self.assertEqual(anon.get(self.url).status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_entries_do_not_expose_contact_details(self):
+        response = self.client.get(self.url)
+        row = response.data["results"][0]
+        self.assertNotIn("bio", row)
+        self.assertNotIn("email", row)
+        self.assertIn("open_to_connect", row)
+
+
+class MeEndpointTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        from companies.models import Company
+        from accounts.models import PastRole
+
+        self.url = reverse("accounts:me")
+        self.user = User.objects.create_user(
+            username=EMAIL, email=EMAIL, first_name="Jane", last_name="Doe"
+        )
+        self.profile = Profile.objects.create(
+            user=self.user, major="Computer Science", grad_year=2028,
+            bio="Sophomore.", account_status=Profile.AccountStatus.ACTIVE,
+        )
+        self.google = Company.objects.create(name="Google")
+        PastRole.objects.create(
+            user=self.user, company=self.google, role_title="SWE Intern",
+            start_date="2025-05-01", end_date="2025-08-01",
+        )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(self.user)}"
+        )
+
+    def test_get_returns_the_callers_own_profile_with_roles(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["user_id"], self.user.pk)
+        self.assertEqual(response.data["name"], "Jane Doe")
+        self.assertEqual(len(response.data["past_roles"]), 1)
+        self.assertEqual(response.data["past_roles"][0]["company"]["name"], "Google")
+
+    def test_patch_updates_editable_fields(self):
+        response = self.client.patch(
+            self.url, {"bio": "Junior now.", "major": "Statistics", "grad_year": 2027},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.bio, "Junior now.")
+        self.assertEqual(self.profile.major, "Statistics")
+
+    def test_patch_updates_the_name_through_the_user_model(self):
+        self.client.patch(self.url, {"first_name": "Janet"}, format="json")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Janet")
+        self.assertEqual(self.client.get(self.url).data["name"], "Janet Doe")
+
+    def test_current_employer_is_set_by_name_and_deduped(self):
+        from companies.models import Company
+
+        response = self.client.patch(
+            self.url, {"current_company_name": "  google inc. "}, format="json"
+        )
+        self.assertEqual(response.data["current_company"]["id"], self.google.pk)
+        self.assertEqual(Company.objects.count(), 1)
+
+    def test_a_blank_employer_name_clears_it(self):
+        self.client.patch(self.url, {"current_company_name": "Google"}, format="json")
+        response = self.client.patch(self.url, {"current_company_name": ""}, format="json")
+        self.assertIsNone(response.data["current_company"])
+
+    def test_read_only_fields_cannot_be_written(self):
+        self.client.patch(
+            self.url,
+            {"email": "attacker@ncsu.edu", "account_status": "suspended"},
+            format="json",
+        )
+        self.user.refresh_from_db()
+        self.profile.refresh_from_db()
+        self.assertEqual(self.user.email, EMAIL)
+        self.assertEqual(self.profile.account_status, Profile.AccountStatus.ACTIVE)
+
+    def test_put_is_not_allowed(self):
+        response = self.client.put(self.url, {"bio": "x"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def test_requires_a_token(self):
+        anon = self.client_class()
+        self.assertEqual(anon.get(self.url).status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_an_account_without_a_profile_gets_404(self):
+        stray = User.objects.create_user(username="stray")
+        client = self.client_class()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(stray)}")
+        self.assertEqual(client.get(self.url).status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_the_profiles_route_is_gone(self):
+        """It was an uncurated third view of people, listing suspended and
+        unverified members with their bio. /users/ and /me/ replace it."""
+        victim = User.objects.create_user(username="victim")
+        other = Profile.objects.create(user=victim, bio="untouched")
+
+        for path in ("/api/accounts/profiles/", f"/api/accounts/profiles/{other.pk}/"):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(
+            self.client.patch(
+                f"/api/accounts/profiles/{other.pk}/", {"bio": "hacked"}, format="json"
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+        other.refresh_from_db()
+        self.assertEqual(other.bio, "untouched")
+
+    def test_a_suspended_member_is_not_reachable_anywhere(self):
+        """The leak Sameeksha found: suspended profiles were listable."""
+        hidden = User.objects.create_user(username="hidden", first_name="Hidden")
+        Profile.objects.create(
+            user=hidden, bio="private", account_status=Profile.AccountStatus.SUSPENDED
+        )
+
+        directory = self.client.get(reverse("accounts:user-directory"))
+        self.assertNotIn("Hidden", [row["name"] for row in directory.data["results"]])
+        self.assertEqual(
+            self.client.get(f"/api/accounts/profiles/{hidden.profile.pk}/").status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    def test_grad_year_outside_a_sane_range_is_rejected(self):
+        for bad in (1800, 3000):
+            with self.subTest(bad=bad):
+                response = self.client.patch(self.url, {"grad_year": bad}, format="json")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.client.patch(self.url, {"grad_year": 2028}, format="json").status_code,
+            status.HTTP_200_OK,
+        )
+
+    def test_a_suffix_only_employer_name_is_rejected(self):
+        response = self.client.patch(
+            self.url, {"current_company_name": "Inc."}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

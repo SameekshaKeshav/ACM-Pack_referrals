@@ -4,6 +4,7 @@ from django.db import models
 
 
 class Company(models.Model):
+    SUFFIX_WORDS = frozenset({"inc", "llc", "ltd", "corp", "corporation", "co"})
     SUFFIX_RE = re.compile(r"\s+(inc|llc|ltd|corp|corporation|co)$")
 
     name = models.CharField(max_length=255, unique=True)
@@ -19,6 +20,30 @@ class Company(models.Model):
         """Reduce a display name to the key used to detect duplicates."""
         normalized = " ".join(value.split()).lower().replace(".", "").replace(",", "")
         return cls.SUFFIX_RE.sub("", normalized).strip()
+
+    @classmethod
+    def find_or_create(cls, raw_name):
+        """Resolve a user-typed company name to a single Company row.
+
+        Matching is on the normalized key, so "Google", "  google " and
+        "Google Inc." all resolve to the same company rather than creating
+        three. The first spelling seen becomes the display name.
+
+        Returns (company, created). Raises ValueError if the name normalizes
+        to nothing, which would otherwise collide with any other blank name on
+        the unique constraint.
+        """
+        normalized = cls.normalize_name(raw_name)
+        if not normalized:
+            raise ValueError("Company name cannot be blank.")
+        if normalized in cls.SUFFIX_WORDS:
+            # "Inc." is a legal suffix, not a company. The suffix regex only
+            # strips one that trails a real name, so this has to be caught here.
+            raise ValueError("Company name cannot be only a legal suffix.")
+        return cls.objects.get_or_create(
+            name_normalized=normalized,
+            defaults={"name": " ".join(raw_name.split())},
+        )
 
     def save(self, *args, **kwargs):
         self.name_normalized = self.normalize_name(self.name)

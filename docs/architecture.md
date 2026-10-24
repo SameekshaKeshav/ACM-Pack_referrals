@@ -22,17 +22,21 @@ Each backend dev runs `makemigrations` only inside their app(s), which avoids co
 
 Cross-app foreign keys use string references (e.g. `Report.reported_message` → `"chat.Message"`, `Profile.current_company` → `"companies.Company"`).
 
+See [`api-contract-accounts-companies.md`](api-contract-accounts-companies.md)
+for request and response shapes on the accounts and companies endpoints,
+and [`api-contract-chat.md`](api-contract-chat.md) for chat.
+
 ## URL map (v1)
 
 | Prefix | Resources |
 |--------|-----------|
 | `/api/health/` | Global health |
-| `/api/accounts/` | `profiles/`, `past-roles/`, `health/` |
-| `/api/companies/` | company CRUD, `health/` |
+| `/api/accounts/` | `me/`, `past-roles/`, `users/` (directory), `auth/*`, `health/` |
+| `/api/companies/` | company list (`?search=`), detail with affiliations, `health/` |
 | `/api/connections/` | `connection-requests/`, `reports/`, `health/` |
 | `/api/chat/` | `conversations/`, `messages/`, `health/` |
 
-Tell frontend before wiring clients: paths are prefixed (e.g. `/api/accounts/profiles/`, not `/api/profiles/`).
+Tell frontend before wiring clients: paths are prefixed (e.g. `/api/accounts/users/`, not `/api/users/`).
 
 ## Schema changes (team rule)
 
