@@ -15,7 +15,7 @@ One place that lists every route the backend serves, so both frontends can code 
 | `POST /api/accounts/auth/verify/` | yes | Exchange the code for an access and refresh token | Scoped (rate limited, 5 wrong guesses) |
 | `POST /api/accounts/auth/login/` | yes | Email a fresh code to a returning user | Scoped (rate limited) |
 | `POST /api/accounts/auth/refresh/` | yes | Exchange a refresh token for a new access token | Scoped |
-| `GET, POST /api/accounts/profiles/`, `GET, PUT, PATCH, DELETE /api/accounts/profiles/<id>/` | no | Profiles | **Open** |
+| ~~`/api/accounts/profiles/`~~ | - | Removed; use `/api/accounts/users/` or `/api/accounts/me/` | Closed |
 | `GET, POST /api/accounts/past-roles/`, `GET, PUT, PATCH, DELETE /api/accounts/past-roles/<id>/` | no | Past roles | **Open** |
 
 ## Companies: `companies/` (BE1)
