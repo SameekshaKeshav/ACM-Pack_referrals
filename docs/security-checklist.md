@@ -12,7 +12,7 @@ Security status of the backend API and the staging deployment.
 | Access | Every endpoint returns only data the caller may see | **FAIL** | #22 |
 | Input | Server-controlled fields can't be set from the request body | **FAIL** | #26 |
 | Input | Every text field has a server-side length limit | **FAIL** | #27 |
-| Email | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **FAIL** | not filed |
+| Email | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **FAIL** | #34 |
 | Config | `SECRET_KEY` from the environment, unique and random on staging | **PASS** | — |
 | Config | Email credentials from the environment | **PASS** | — |
 | Config | `DEBUG` off on staging | **PASS** | — |
@@ -65,7 +65,7 @@ The Django admin (`/admin/`) is staff-only and not covered.
 
 **Throttles behind the proxy — PASS (#28).** The signup, login and verify throttles key on the client IP. Staging sits behind two proxies (a CDN77 node and Railway), so `NUM_PROXIES=2` is set on Railway. The proxies also drop client-supplied `X-Forwarded-For` values, so the throttles hold today even without the setting.
 
-## Email on staging — FAIL
+## Email on staging — FAIL (#34)
 
 A signup on staging doesn't deliver a code yet. Staging is on Railway's free plan, which [blocks outbound SMTP](https://docs.railway.com/networking/outbound-networking).
 
