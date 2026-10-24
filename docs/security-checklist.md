@@ -21,7 +21,7 @@ Security pass over the backend API and the staging deployment.
 | 2.4 | `DEBUG=False` on staging | **PASS** | — |
 | 3 | Every endpoint returns only data the caller may see | **FAIL** | #22, #23, #24, #25 (see [section 3](#3-permission-audit)) |
 | 4 | Throttles identify clients reliably behind Railway's proxy (`NUM_PROXIES`) | **PASS** | #28 |
-| 5 | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **BLOCKED** | — |
+| 5 | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **FAIL** | — (not filed yet) |
 
 ## How the findings were checked
 
@@ -135,25 +135,22 @@ The signup, login and verify throttles key on the client IP from DRF's `get_iden
 
 **Confirmed on staging:** the running app's process environment contains `NUM_PROXIES=2`. Twelve `POST`s to `/api/accounts/auth/verify/`, each with a different fake `X-Forwarded-For` and an unregistered email (nothing is written), returned `400` ten times and then `429`, so the 10/15min limit holds. Because the proxies already drop fake values, this throttle result would look the same with the variable unset. The environment check is what confirms the setting.
 
-## 5. Real email on staging — BLOCKED
+## 5. Real email on staging — FAIL
 
 **Requirement:** a signup on staging delivers the code to an NC State inbox, not spam, within 1 minute.
 
-**Blocker:** staging runs on Railway's free plan. Railway allows outbound SMTP (ports 25, 465, 587, 2525) only on the Pro plan and above ([Railway docs: Outbound Networking](https://docs.railway.com/networking/outbound-networking)). Any SMTP provider (Gmail app password, SendGrid SMTP, etc.) would time out from staging.
+**Why it doesn't work yet:** staging runs on Railway's free plan. Railway allows outbound SMTP (ports 25, 465, 587, 2525) only on the Pro plan and above ([Railway docs: Outbound Networking](https://docs.railway.com/networking/outbound-networking)), so any SMTP provider (Gmail app password, SendGrid SMTP, etc.) times out from staging.
 
-**Options (team decision):**
+**Decision:** the team is staying on the free plan. Email will go through an email provider's HTTPS API using [`django-anymail`](https://anymail.dev/), on the free tier of Resend, SendGrid or Brevo. Upgrading to Pro to use SMTP was not chosen. The provider hasn't been picked yet.
 
-| Option | Code change | Other requirements |
-|--------|-------------|--------------------|
-| A. Upgrade the workspace to Pro and use a Gmail app password over SMTP | None. Django's SMTP backend switches on when `EMAIL_HOST` is set | Paid plan; a team Gmail account with 2FA |
-| B. Stay on the free plan and use a provider's HTTPS API (e.g. Resend, SendGrid) through [`django-anymail`](https://anymail.dev/) | New dependency and an `EMAIL_BACKEND` setting | Provider account and API key. Most providers need a verified sending domain to email arbitrary addresses, so the team likely needs a domain it owns (DNS records can't be added to `*.up.railway.app`). Check each provider's current free tier before choosing |
+**To do:**
 
-**Needed under either option:**
+- **Pick the provider.** Check each one's current free tier, and whether it can send to arbitrary addresses without a verified sending domain. Most can't, so the team likely needs a domain it owns (DNS records can't be added to `*.up.railway.app`).
+- **Switch the backend.** Add `django-anymail` to `requirements.txt` and set `EMAIL_BACKEND` to the provider's Anymail backend, with the API key read from the environment and set on Railway. Today `EMAIL_BACKEND` is SMTP when `EMAIL_HOST` is set and the console otherwise ([`pack_referrals/settings.py:47`](../pack_referrals/settings.py)).
+- **Set `DEFAULT_FROM_EMAIL`.** The default, `no-reply@packreferrals.ncsu.edu` ([`pack_referrals/settings.py:204`](../pack_referrals/settings.py)), is on a domain the team doesn't control. Mail from it fails SPF/DMARC and lands in spam or is rejected. Use an address the provider is authorized to send as.
+- **Bound the send time.** `EMAIL_TIMEOUT` only applies to Django's SMTP backend. With Anymail, check the timeout it uses for API requests, so a slow provider can't hang the signup request until gunicorn kills the worker (a 502 for the user).
 
-- **Set `DEFAULT_FROM_EMAIL`.** The default, `no-reply@packreferrals.ncsu.edu` ([`pack_referrals/settings.py:196`](../pack_referrals/settings.py)), is on a domain the team doesn't control. Mail from it fails SPF/DMARC and lands in spam or is rejected. Use an address the provider is authorized to send as.
-- **Set `EMAIL_TIMEOUT`** (e.g. 10 seconds). Without it, a send that can't connect hangs the signup request until gunicorn kills the worker (a 502 for the user).
-
-**How to verify once unblocked:** note the time, sign up on staging with a real @ncsu.edu address, and record a screenshot of the message in the inbox (not spam) with its received time.
+**How to verify once it's set up:** note the time, sign up on staging with a real @ncsu.edu address, and record a screenshot of the message in the inbox (not spam) with its received time.
 
 ## Outside this checklist
 
