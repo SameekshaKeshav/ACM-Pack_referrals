@@ -1,157 +1,77 @@
 # Pack Referrals — Security Checklist
 
-Security pass over the backend API and the staging deployment.
+Security status of the backend API and the staging deployment.
 
-- **Audited:** 2026-10-21, commit `c4aa761` (current `main`, and the commit staging was running at audit time)
-- **Updated:** 2026-10-24, commit `3b1c2e0`: rechecked against the code after #21, #29 and #30 merged, and section 4 confirmed on staging
+- **Last verified:** 2026-10-24, `main` at `986a642` (also running on staging)
 - **Staging:** https://acm-packreferrals-production.up.railway.app/
-- **Status key:** **PASS**, **FAIL** (issue filed), **BLOCKED** (cannot be completed as things stand)
 
 ## Summary
 
-| # | Item | Status | Issue |
-|---|------|--------|-------|
-| 1.1 | `message_text` limited to 500 characters server-side | **PASS** | — |
-| 1.2 | `body_text` limited to 2000 characters server-side | **PASS** | — |
-| 1.3 | Other POST/PATCH text fields have a length limit | **FAIL** | #27 |
-| 1.4 | Server-controlled fields (`sender`, `user`, `reporter`, `account_status`) are read-only | **FAIL** | #26 |
-| 2.1 | `SECRET_KEY` read from the environment, never hardcoded | **PASS** | — |
-| 2.2 | Staging `SECRET_KEY` is a unique, random value | **PASS** | — |
-| 2.3 | Email credentials read from the environment, never hardcoded | **PASS** | — |
-| 2.4 | `DEBUG=False` on staging | **PASS** | — |
-| 3 | Every endpoint returns only data the caller may see | **FAIL** | #22, #23, #24, #25 (see [section 3](#3-permission-audit)) |
-| 4 | Throttles identify clients reliably behind Railway's proxy (`NUM_PROXIES`) | **PASS** | #28 |
-| 5 | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **FAIL** | — (not filed yet) |
+| Area | Requirement | Status | Issue |
+|------|-------------|--------|-------|
+| Access | Every endpoint returns only data the caller may see | **FAIL** | #22 |
+| Input | Server-controlled fields can't be set from the request body | **FAIL** | #26 |
+| Input | Every text field has a server-side length limit | **FAIL** | #27 |
+| Email | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **FAIL** | not filed |
+| Config | `SECRET_KEY` from the environment, unique and random on staging | **PASS** | — |
+| Config | Email credentials from the environment | **PASS** | — |
+| Config | `DEBUG` off on staging | **PASS** | — |
+| Config | Throttles identify clients correctly behind Railway's proxy | **PASS** | #28 |
 
-## How the findings were checked
+## Access control
 
-Each finding was checked by reading the code and confirmed with automated tests against a local test database. No write requests were sent to staging. The staging checks in 2.4 and section 3 were read-only `GET` requests.
+Every endpoint requires a JWT unless it is deliberately public (`IsAuthenticated` is the default in `REST_FRAMEWORK`). The one open problem is reports: `ReportViewSet` is a plain `ModelViewSet` over all reports, so any logged-in user can list every report, edit or delete any of them, and change their `status`.
 
-## 1. Server-side input validation
+| Endpoint | Who can use it | Status |
+|----------|----------------|--------|
+| `/api/health/`, `/api/<app>/health/` | Anyone; no user data | PASS |
+| `/api/accounts/auth/signup/`, `login/`, `verify/` | Anyone; throttled, tokens only for a valid code | PASS |
+| `/api/accounts/auth/refresh/` | Anyone with a valid refresh token | PASS |
+| `/api/schema/`, `/api/docs/` | Anyone; route and field descriptions only | PASS |
+| `/api/accounts/` | Logged in; lists endpoint URLs only | PASS |
+| `/api/accounts/me/` | The caller's own profile (GET, PATCH) | PASS |
+| `/api/accounts/users/` | Logged in; active members only, without bio or email, max 100 per page | PASS |
+| `/api/accounts/past-roles/` | Logged in to read; create, update and delete only your own | PASS |
+| `/api/companies/`, `/api/companies/<id>/` | Logged in, read-only; affiliated users are active members only | PASS |
+| `/api/connections/`, `/api/connections/<id>/` | Requests the caller sent or received; others get 404 | PASS |
+| `/api/connections/<id>/accept/`, `decline/` | The recipient only; outsiders get 404, the sender 403 | PASS |
+| `/api/chat/conversations/` | The caller's conversations, minus blocked users | PASS |
+| `/api/chat/conversations/<id>/messages/`, `<id>/read/`, `/api/chat/messages/` | Participants who aren't blocked; unknown ids 404, others 403 | PASS |
+| `/api/connections/reports/` | Any logged-in user, for every report | **FAIL** (#22) |
 
-All POST/PATCH bodies go through DRF serializers. The question is whether those serializers enforce the limits themselves, rather than relying on the frontend.
+The Django admin (`/admin/`) is staff-only and not covered.
 
-### 1.1 `message_text` ≤ 500 — PASS
+## Input validation
 
-[`connections/serializers.py:46`](../connections/serializers.py) declares `message_text` with `max_length=500` and `allow_blank=False`. `validate_message_text` (line 58) also rejects whitespace-only text. A request with 501 characters is rejected with a 400 and a field error.
+**Server-controlled fields — FAIL (#26).** `ReportSerializer` uses `fields = "__all__"`, so `reporter` and `status` are writable from the request body, and a user can file a report in someone else's name. It is the last serializer using `"__all__"`. Elsewhere, identity fields (`sender`, `user`) are set from the token and `account_status` is read-only.
 
-The model field (`ConnectionRequest.message_text`) is an unbounded `TextField`, so the serializer is the only check. A DB constraint like the one on `body_text` would add a second layer, but isn't required for this item.
+**Length limits — FAIL (#27).** `Profile.bio` (written through `/api/accounts/me/`) and `Report.reason` are `TextField`s with no limit in the model or serializer. All other text fields are limited:
 
-### 1.2 `body_text` ≤ 2000 — PASS
+| Field | Limit |
+|-------|-------|
+| Connection request `message_text` | 500 |
+| Chat message `body_text` | 2000 (also a database constraint) |
+| `first_name`, `last_name` | 150 |
+| `major`, `current_role`, `role_title`, company names | 255 |
+| `bio`, `reason` | **none** |
 
-`SendMessageSerializer` ([`chat/serializers.py:31`](../chat/serializers.py)), the input for sending a message, declares `body_text` with `max_length=2000`, and the model field has the same limit ([`chat/models.py:61`](../chat/models.py), `CharField(max_length=2000)`). The `message_body_text_max_2000` check constraint (line 72) enforces the same limit in the database, since SQLite ignores `VARCHAR` lengths. A request with 2001 characters is rejected with a 400 and a field error.
+## Configuration
 
-### 1.3 Other text fields have a length limit — FAIL
+**`SECRET_KEY` — PASS.** Read from the environment; settings refuse to start without it. The staging key was generated randomly on Railway and matches no key in the repo. Early commits (`31ffe48`, `4a26978`) contain development keys, which are public and must never be used.
 
-`Profile.bio` ([`accounts/models.py:23`](../accounts/models.py)) and `Report.reason` ([`connections/models.py:59`](../connections/models.py)) are `TextField`s with no `max_length`, and their serializers add none, so the server accepts text of any size in these fields.
+**Email credentials — PASS.** All `EMAIL_*` settings are read from the environment. None are in the code or git history.
 
-**Fix:** add a `max_length` to both fields in the serializer (and optionally a DB constraint), with limits the frontend also shows.
+**`DEBUG` — PASS.** Defaults to `False`, and staging serves Django's plain "Not Found" page. Nothing in the code stops it from being turned on via Railway's variables.
 
-### 1.4 Server-controlled fields are read-only — FAIL
+**Throttles behind the proxy — PASS (#28).** The signup, login and verify throttles key on the client IP. Staging sits behind two proxies (a CDN77 node and Railway), so `NUM_PROXIES=2` is set on Railway. The proxies also drop client-supplied `X-Forwarded-For` values, so the throttles hold today even without the setting.
 
-These serializers use `fields = "__all__"`, which makes all of the model's editable fields writable from the request body, including fields the server should set:
+## Email on staging — FAIL
 
-| Serializer | Server-controlled field(s) that are writable |
-|------------|---------------------------------------------|
-| `ReportSerializer` ([`connections/serializers.py`](../connections/serializers.py)) | `reporter` |
-| `ProfileSerializer` ([`accounts/serializers.py`](../accounts/serializers.py)) | `user`, `account_status` |
-| `PastRoleSerializer` ([`accounts/serializers.py`](../accounts/serializers.py)) | `user` |
+A signup on staging doesn't deliver a code yet. Staging is on Railway's free plan, which [blocks outbound SMTP](https://docs.railway.com/networking/outbound-networking).
 
-[`docs/api-contract-chat.md`](api-contract-chat.md) says the authenticated user supplies sender/reporter identity and "client input must never control it". (`CompanySerializer` also uses `"__all__"`, but `Company` has no server-controlled fields, since `name_normalized` is non-editable.)
+The team decided to stay on the free plan and send mail through an email provider's HTTPS API with [`django-anymail`](https://anymail.dev/), on the free tier of Resend, SendGrid or Brevo. No provider has been picked. Most require a verified sending domain, and the current default sender, `no-reply@packreferrals.ncsu.edu`, is on a domain the team doesn't control.
 
-`MessageSerializer` (`sender`) and `ConversationSerializer` (`created_from_connection_request`) were also on this list at audit time. #21 fixed both. `MessageSerializer` ([`chat/serializers.py:10`](../chat/serializers.py)) is now read-only, and messages are sent through `SendMessageSerializer`, which has no sender field: the view sets `sender=request.user`. `ConversationSerializer` was removed, so conversations are only created by the accept flow.
+## Known gaps outside the checklist
 
-**Fix:** list fields explicitly and mark the fields above read-only. Set identity fields in the view from `request.user` (the way `ConnectionRequestViewSet.create` does with `serializer.save(sender=request.user)`).
-
-## 2. Secrets and DEBUG
-
-### 2.1 `SECRET_KEY` from the environment — PASS
-
-[`pack_referrals/settings.py:25`](../pack_referrals/settings.py) reads `os.getenv("SECRET_KEY")` and raises `RuntimeError` if it's missing, so there is no fallback key to deploy by accident. `.env` is gitignored, and `.env.example` only contains a placeholder.
-
-Early commits (`31ffe48`, `4a26978`) contained development keys. They are public in git history, so they are only safe if staging uses none of them (see 2.2).
-
-### 2.2 Staging key is unique and random — PASS
-
-The key can't be checked from the repo, so this was verified on Railway. The staging `SECRET_KEY` was generated randomly and set directly on Railway. On 2026-10-21, Danny confirmed that the value on Railway:
-
-- is at least 50 characters, with no stray whitespace or quotes from pasting;
-- isn't the `.env.example` placeholder, doesn't start with `django-insecure-`, and doesn't match any key in the repo's history;
-- isn't used in any local `.env`.
-
-**To re-verify** (for example, after the key is rotated), check the value in the service's **Variables** tab on Railway, or run Django's check against staging's environment variables without printing the key:
-
-```bash
-railway run python manage.py check --deploy
-```
-
-If warning `security.W009` is absent, the key is at least 50 characters with at least 5 unique characters and isn't a `django-insecure-` key. That rules out every key known from the repo's history and `.env.example`.
-
-### 2.3 Email credentials from the environment — PASS
-
-`EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_PORT` and `EMAIL_USE_TLS` are all read with `os.getenv` ([`pack_referrals/settings.py:41-45`](../pack_referrals/settings.py)). There are no credentials in the code or in git history (`.env.example` has empty values).
-
-### 2.4 `DEBUG=False` on staging — PASS
-
-[`pack_referrals/settings.py:31`](../pack_referrals/settings.py) defaults `DEBUG` to `False`, and staging has it off: a request for a nonexistent URL returns Django's plain "Not Found" page, not the debug page.
-
-**Note:** this relies on nobody setting `DEBUG=True` on Railway. Nothing in the code prevents it. If the team wants it enforced, settings could refuse to start when `DEBUG` is on in a Railway environment.
-
-## 3. Permission audit
-
-Since #14, every endpoint requires a valid JWT by default (`IsAuthenticated`, [`pack_referrals/settings.py:161`](../pack_referrals/settings.py)), and staging returns 401 to unauthenticated requests. For some endpoints, being logged in is all they check. Four are plain `ModelViewSet`s with `queryset = <Model>.objects.all()` and no object-level permission, so they don't limit which rows a logged-in user can read or change.
-
-| Endpoint | View | Status | Issue | Problem |
-|----------|------|--------|-------|---------|
-| `/api/connections/reports/` | `ReportViewSet` ([`connections/views.py:227`](../connections/views.py)) | **FAIL** | #22 | Not limited to reports the user filed; status changes aren't restricted to moderators |
-| `/api/accounts/profiles/` | `ProfileViewSet` ([`accounts/views.py:56`](../accounts/views.py)) | **FAIL** | #23 | Writes aren't restricted to the profile's owner |
-| `/api/accounts/past-roles/` | `PastRoleViewSet` ([`accounts/views.py:61`](../accounts/views.py)) | **FAIL** | #24 | Writes aren't restricted to the role's owner |
-| `/api/companies/` | `CompanyViewSet` ([`companies/views.py:17`](../companies/views.py)) | **FAIL** | #25 | Writes aren't restricted to admins |
-| `/api/chat/conversations/` | `ConversationListView` ([`chat/views.py:63`](../chat/views.py)) | **PASS** | #20 | Filtered to conversations the user participates in, minus blocked users (line 74). Fixed in #21 |
-| `/api/chat/conversations/<id>/messages/`, `/api/chat/conversations/<id>/read/`, `/api/chat/messages/` (send) | `ConversationMessagesView`, `MarkConversationReadView`, `SendMessageView` | **PASS** | #19 | Each goes through `get_conversation_for_participant` (line 34): 404 for unknown ids, 403 for non-participants and blocked users. Fixed in #21 |
-| `/api/connections/` (list, create) | `ConnectionRequestViewSet` | **PASS** | — | Queryset filtered to `sender=user OR recipient=user` (`get_queryset`, line 43) |
-| `/api/connections/<id>/` | `ConnectionRequestDetailView` | **PASS** | — | Same filter (line 165); other users get 404 |
-| `/api/connections/<id>/accept/`, `decline/` | `_ConnectionActionView` | **PASS** | — | `_get_request_for_recipient` ([`connections/services.py:37`](../connections/services.py)) returns 404 to outsiders and 403 to the sender |
-| `/api/health/`, `/api/<app>/health/` | `HealthCheckView`, `AppHealthView` | **PASS** | — | Public on purpose (`AllowAny`); return no user data |
-| `/api/accounts/auth/signup/`, `login/`, `verify/` | `SignupView`, `LoginView`, `VerifyView` | **PASS** | — | Public on purpose (`AllowAny`, throttled); return tokens only for a valid code |
-| `/api/accounts/auth/refresh/` | SimpleJWT `TokenRefreshView` | **PASS** | — | No permission classes, as designed; returns a new access token only for a valid refresh token |
-| `/api/accounts/` | DRF router root (`APIRootView`) | **PASS** | — | Requires login; lists endpoint URLs only, no user data |
-| `/api/schema/`, `/api/docs/` | drf-spectacular `SpectacularAPIView`, `SpectacularSwaggerView` ([`pack_referrals/urls.py`](../pack_referrals/urls.py)) | **PASS** | — | Public on purpose (`AllowAny`); describe routes and fields, return no user data |
-
-The `companies` and `connections` routers also generate a root view, but it's unreachable: `/api/companies/` resolves to the company list (that router is registered at `r""`), and `/api/connections/` resolves to the connection-request list, which is registered first. The Django admin (`/admin/`) is staff-only and outside this audit.
-
-Reading profiles and companies may be intended, since browsing affiliations is the product. **Fix direction:** scope `get_queryset()` to the requesting user where the data is private (reports they filed), restrict writes to the owner for profiles and past roles, and restrict company writes and report status changes to admins.
-
-## 4. Throttles behind Railway's proxy (`NUM_PROXIES`) — PASS
-
-The signup, login and verify throttles key on the client IP from DRF's `get_ident()` ([`accounts/throttling.py:29`](../accounts/throttling.py)). At audit time `NUM_PROXIES` was not set in `REST_FRAMEWORK`. When it's unset, DRF builds the client identity from the whole `X-Forwarded-For` header, which a client can fill with fake values, so the throttles couldn't be relied on to tell clients apart. See DRF's [throttling docs on identifying clients](https://www.django-rest-framework.org/api-guide/throttling/#how-clients-are-identified).
-
-**Fix:** settings read `NUM_PROXIES` from the environment, with tests for spoofed headers and separate per-client budgets. Staging sets `NUM_PROXIES=2`.
-
-**Measured on staging (2026-10-24, commit `3b1c2e0`)** with temporary forwarding-header logging, since removed:
-
-- A plain request arrives with `X-Forwarded-For: <client IP>, <CDN77 node IP>` from a Railway-internal `REMOTE_ADDR`. Two proxies sit in front of the app and the client IP is second from the end, so N = 2.
-- A request sent with `X-Forwarded-For: 1.2.3.4` arrives with the same two entries, so one of the proxies drops client-supplied values. N = 2 doesn't depend on this.
-
-**Confirmed on staging:** the running app's process environment contains `NUM_PROXIES=2`. Twelve `POST`s to `/api/accounts/auth/verify/`, each with a different fake `X-Forwarded-For` and an unregistered email (nothing is written), returned `400` ten times and then `429`, so the 10/15min limit holds. Because the proxies already drop fake values, this throttle result would look the same with the variable unset. The environment check is what confirms the setting.
-
-## 5. Real email on staging — FAIL
-
-**Requirement:** a signup on staging delivers the code to an NC State inbox, not spam, within 1 minute.
-
-**Why it doesn't work yet:** staging runs on Railway's free plan. Railway allows outbound SMTP (ports 25, 465, 587, 2525) only on the Pro plan and above ([Railway docs: Outbound Networking](https://docs.railway.com/networking/outbound-networking)), so any SMTP provider (Gmail app password, SendGrid SMTP, etc.) times out from staging.
-
-**Decision:** the team is staying on the free plan. Email will go through an email provider's HTTPS API using [`django-anymail`](https://anymail.dev/), on the free tier of Resend, SendGrid or Brevo. Upgrading to Pro to use SMTP was not chosen. The provider hasn't been picked yet.
-
-**To do:**
-
-- **Pick the provider.** Check each one's current free tier, and whether it can send to arbitrary addresses without a verified sending domain. Most can't, so the team likely needs a domain it owns (DNS records can't be added to `*.up.railway.app`).
-- **Switch the backend.** Add `django-anymail` to `requirements.txt` and set `EMAIL_BACKEND` to the provider's Anymail backend, with the API key read from the environment and set on Railway. Today `EMAIL_BACKEND` is SMTP when `EMAIL_HOST` is set and the console otherwise ([`pack_referrals/settings.py:47`](../pack_referrals/settings.py)).
-- **Set `DEFAULT_FROM_EMAIL`.** The default, `no-reply@packreferrals.ncsu.edu` ([`pack_referrals/settings.py:204`](../pack_referrals/settings.py)), is on a domain the team doesn't control. Mail from it fails SPF/DMARC and lands in spam or is rejected. Use an address the provider is authorized to send as.
-- **Bound the send time.** `EMAIL_TIMEOUT` only applies to Django's SMTP backend. With Anymail, check the timeout it uses for API requests, so a slow provider can't hang the signup request until gunicorn kills the worker (a 502 for the user).
-
-**How to verify once it's set up:** note the time, sign up on staging with a real @ncsu.edu address, and record a screenshot of the message in the inbox (not spam) with its received time.
-
-## Outside this checklist
-
-`python manage.py check --deploy` also warns about `SECURE_HSTS_SECONDS`, `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE`. None of these were in scope. They're worth a follow-up, since staging sits behind Railway's HTTPS proxy and `SECURE_PROXY_SSL_HEADER` is already set.
+- `python manage.py check --deploy` warns about `SECURE_HSTS_SECONDS`, `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE`.
+- `/api/accounts/past-roles/` lists roles of unverified and suspended users too, though without saying whose they are.
