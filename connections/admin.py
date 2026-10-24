@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ConnectionRequest, Report
+from .models import Block, ConnectionRequest, Report
 
 
 @admin.register(ConnectionRequest)
@@ -13,3 +13,8 @@ class ConnectionRequestAdmin(admin.ModelAdmin):
 class ReportAdmin(admin.ModelAdmin):
     list_display = ("reporter", "reported_user", "status", "created_at")
     list_filter = ("status",)
+
+
+@admin.register(Block)
+class BlockAdmin(admin.ModelAdmin):
+    list_display = ("blocker", "blocked", "created_at")

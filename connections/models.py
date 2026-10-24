@@ -66,3 +66,37 @@ class Report(models.Model):
 
     def __str__(self):
         return f"Report {self.pk} ({self.status})"
+
+
+class Block(models.Model):
+    """One user has blocked another. SAMPLE VERSION so chat can honour blocks.
+
+    Thomas (BE2) owns this: replace or extend it freely (extra fields, the block and
+    unblock endpoints, the check in ``POST /api/connections/``). Chat only relies on
+    ``blocked_user_ids()`` in ``connections/blocks.py``, so keep that function working
+    and nothing in ``chat/`` needs to change. A block is soft: no messages are deleted.
+    """
+
+    blocker = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="blocks_made",
+    )
+    blocked = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="blocks_received",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["blocker", "blocked"], name="unique_block"),
+            models.CheckConstraint(
+                condition=~models.Q(blocker=models.F("blocked")),
+                name="block_not_self",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.blocker.get_username()} blocked {self.blocked.get_username()}"

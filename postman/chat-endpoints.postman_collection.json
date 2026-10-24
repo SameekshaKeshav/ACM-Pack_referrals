@@ -1,0 +1,434 @@
+{
+  "info": {
+    "name": "Pack Referrals - chat endpoints",
+    "description": "Week 6 PM deliverable. Run `python manage.py seed_demo_data` first; it resets the postman_sender -> postman_recipient request and prints sender_token, recipient_token and outsider_token. Set collection variables base_url, sender_token (Alice), recipient_token (Bob), outsider_token (Carol) and recipient_id, then run the folder in order. It proves: an outsider gets 403 on history and send, a participant can send and poll with ?after=, unread counts and mark-read work, and over-long or anonymous calls are refused.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "sender_token",
+      "value": ""
+    },
+    {
+      "key": "recipient_token",
+      "value": ""
+    },
+    {
+      "key": "outsider_token",
+      "value": ""
+    },
+    {
+      "key": "recipient_id",
+      "value": ""
+    },
+    {
+      "key": "connection_id",
+      "value": ""
+    },
+    {
+      "key": "conversation_id",
+      "value": ""
+    },
+    {
+      "key": "message_id",
+      "value": ""
+    },
+    {
+      "key": "previous_message_id",
+      "value": ""
+    },
+    {
+      "key": "long_text",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Alice (sender) sends a connection request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('create returns 201', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('connection_id', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{sender_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/connections/",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"recipient_id\": {{recipient_id}}, \"message_text\": \"Hi! Could we talk about your internship?\"}"
+        }
+      }
+    },
+    {
+      "name": "2. Bob (recipient) accepts - opens the conversation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accept returns 200', function () { pm.response.to.have.status(200); });",
+              "pm.collectionVariables.set('conversation_id', pm.response.json().conversation_id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{recipient_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/connections/{{connection_id}}/accept/"
+      }
+    },
+    {
+      "name": "3. Carol (outsider) cannot read the history -> 403",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('outsider gets 403', function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{outsider_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/conversations/{{conversation_id}}/messages/"
+      }
+    },
+    {
+      "name": "4. Carol (outsider) cannot send into it -> 403",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('outsider gets 403', function () { pm.response.to.have.status(403); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{outsider_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/messages/",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"conversation_id\": {{conversation_id}}, \"body_text\": \"let me in\"}"
+        }
+      }
+    },
+    {
+      "name": "5. Alice sends a message -> 201",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('send returns 201', function () { pm.response.to.have.status(201); });",
+              "const m = pm.response.json();",
+              "pm.test('message has the contract fields', function () {",
+              "  pm.expect(m).to.have.all.keys('id','conversation_id','sender_id','body_text','created_at','read_status');",
+              "  pm.expect(m.body_text).to.eql('Thanks for your help! <b>plain text</b> & more');",
+              "  pm.expect(m.read_status).to.eql(false);",
+              "});",
+              "pm.collectionVariables.set('message_id', m.id);",
+              "pm.collectionVariables.set('previous_message_id', m.id - 1);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{sender_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/messages/",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"conversation_id\": {{conversation_id}}, \"body_text\": \"Thanks for your help! <b>plain text</b> & more\"}"
+        }
+      }
+    },
+    {
+      "name": "6. Bob polls with ?after= and gets only the new message",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('poll returns 200', function () { pm.response.to.have.status(200); });",
+              "const msgs = pm.response.json();",
+              "pm.test('exactly the new message comes back', function () {",
+              "  pm.expect(msgs.length).to.eql(1);",
+              "  pm.expect(msgs[0].id).to.eql(Number(pm.collectionVariables.get('message_id')));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{recipient_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/conversations/{{conversation_id}}/messages/?after={{previous_message_id}}"
+      }
+    },
+    {
+      "name": "7. Bob polls again from the newest id and gets nothing",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('nothing new -> empty list', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.eql([]);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{recipient_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/conversations/{{conversation_id}}/messages/?after={{message_id}}"
+      }
+    },
+    {
+      "name": "8. Bob's conversation list shows Alice and 1 unread",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('list returns 200', function () { pm.response.to.have.status(200); });",
+              "const row = pm.response.json().find(function (c) { return c.id === Number(pm.collectionVariables.get('conversation_id')); });",
+              "pm.test('the conversation is listed with the other person and unread count', function () {",
+              "  pm.expect(row).to.not.eql(undefined);",
+              "  pm.expect(row.other_user).to.have.all.keys('id','name','company');",
+              "  pm.expect(row.last_message.id).to.eql(Number(pm.collectionVariables.get('message_id')));",
+              "  pm.expect(row.unread_count).to.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{recipient_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/conversations/"
+      }
+    },
+    {
+      "name": "9. Carol's conversation list does not include it",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('outsider cannot see the conversation', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const ids = pm.response.json().map(function (c) { return c.id; });",
+              "  pm.expect(ids).to.not.include(Number(pm.collectionVariables.get('conversation_id')));",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{outsider_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/conversations/"
+      }
+    },
+    {
+      "name": "10. Bob marks the conversation read",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('mark read returns the count', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().updated_count).to.eql(1);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{recipient_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/conversations/{{conversation_id}}/read/"
+      }
+    },
+    {
+      "name": "11. Marking read again updates nothing",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('repeat call -> 0', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().updated_count).to.eql(0);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{recipient_token}}"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/conversations/{{conversation_id}}/read/"
+      }
+    },
+    {
+      "name": "12. A 2001-character message is rejected -> 400",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set('long_text', 'x'.repeat(2001));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('too long -> 400', function () { pm.response.to.have.status(400); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{sender_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/chat/messages/",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"conversation_id\": {{conversation_id}}, \"body_text\": \"{{long_text}}\"}"
+        }
+      }
+    },
+    {
+      "name": "13. No token -> 401",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('anonymous gets 401', function () { pm.response.to.have.status(401); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/api/chat/conversations/"
+      }
+    }
+  ]
+}
