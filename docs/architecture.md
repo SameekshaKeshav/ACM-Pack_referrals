@@ -22,6 +22,10 @@ Each backend dev runs `makemigrations` only inside their app(s), which avoids co
 
 Cross-app foreign keys use string references (e.g. `Report.reported_message` → `"chat.Message"`, `Profile.current_company` → `"companies.Company"`).
 
+See [`api-contract-accounts-companies.md`](api-contract-accounts-companies.md)
+for request and response shapes on the accounts and companies endpoints,
+and [`api-contract-chat.md`](api-contract-chat.md) for chat.
+
 ## URL map (v1)
 
 | Prefix | Resources |
