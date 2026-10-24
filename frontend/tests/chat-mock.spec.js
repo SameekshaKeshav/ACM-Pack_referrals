@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-test.beforeEach(async ({ page }) => { await page.goto('/chat-mock'); });
+test.beforeEach(async ({ page }) => {
+  await page.goto('/login');
+  await page.evaluate(() => localStorage.setItem('pack-referrals.session.v1', JSON.stringify({ access: 'test-jwt', refresh: 'test-refresh', user: { id: 7, email: 'test@ncsu.edu' } })));
+  await page.goto('/chat-mock');
+});
 
 async function prepareRequest(page, text = 'Hello from a fellow NC State student!') {
-  await page.getByText('API test panel', { exact: true }).click();
-  await page.getByLabel('Access token', { exact: true }).fill('test-jwt');
   await page.getByLabel('Recipient user ID').fill('31');
   await page.getByLabel('Your note').fill(text);
 }
@@ -79,8 +81,7 @@ test('POST sends exact body and auth, only once while pending, then appends outg
   await page.getByRole('tab', { name: 'Outgoing 3' }).click();
   await expect(page.getByRole('article', { name: 'Request to User 31' })).toBeVisible();
   await page.reload();
-  await page.getByText('API test panel', { exact: true }).click();
-  await expect(page.getByLabel('Access token', { exact: true })).toHaveValue('');
+  await expect(page.getByText('Requests use your signed-in account.')).toBeVisible();
 });
 
 test('409 and network failure keep the draft and allow retry', async ({ page }) => {
@@ -101,17 +102,18 @@ test('409 and network failure keep the draft and allow retry', async ({ page }) 
   await expect(page.getByText('Request #204 sent. Status: pending.')).toBeVisible();
 });
 
-test('no token sends no request, and whitespace-only note is rejected', async ({ page }) => {
+test('whitespace-only note is rejected and signed-out users cannot open the mock', async ({ page }) => {
   const calls = [];
   page.on('request', (request) => { if (request.url().includes('/api/')) calls.push(request.url()); });
   await page.getByLabel('Recipient user ID').fill('31');
-  await page.getByLabel('Your note').fill('Hi there');
-  await page.getByRole('button', { name: 'Send Request', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Add an access token');
   await page.getByLabel('Your note').fill('   ');
   await page.getByRole('button', { name: 'Send Request', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Add a short note');
   expect(calls).toEqual([]);
+  await page.getByRole('button', { name: 'Log out' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.goto('/chat-mock');
+  await expect(page).toHaveURL(/\/login$/);
 });
 
 test('mobile layout stays within viewport and composer stays in its panel', async ({ page }) => {

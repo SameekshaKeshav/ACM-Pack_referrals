@@ -11,7 +11,13 @@ from .services import affiliated_users
 User = get_user_model()
 
 
-def member(username, first="", major="", grad_year=None, company=None, role=""):
+def member(username, first="", major="", grad_year=None, company=None, role="",
+           account_status=Profile.AccountStatus.ACTIVE):
+    """A verified member by default; pass account_status to make an exception.
+
+    The model default is `unverified`, which is right for signup but wrong for
+    a fixture, since an unverified account is invisible to the directory.
+    """
     user = User.objects.create_user(username=username, first_name=first, last_name="Student")
     Profile.objects.create(
         user=user,
@@ -19,6 +25,7 @@ def member(username, first="", major="", grad_year=None, company=None, role=""):
         grad_year=grad_year,
         current_company=company,
         current_role=role,
+        account_status=account_status,
     )
     return user
 
@@ -171,3 +178,84 @@ class CompanyEndpointTests(APITestCase):
     def test_company_endpoints_require_a_token(self):
         anon = self.client_class()
         self.assertEqual(anon.get("/api/companies/").status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class AffiliationVisibilityTests(APITestCase):
+    """A company page is a directory view, so it hides the same people the
+    people-directory hides."""
+
+    def setUp(self):
+        self.company = Company.objects.create(name="Google")
+        from accounts.models import PastRole
+
+        for username, state in (
+            ("active_current", "active"),
+            ("unverified_current", "unverified"),
+            ("suspended_current", "suspended"),
+        ):
+            member(username, username.title(), company=self.company, role="SWE",
+                   account_status=state)
+
+        for username, state in (
+            ("active_past", "active"),
+            ("unverified_past", "unverified"),
+            ("suspended_past", "suspended"),
+        ):
+            user = member(username, username.title(), account_status=state)
+            PastRole.objects.create(user=user, company=self.company, role_title="Intern")
+
+    def test_only_verified_members_are_listed(self):
+        names = {row["name"] for row in affiliated_users(self.company)}
+        self.assertEqual(names, {"Active_Current Student", "Active_Past Student"})
+
+    def test_the_company_endpoint_hides_them_too(self):
+        viewer = member("viewer")
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(viewer)}"
+        )
+        response = self.client.get(f"/api/companies/{self.company.pk}/")
+        names = {row["name"] for row in response.data["affiliated_users"]}
+        self.assertNotIn("Suspended_Current Student", names)
+        self.assertNotIn("Unverified_Past Student", names)
+        self.assertEqual(len(names), 2)
+
+
+class CompanySearchTests(APITestCase):
+    def setUp(self):
+        for name in ("Google", "Google Cloud", "IBM", "Red Hat", "Goldman Sachs"):
+            Company.objects.create(name=name)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(member('viewer'))}"
+        )
+
+    def names(self, query=""):
+        response = self.client.get(f"/api/companies/{query}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return sorted(row["name"] for row in response.data)
+
+    def test_no_search_returns_everything(self):
+        self.assertEqual(len(self.names()), 5)
+
+    def test_partial_match_is_case_insensitive(self):
+        self.assertEqual(self.names("?search=goog"), ["Google", "Google Cloud"])
+        self.assertEqual(self.names("?search=GOOG"), ["Google", "Google Cloud"])
+
+    def test_a_suffixed_spelling_finds_the_stored_company(self):
+        """Someone typing the legal name should still find "Google"."""
+        self.assertIn("Google", self.names("?search=Google Inc."))
+
+    def test_search_matches_anywhere_in_the_name(self):
+        self.assertEqual(self.names("?search=hat"), ["Red Hat"])
+
+    def test_no_matches_is_an_empty_list_not_an_error(self):
+        self.assertEqual(self.names("?search=zzzz"), [])
+
+    def test_a_blank_search_is_ignored(self):
+        self.assertEqual(len(self.names("?search=%20%20")), 5)
+
+    def test_search_requires_a_token(self):
+        anon = self.client_class()
+        self.assertEqual(
+            anon.get("/api/companies/?search=goog").status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )

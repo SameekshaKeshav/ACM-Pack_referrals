@@ -42,6 +42,12 @@ class Command(BaseCommand):
         recipient.set_password("RecipientPass123!")
         recipient.save()
 
+        # A logged-in user who is not part of the sender/recipient conversation,
+        # used to check that chat endpoints refuse outsiders.
+        outsider, _ = User.objects.get_or_create(username="postman_outsider")
+        outsider.set_password("OutsiderPass123!")
+        outsider.save()
+
         Profile.objects.update_or_create(
             user=sender,
             defaults={
@@ -51,6 +57,10 @@ class Command(BaseCommand):
         )
         Profile.objects.update_or_create(
             user=recipient,
+            defaults={"open_to_connect": True},
+        )
+        Profile.objects.update_or_create(
+            user=outsider,
             defaults={"open_to_connect": True},
         )
 
@@ -68,3 +78,4 @@ class Command(BaseCommand):
         # Bearer tokens for these local-only users to paste into Postman.
         self.stdout.write(f"sender_token: {AccessToken.for_user(sender)}")
         self.stdout.write(f"recipient_token: {AccessToken.for_user(recipient)}")
+        self.stdout.write(f"outsider_token: {AccessToken.for_user(outsider)}")

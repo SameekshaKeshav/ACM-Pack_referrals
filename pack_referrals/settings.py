@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "api",
     "accounts",
     "companies",
@@ -159,6 +160,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # Applied per view via throttle classes in accounts.throttling.
     "DEFAULT_THROTTLE_RATES": {
         # Requesting a code emails a stranger and runs a slow hash, so it is
@@ -167,7 +169,13 @@ REST_FRAMEWORK = {
         # Submitting a code. The per-code attempt cap is the real defence
         # against guessing; this bounds flooding from one source.
         "verify_attempt": os.getenv("THROTTLE_VERIFY_ATTEMPT", "10/15min"),
+        # Sending a chat message, per signed-in user (chat.throttling).
+        "message_send": os.getenv("THROTTLE_MESSAGE_SEND", "30/min"),
     },
+    # How many proxies sit in front of the app. Throttles use it to find the
+    # client's IP in X-Forwarded-For. Unset, DRF keys on the whole header,
+    # which the client controls, so a new value each request skips the limit.
+    "NUM_PROXIES": int(os.getenv("NUM_PROXIES")) if os.getenv("NUM_PROXIES") else None,
 }
 
 # A code is destroyed after this many wrong guesses, so a six-digit code
@@ -235,3 +243,11 @@ if SENTRY_DSN:
         dsn=SENTRY_DSN,
         release=COMMIT_HASH,
     )
+
+# OpenAPI schema and Swagger UI (served at /api/schema/ and /api/docs/).
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Pack Referrals API",
+    "DESCRIPTION": "Verified NC State referral network. Send `Authorization: Bearer <token>`.",
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}

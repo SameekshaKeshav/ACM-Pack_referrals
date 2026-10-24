@@ -14,12 +14,19 @@ def affiliated_users(company):
     this covers both halves of that: explicit PastRole entries, and people
     whose profile names this as their current employer. A person with both
     appears once, as current.
+
+    Only verified members are listed. An unverified account has not proved it
+    belongs to an NC State student, and spec 4.6 requires a suspended user to
+    be hidden - a company page is a directory view and must honour both.
     """
     rows = []
     seen = set()
 
     current = (
-        Profile.objects.filter(current_company=company)
+        Profile.objects.filter(
+            current_company=company,
+            account_status=Profile.AccountStatus.ACTIVE,
+        )
         .select_related("user")
         .order_by("user__id")
     )
@@ -39,7 +46,10 @@ def affiliated_users(company):
         )
 
     past = (
-        PastRole.objects.filter(company=company)
+        PastRole.objects.filter(
+            company=company,
+            user__profile__account_status=Profile.AccountStatus.ACTIVE,
+        )
         .select_related("user", "user__profile")
         .order_by("-start_date", "user__id")
     )

@@ -168,6 +168,7 @@ class ConnectionRequestDetailView(generics.RetrieveAPIView):
         ).select_related(
             "sender__profile__current_company",
             "recipient__profile__current_company",
+            "conversation",
         )
 
 
@@ -195,8 +196,15 @@ class AcceptConnectionRequestView(_ConnectionActionView):
     """PATCH /api/connections/<id>/accept/ - recipient accepts, a conversation is created."""
 
     def perform(self, request, connection_id):
-        _, conversation = accept_connection_request(connection_id, request.user)
-        return Response({"conversation_id": conversation.pk}, status=status.HTTP_200_OK)
+        connection_request, conversation = accept_connection_request(connection_id, request.user)
+        return Response(
+            {
+                "id": connection_request.pk,
+                "status": connection_request.status,
+                "conversation_id": conversation.pk,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class DeclineConnectionRequestView(_ConnectionActionView):
@@ -204,8 +212,14 @@ class DeclineConnectionRequestView(_ConnectionActionView):
 
     def perform(self, request, connection_id):
         connection_request = decline_connection_request(connection_id, request.user)
+        # Same shape as accept so the UI handles both the same way; there is never
+        # a conversation after a decline.
         return Response(
-            {"id": connection_request.pk, "status": connection_request.status},
+            {
+                "id": connection_request.pk,
+                "status": connection_request.status,
+                "conversation_id": None,
+            },
             status=status.HTTP_200_OK,
         )
 
