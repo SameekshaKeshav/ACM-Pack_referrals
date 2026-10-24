@@ -23,10 +23,6 @@ class RequestLoggingMiddleware:
                 "path": request.path,
                 "status_code": response.status_code,
                 "duration_ms": duration_ms,
-                # TEMPORARY (#28): shows how many proxies Railway adds, so
-                # NUM_PROXIES can be set. Remove once it is set on staging.
-                "x_forwarded_for": request.headers.get("X-Forwarded-For"),
-                "remote_addr": request.META.get("REMOTE_ADDR"),
             },
         )
         return response
