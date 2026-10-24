@@ -3,6 +3,7 @@
 Security pass over the backend API and the staging deployment.
 
 - **Audited:** 2026-10-21, commit `c4aa761` (current `main`, and the commit staging was running at audit time)
+- **Updated:** 2026-10-24, commit `3b1c2e0`: rechecked against the code after #21, #29 and #30 merged, and section 4 confirmed on staging
 - **Staging:** https://acm-packreferrals-production.up.railway.app/
 - **Status key:** **PASS**, **FAIL** (issue filed), **BLOCKED** (cannot be completed as things stand)
 
@@ -18,7 +19,7 @@ Security pass over the backend API and the staging deployment.
 | 2.2 | Staging `SECRET_KEY` is a unique, random value | **PASS** | — |
 | 2.3 | Email credentials read from the environment, never hardcoded | **PASS** | — |
 | 2.4 | `DEBUG=False` on staging | **PASS** | — |
-| 3 | Every endpoint returns only data the caller may see | **FAIL** | #19, #20, #22, #23, #24, #25 (see [section 3](#3-permission-audit)) |
+| 3 | Every endpoint returns only data the caller may see | **FAIL** | #22, #23, #24, #25 (see [section 3](#3-permission-audit)) |
 | 4 | Throttles identify clients reliably behind Railway's proxy (`NUM_PROXIES`) | **PASS** | #28 |
 | 5 | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **BLOCKED** | — |
 
@@ -32,13 +33,13 @@ All POST/PATCH bodies go through DRF serializers. The question is whether those 
 
 ### 1.1 `message_text` ≤ 500 — PASS
 
-[`connections/serializers.py:48`](../connections/serializers.py) declares `message_text` with `max_length=500` and `allow_blank=False`. `validate_message_text` (line 60) also rejects whitespace-only text. A request with 501 characters is rejected with a 400 and a field error.
+[`connections/serializers.py:46`](../connections/serializers.py) declares `message_text` with `max_length=500` and `allow_blank=False`. `validate_message_text` (line 58) also rejects whitespace-only text. A request with 501 characters is rejected with a 400 and a field error.
 
 The model field (`ConnectionRequest.message_text`) is an unbounded `TextField`, so the serializer is the only check. A DB constraint like the one on `body_text` would add a second layer, but isn't required for this item.
 
 ### 1.2 `body_text` ≤ 2000 — PASS
 
-[`chat/models.py:61`](../chat/models.py) has `CharField(max_length=2000)`, which the `ModelSerializer` turns into a 2000-character serializer limit. The `message_body_text_max_2000` check constraint (line 72) enforces the same limit in the database, since SQLite ignores `VARCHAR` lengths. A request with 2001 characters is rejected with a 400 and a field error.
+`SendMessageSerializer` ([`chat/serializers.py:31`](../chat/serializers.py)), the input for sending a message, declares `body_text` with `max_length=2000`, and the model field has the same limit ([`chat/models.py:61`](../chat/models.py), `CharField(max_length=2000)`). The `message_body_text_max_2000` check constraint (line 72) enforces the same limit in the database, since SQLite ignores `VARCHAR` lengths. A request with 2001 characters is rejected with a 400 and a field error.
 
 ### 1.3 Other text fields have a length limit — FAIL
 
@@ -52,13 +53,13 @@ These serializers use `fields = "__all__"`, which makes all of the model's edita
 
 | Serializer | Server-controlled field(s) that are writable |
 |------------|---------------------------------------------|
-| `MessageSerializer` ([`chat/serializers.py`](../chat/serializers.py)) | `sender` |
 | `ReportSerializer` ([`connections/serializers.py`](../connections/serializers.py)) | `reporter` |
 | `ProfileSerializer` ([`accounts/serializers.py`](../accounts/serializers.py)) | `user`, `account_status` |
 | `PastRoleSerializer` ([`accounts/serializers.py`](../accounts/serializers.py)) | `user` |
-| `ConversationSerializer` ([`chat/serializers.py`](../chat/serializers.py)) | `created_from_connection_request` (should only be set by the accept flow) |
 
 [`docs/api-contract-chat.md`](api-contract-chat.md) says the authenticated user supplies sender/reporter identity and "client input must never control it". (`CompanySerializer` also uses `"__all__"`, but `Company` has no server-controlled fields, since `name_normalized` is non-editable.)
+
+`MessageSerializer` (`sender`) and `ConversationSerializer` (`created_from_connection_request`) were also on this list at audit time. #21 fixed both. `MessageSerializer` ([`chat/serializers.py:10`](../chat/serializers.py)) is now read-only, and messages are sent through `SendMessageSerializer`, which has no sender field: the view sets `sender=request.user`. `ConversationSerializer` was removed, so conversations are only created by the accept flow.
 
 **Fix:** list fields explicitly and mark the fields above read-only. Set identity fields in the view from `request.user` (the way `ConnectionRequestViewSet.create` does with `serializer.save(sender=request.user)`).
 
@@ -98,27 +99,28 @@ If warning `security.W009` is absent, the key is at least 50 characters with at 
 
 ## 3. Permission audit
 
-Since #14, every endpoint requires a valid JWT by default (`IsAuthenticated`, [`pack_referrals/settings.py:160`](../pack_referrals/settings.py)), and staging returns 401 to unauthenticated requests. Being logged in is all most endpoints check, though. Six are plain `ModelViewSet`s with `queryset = <Model>.objects.all()` and no object-level permission, so they don't limit which rows a logged-in user can read or change.
+Since #14, every endpoint requires a valid JWT by default (`IsAuthenticated`, [`pack_referrals/settings.py:161`](../pack_referrals/settings.py)), and staging returns 401 to unauthenticated requests. For some endpoints, being logged in is all they check. Four are plain `ModelViewSet`s with `queryset = <Model>.objects.all()` and no object-level permission, so they don't limit which rows a logged-in user can read or change.
 
 | Endpoint | View | Status | Issue | Problem |
 |----------|------|--------|-------|---------|
-| `/api/chat/messages/` | `MessageViewSet` ([`chat/views.py:22`](../chat/views.py)) | **FAIL** | #19 | Not limited to the user's own conversations |
-| `/api/chat/conversations/` | `ConversationViewSet` ([`chat/views.py:17`](../chat/views.py)) | **FAIL** | #20 | Not limited to conversations the user participates in |
-| `/api/connections/reports/` | `ReportViewSet` ([`connections/views.py:213`](../connections/views.py)) | **FAIL** | #22 | Not limited to reports the user filed; status changes aren't restricted to moderators |
+| `/api/connections/reports/` | `ReportViewSet` ([`connections/views.py:227`](../connections/views.py)) | **FAIL** | #22 | Not limited to reports the user filed; status changes aren't restricted to moderators |
 | `/api/accounts/profiles/` | `ProfileViewSet` ([`accounts/views.py:56`](../accounts/views.py)) | **FAIL** | #23 | Writes aren't restricted to the profile's owner |
 | `/api/accounts/past-roles/` | `PastRoleViewSet` ([`accounts/views.py:61`](../accounts/views.py)) | **FAIL** | #24 | Writes aren't restricted to the role's owner |
 | `/api/companies/` | `CompanyViewSet` ([`companies/views.py:17`](../companies/views.py)) | **FAIL** | #25 | Writes aren't restricted to admins |
+| `/api/chat/conversations/` | `ConversationListView` ([`chat/views.py:63`](../chat/views.py)) | **PASS** | #20 | Filtered to conversations the user participates in, minus blocked users (line 74). Fixed in #21 |
+| `/api/chat/conversations/<id>/messages/`, `/api/chat/conversations/<id>/read/`, `/api/chat/messages/` (send) | `ConversationMessagesView`, `MarkConversationReadView`, `SendMessageView` | **PASS** | #19 | Each goes through `get_conversation_for_participant` (line 34): 404 for unknown ids, 403 for non-participants and blocked users. Fixed in #21 |
 | `/api/connections/` (list, create) | `ConnectionRequestViewSet` | **PASS** | — | Queryset filtered to `sender=user OR recipient=user` (`get_queryset`, line 43) |
 | `/api/connections/<id>/` | `ConnectionRequestDetailView` | **PASS** | — | Same filter (line 165); other users get 404 |
-| `/api/connections/<id>/accept/`, `decline/` | `_ConnectionActionView` | **PASS** | — | `_get_pending_for_recipient` ([`connections/services.py:32`](../connections/services.py)) returns 404 to outsiders and 403 to the sender |
+| `/api/connections/<id>/accept/`, `decline/` | `_ConnectionActionView` | **PASS** | — | `_get_request_for_recipient` ([`connections/services.py:37`](../connections/services.py)) returns 404 to outsiders and 403 to the sender |
 | `/api/health/`, `/api/<app>/health/` | `HealthCheckView`, `AppHealthView` | **PASS** | — | Public on purpose (`AllowAny`); return no user data |
 | `/api/accounts/auth/signup/`, `login/`, `verify/` | `SignupView`, `LoginView`, `VerifyView` | **PASS** | — | Public on purpose (`AllowAny`, throttled); return tokens only for a valid code |
 | `/api/accounts/auth/refresh/` | SimpleJWT `TokenRefreshView` | **PASS** | — | No permission classes, as designed; returns a new access token only for a valid refresh token |
-| `/api/accounts/`, `/api/chat/` | DRF router root (`APIRootView`) | **PASS** | — | Requires login; lists endpoint URLs only, no user data |
+| `/api/accounts/` | DRF router root (`APIRootView`) | **PASS** | — | Requires login; lists endpoint URLs only, no user data |
+| `/api/schema/`, `/api/docs/` | drf-spectacular `SpectacularAPIView`, `SpectacularSwaggerView` ([`pack_referrals/urls.py`](../pack_referrals/urls.py)) | **PASS** | — | Public on purpose (`AllowAny`); describe routes and fields, return no user data |
 
 The `companies` and `connections` routers also generate a root view, but it's unreachable: `/api/companies/` resolves to the company list (that router is registered at `r""`), and `/api/connections/` resolves to the connection-request list, which is registered first. The Django admin (`/admin/`) is staff-only and outside this audit.
 
-Reading profiles and companies may be intended, since browsing affiliations is the product. **Fix direction:** scope `get_queryset()` to the requesting user where the data is private (messages and conversations they participate in, reports they filed), restrict writes to the owner for profiles and past roles, and restrict company writes and report status changes to admins.
+Reading profiles and companies may be intended, since browsing affiliations is the product. **Fix direction:** scope `get_queryset()` to the requesting user where the data is private (reports they filed), restrict writes to the owner for profiles and past roles, and restrict company writes and report status changes to admins.
 
 ## 4. Throttles behind Railway's proxy (`NUM_PROXIES`) — PASS
 
