@@ -40,6 +40,21 @@ class PastRoleSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Company name cannot be blank.")
         return value
 
+    def validate(self, attrs):
+        """A role cannot end before it began.
+
+        Checked against the incoming value where present and the stored one
+        otherwise, so a PATCH that moves only one of the two dates is still
+        validated against the other.
+        """
+        start = attrs.get("start_date", getattr(self.instance, "start_date", None))
+        end = attrs.get("end_date", getattr(self.instance, "end_date", None))
+        if start and end and end < start:
+            raise serializers.ValidationError(
+                {"end_date": "End date cannot be before the start date."}
+            )
+        return attrs
+
     def create(self, validated_data):
         company, _ = Company.find_or_create(validated_data.pop("company_name"))
         return PastRole.objects.create(company=company, **validated_data)
