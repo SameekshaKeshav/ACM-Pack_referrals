@@ -259,3 +259,42 @@ class CompanySearchTests(APITestCase):
             anon.get("/api/companies/?search=goog").status_code,
             status.HTTP_401_UNAUTHORIZED,
         )
+
+
+class PastRoleDateTests(APITestCase):
+    def setUp(self):
+        self.user = member("alice", "Alice")
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(self.user)}"
+        )
+
+    def post(self, **extra):
+        return self.client.post(
+            "/api/accounts/past-roles/",
+            {"company_name": "Google", "role_title": "Intern", **extra},
+            format="json",
+        )
+
+    def test_end_before_start_is_rejected(self):
+        response = self.post(start_date="2025-08-01", end_date="2025-05-01")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("end_date", response.data)
+
+    def test_a_sensible_range_is_accepted(self):
+        self.assertEqual(
+            self.post(start_date="2025-05-01", end_date="2025-08-01").status_code,
+            status.HTTP_201_CREATED,
+        )
+
+    def test_an_ongoing_role_needs_no_end_date(self):
+        self.assertEqual(
+            self.post(start_date="2025-05-01").status_code, status.HTTP_201_CREATED
+        )
+
+    def test_patching_one_date_is_checked_against_the_stored_other(self):
+        created = self.post(start_date="2025-05-01", end_date="2025-08-01")
+        role_id = created.data["id"]
+        response = self.client.patch(
+            f"/api/accounts/past-roles/{role_id}/", {"end_date": "2025-01-01"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
