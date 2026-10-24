@@ -19,7 +19,7 @@ Security pass over the backend API and the staging deployment.
 | 2.3 | Email credentials read from the environment, never hardcoded | **PASS** | — |
 | 2.4 | `DEBUG=False` on staging | **PASS** | — |
 | 3 | Every endpoint returns only data the caller may see | **FAIL** | #19, #20, #22, #23, #24, #25 (see [section 3](#3-permission-audit)) |
-| 4 | Throttles identify clients reliably behind Railway's proxy (`NUM_PROXIES`) | **FAIL** | #28 |
+| 4 | Throttles identify clients reliably behind Railway's proxy (`NUM_PROXIES`) | **PASS** | #28 |
 | 5 | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **BLOCKED** | — |
 
 ## How the findings were checked
@@ -120,11 +120,18 @@ The `companies` and `connections` routers also generate a root view, but it's un
 
 Reading profiles and companies may be intended, since browsing affiliations is the product. **Fix direction:** scope `get_queryset()` to the requesting user where the data is private (messages and conversations they participate in, reports they filed), restrict writes to the owner for profiles and past roles, and restrict company writes and report status changes to admins.
 
-## 4. Throttles behind Railway's proxy (`NUM_PROXIES`) — FAIL
+## 4. Throttles behind Railway's proxy (`NUM_PROXIES`) — PASS
 
-The signup, login and verify throttles key on the client IP from DRF's `get_ident()` ([`accounts/throttling.py:29`](../accounts/throttling.py)). `NUM_PROXIES` is not set in `REST_FRAMEWORK`. When it's unset, DRF builds the client identity from a request header the client controls, so the throttles can't reliably tell clients apart. This weakens the rate limiting on the auth endpoints. See DRF's [throttling docs on identifying clients](https://www.django-rest-framework.org/api-guide/throttling/#how-clients-are-identified).
+The signup, login and verify throttles key on the client IP from DRF's `get_ident()` ([`accounts/throttling.py:29`](../accounts/throttling.py)). At audit time `NUM_PROXIES` was not set in `REST_FRAMEWORK`. When it's unset, DRF builds the client identity from the whole `X-Forwarded-For` header, which a client can fill with fake values, so the throttles couldn't be relied on to tell clients apart. See DRF's [throttling docs on identifying clients](https://www.django-rest-framework.org/api-guide/throttling/#how-clients-are-identified).
 
-**Progress:** settings now read `NUM_PROXIES` from the environment (unset keeps the current behavior), with tests for spoofed headers and separate per-client budgets. **Remaining:** measure N on staging using the temporary forwarding-header logging in `pack_referrals/middleware.py`, set `NUM_PROXIES` on Railway, confirm on staging, then remove the logging.
+**Fix:** settings read `NUM_PROXIES` from the environment, with tests for spoofed headers and separate per-client budgets. Staging sets `NUM_PROXIES=2`.
+
+**Measured on staging (2026-10-24, commit `3b1c2e0`)** with temporary forwarding-header logging, since removed:
+
+- A plain request arrives with `X-Forwarded-For: <client IP>, <CDN77 node IP>` from a Railway-internal `REMOTE_ADDR`. Two proxies sit in front of the app and the client IP is second from the end, so N = 2.
+- A request sent with `X-Forwarded-For: 1.2.3.4` arrives with the same two entries, so one of the proxies drops client-supplied values. N = 2 doesn't depend on this.
+
+**Confirmed on staging:** the running app's process environment contains `NUM_PROXIES=2`. Twelve `POST`s to `/api/accounts/auth/verify/`, each with a different fake `X-Forwarded-For` and an unregistered email (nothing is written), returned `400` ten times and then `429`, so the 10/15min limit holds. Because the proxies already drop fake values, this throttle result would look the same with the variable unset. The environment check is what confirms the setting.
 
 ## 5. Real email on staging — BLOCKED
 
