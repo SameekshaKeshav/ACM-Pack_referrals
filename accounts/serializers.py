@@ -7,10 +7,18 @@ from .models import PastRole, Profile, VerificationCode
 from .validators import normalize_email, validate_ncsu_email
 
 
-class ProfileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Profile
-        fields = "__all__"
+def _resolve_company(raw_name, field):
+    """Resolve a typed company name, turning a rejection into a 400.
+
+    Company.find_or_create raises ValueError for a name that is blank or only
+    a legal suffix. Left uncaught that surfaces as a 500, so it is translated
+    into a field error on whichever field carried the name.
+    """
+    try:
+        company, _ = Company.find_or_create(raw_name)
+    except ValueError as exc:
+        raise serializers.ValidationError({field: str(exc)}) from exc
+    return company
 
 
 class DirectoryEntrySerializer(serializers.ModelSerializer):
@@ -79,13 +87,13 @@ class PastRoleSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        company, _ = Company.find_or_create(validated_data.pop("company_name"))
+        company = _resolve_company(validated_data.pop("company_name"), "company_name")
         return PastRole.objects.create(company=company, **validated_data)
 
     def update(self, instance, validated_data):
         raw_name = validated_data.pop("company_name", None)
         if raw_name is not None:
-            instance.company, _ = Company.find_or_create(raw_name)
+            instance.company = _resolve_company(raw_name, "company_name")
         for field, value in validated_data.items():
             setattr(instance, field, value)
         instance.save()
@@ -135,6 +143,13 @@ class MeSerializer(serializers.ModelSerializer):
             "past_roles",
         )
 
+    def validate_grad_year(self, value):
+        """Catch typos. A four-digit year outside this range is a slip, not a
+        student who graduated in 1800."""
+        if value is not None and not (2000 <= value <= 2100):
+            raise serializers.ValidationError("Must be between 2000 and 2100.")
+        return value
+
     def get_name(self, profile):
         return profile.user.get_full_name() or profile.user.get_username()
 
@@ -150,7 +165,9 @@ class MeSerializer(serializers.ModelSerializer):
             # Blank clears the current employer; anything else resolves through
             # the same dedupe path past roles use.
             instance.current_company = (
-                Company.find_or_create(raw_company)[0] if raw_company.strip() else None
+                _resolve_company(raw_company, "current_company_name")
+                if raw_company.strip()
+                else None
             )
 
         for field, value in validated_data.items():

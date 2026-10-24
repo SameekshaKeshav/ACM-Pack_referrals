@@ -7,7 +7,6 @@ from .views import (
     LoginView,
     MeView,
     PastRoleViewSet,
-    ProfileViewSet,
     SignupView,
     UserDirectoryView,
     VerifyView,
@@ -16,7 +15,6 @@ from .views import (
 app_name = "accounts"
 
 router = DefaultRouter()
-router.register("profiles", ProfileViewSet, basename="profile")
 router.register("past-roles", PastRoleViewSet, basename="past-role")
 
 urlpatterns = [

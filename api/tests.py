@@ -42,7 +42,8 @@ class HealthCheckTests(TestCase):
         self.assertEqual(response.json(), {"status": "ok", "commit_hash": "abc123"})
 
     DOMAIN_RESOURCE_ROUTES = (
-        "/api/accounts/profiles/",
+        # /api/accounts/profiles/ removed: it was an uncurated third view
+        # of people. Use /users/ (directory) or /me/ (own profile).
         "/api/accounts/past-roles/",
         "/api/companies/",
         # /api/connections/connection-requests/ is intentionally absent: #10

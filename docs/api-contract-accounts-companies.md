@@ -94,6 +94,9 @@ Read-only and silently ignored if sent: `email`, `account_status`, `user_id`,
 { "bio": "Junior, backend.", "current_company_name": "Red Hat", "current_role": "Co-op" }
 ```
 
+A company name that is blank or only a legal suffix ("Inc.", "LLC") returns
+**400**. `grad_year` must be between 2000 and 2100.
+
 `current_company_name` is a **typed string, not an id**. It resolves to an
 existing company when one matches (see deduplication below) and comes back as
 an object. Send `""` to clear the current employer.

@@ -4,6 +4,7 @@ from django.db import models
 
 
 class Company(models.Model):
+    SUFFIX_WORDS = frozenset({"inc", "llc", "ltd", "corp", "corporation", "co"})
     SUFFIX_RE = re.compile(r"\s+(inc|llc|ltd|corp|corporation|co)$")
 
     name = models.CharField(max_length=255, unique=True)
@@ -35,6 +36,10 @@ class Company(models.Model):
         normalized = cls.normalize_name(raw_name)
         if not normalized:
             raise ValueError("Company name cannot be blank.")
+        if normalized in cls.SUFFIX_WORDS:
+            # "Inc." is a legal suffix, not a company. The suffix regex only
+            # strips one that trails a real name, so this has to be caught here.
+            raise ValueError("Company name cannot be only a legal suffix.")
         return cls.objects.get_or_create(
             name_normalized=normalized,
             defaults={"name": " ".join(raw_name.split())},

@@ -60,10 +60,17 @@ class FindOrCreateTests(APITestCase):
                 with self.assertRaises(ValueError):
                     Company.find_or_create(blank)
 
-    def test_a_suffix_is_only_stripped_when_it_trails_a_real_name(self):
-        """"LLC" alone is a name, not an empty one."""
-        company, _ = Company.find_or_create("LLC")
-        self.assertEqual(company.name_normalized, "llc")
+    def test_a_name_that_is_only_a_legal_suffix_is_rejected(self):
+        """The suffix regex only strips one that trails a real name, so "Inc."
+        would otherwise become a company called "Inc."."""
+        for suffix in ("Inc.", "LLC", "  ltd ", "Corporation", "co"):
+            with self.subTest(suffix=suffix):
+                with self.assertRaises(ValueError):
+                    Company.find_or_create(suffix)
+
+    def test_a_suffix_still_strips_when_it_trails_a_real_name(self):
+        company, _ = Company.find_or_create("Acme Inc.")
+        self.assertEqual(company.name_normalized, "acme")
 
 
 class AffiliatedUsersTests(APITestCase):

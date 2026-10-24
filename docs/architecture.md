@@ -31,12 +31,12 @@ and [`api-contract-chat.md`](api-contract-chat.md) for chat.
 | Prefix | Resources |
 |--------|-----------|
 | `/api/health/` | Global health |
-| `/api/accounts/` | `me/`, `profiles/` (read-only), `past-roles/`, `users/` (directory), `auth/*`, `health/` |
+| `/api/accounts/` | `me/`, `past-roles/`, `users/` (directory), `auth/*`, `health/` |
 | `/api/companies/` | company list (`?search=`), detail with affiliations, `health/` |
 | `/api/connections/` | `connection-requests/`, `reports/`, `health/` |
 | `/api/chat/` | `conversations/`, `messages/`, `health/` |
 
-Tell frontend before wiring clients: paths are prefixed (e.g. `/api/accounts/profiles/`, not `/api/profiles/`).
+Tell frontend before wiring clients: paths are prefixed (e.g. `/api/accounts/users/`, not `/api/users/`).
 
 ## Schema changes (team rule)
 

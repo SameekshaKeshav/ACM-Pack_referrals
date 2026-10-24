@@ -19,7 +19,6 @@ from .pagination import DirectoryPagination
 from .throttling import CodeRequestThrottle, VerifyAttemptThrottle
 from .serializers import (
     PastRoleSerializer,
-    ProfileSerializer,
     LoginSerializer,
     DirectoryEntrySerializer,
     MeSerializer,
@@ -56,15 +55,6 @@ class AppHealthView(APIView):
 
     def get(self, request):
         return Response({"app": "accounts", "status": "ok"})
-
-
-class ProfileViewSet(viewsets.ReadOnlyModelViewSet):
-    """Read-only. A member edits their own profile through /me/, which cannot
-    address anyone else's by construction.
-    """
-
-    queryset = Profile.objects.select_related("user", "current_company")
-    serializer_class = ProfileSerializer
 
 
 class PastRoleViewSet(viewsets.ModelViewSet):

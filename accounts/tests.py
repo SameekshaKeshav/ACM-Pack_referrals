@@ -621,14 +621,51 @@ class MeEndpointTests(APITestCase):
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {AccessToken.for_user(stray)}")
         self.assertEqual(client.get(self.url).status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_profiles_endpoint_is_read_only(self):
-        """Writes go through /me/, which cannot address anyone else's profile."""
+    def test_the_profiles_route_is_gone(self):
+        """It was an uncurated third view of people, listing suspended and
+        unverified members with their bio. /users/ and /me/ replace it."""
         victim = User.objects.create_user(username="victim")
         other = Profile.objects.create(user=victim, bio="untouched")
 
-        response = self.client.patch(
-            f"/api/accounts/profiles/{other.pk}/", {"bio": "hacked"}, format="json"
+        for path in ("/api/accounts/profiles/", f"/api/accounts/profiles/{other.pk}/"):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(
+            self.client.patch(
+                f"/api/accounts/profiles/{other.pk}/", {"bio": "hacked"}, format="json"
+            ).status_code,
+            status.HTTP_404_NOT_FOUND,
         )
-        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         other.refresh_from_db()
         self.assertEqual(other.bio, "untouched")
+
+    def test_a_suspended_member_is_not_reachable_anywhere(self):
+        """The leak Sameeksha found: suspended profiles were listable."""
+        hidden = User.objects.create_user(username="hidden", first_name="Hidden")
+        Profile.objects.create(
+            user=hidden, bio="private", account_status=Profile.AccountStatus.SUSPENDED
+        )
+
+        directory = self.client.get(reverse("accounts:user-directory"))
+        self.assertNotIn("Hidden", [row["name"] for row in directory.data["results"]])
+        self.assertEqual(
+            self.client.get(f"/api/accounts/profiles/{hidden.profile.pk}/").status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    def test_grad_year_outside_a_sane_range_is_rejected(self):
+        for bad in (1800, 3000):
+            with self.subTest(bad=bad):
+                response = self.client.patch(self.url, {"grad_year": bad}, format="json")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            self.client.patch(self.url, {"grad_year": 2028}, format="json").status_code,
+            status.HTTP_200_OK,
+        )
+
+    def test_a_suffix_only_employer_name_is_rejected(self):
+        response = self.client.patch(
+            self.url, {"current_company_name": "Inc."}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
