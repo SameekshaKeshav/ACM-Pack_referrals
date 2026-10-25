@@ -356,6 +356,24 @@ class DuplicateTests(ReferralTestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             self.make_referral(company=None)
 
+    def test_the_database_compares_the_role_ignoring_case_like_the_api_does(self):
+        # Two simultaneous asks that differ only in capitalisation both pass the
+        # read-then-insert check, so the constraint has to catch the second one.
+        self.make_referral(role_title="SWE", company=self.acme)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.make_referral(role_title="swe", company=self.acme)
+
+        self.make_referral(role_title="SWE", company=None)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.make_referral(role_title="Swe", company=None)
+
+    def test_a_different_role_is_not_caught_by_the_case_insensitive_constraint(self):
+        self.make_referral(role_title="SWE", company=self.acme)
+
+        self.make_referral(role_title="SWE Intern", company=self.acme)
+
+        self.assertEqual(ReferralRequest.objects.count(), 2)
+
     def test_a_lost_race_is_reported_as_409(self):
         from unittest import mock
 
@@ -387,7 +405,7 @@ class ReadReferralTests(ReferralTestCase):
         )
 
     def ids(self, response):
-        return [row["id"] for row in response.json()]
+        return [row["id"] for row in response.json()["results"]]
 
     def test_incoming_lists_asks_sent_to_me_newest_first(self):
         self._as(self.bob)
@@ -409,7 +427,7 @@ class ReadReferralTests(ReferralTestCase):
     def test_each_row_has_the_same_fields_as_a_created_ask(self):
         self._as(self.alice)
 
-        row = self.client.get(URL, {"type": "outgoing"}).json()[0]
+        row = self.client.get(URL, {"type": "outgoing"}).json()["results"][0]
 
         self.assertEqual(
             set(row),
@@ -457,11 +475,38 @@ class ReadReferralTests(ReferralTestCase):
             self.connect(extra, self.bob)
             self.make_referral(sender=extra, role_title=f"Role {index}")
 
-        # The caller, their blocks, and all the rows in one joined query.
-        with self.assertNumQueries(3):
+        # The caller, their blocks, the page's total, and all its rows in one joined query.
+        with self.assertNumQueries(4):
             response = self.client.get(URL, {"type": "incoming"})
 
-        self.assertEqual(len(response.json()), 8)
+        self.assertEqual(len(response.json()["results"]), 8)
+
+    def test_the_list_is_paged_with_limit_and_offset(self):
+        self._as(self.bob)
+
+        first = self.client.get(URL, {"type": "incoming", "limit": 2}).json()
+        second = self.client.get(URL, {"type": "incoming", "limit": 2, "offset": 2}).json()
+
+        self.assertEqual(first["count"], 3)
+        self.assertEqual([row["id"] for row in first["results"]],
+                         [self.from_carol.pk, self.second.pk])
+        self.assertIsNotNone(first["next"])
+        self.assertEqual([row["id"] for row in second["results"]], [self.first.pk])
+        self.assertIsNone(second["next"])
+
+    def test_a_page_is_capped_at_100_rows(self):
+        for index in range(105):
+            extra = self._user(f"bulk{index}", company=self.acme)
+            self.connect(extra, self.bob)
+            self.make_referral(sender=extra, role_title="Bulk")
+        self._as(self.bob)
+
+        everything = self.client.get(URL, {"type": "incoming", "limit": 100000}).json()
+        default = self.client.get(URL, {"type": "incoming"}).json()
+
+        self.assertEqual(everything["count"], 108)
+        self.assertEqual(len(everything["results"]), 100)
+        self.assertEqual(len(default["results"]), 20)
 
     def test_the_detail_is_visible_to_both_people(self):
         for user in (self.alice, self.bob):

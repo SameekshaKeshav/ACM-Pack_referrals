@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 from accounts.models import Profile
 from .blocks import blocked_user_ids
 from .models import ConnectionRequest, ReferralRequest, Report
+from .pagination import ReferralPagination
 from .referrals import ReferralError, check_may_ask, create_referral_request
 from .serializers import (
     ConnectionRequestDetailSerializer,
@@ -250,6 +251,7 @@ class ReferralRequestListCreateView(generics.GenericAPIView):
 
     permission_classes = [IsAuthenticated]
     serializer_class = ReferralRequestSerializer
+    pagination_class = ReferralPagination
 
     @extend_schema(
         parameters=[
@@ -283,7 +285,8 @@ class ReferralRequestListCreateView(generics.GenericAPIView):
                 )
             queryset = queryset.filter(status=wanted_status)
 
-        return Response(ReferralRequestSerializer(queryset, many=True).data)
+        page = self.paginate_queryset(queryset)
+        return self.get_paginated_response(ReferralRequestSerializer(page, many=True).data)
 
     @extend_schema(request=ReferralRequestSerializer, responses={201: ReferralRequestSerializer})
     def post(self, request):

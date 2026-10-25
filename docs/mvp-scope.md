@@ -45,6 +45,11 @@ The two biggest MUST gaps today are not features, they are wiring: items 2 and 3
 4. Mobile polish
 5. Firefox testing
 
+## Known limits of referral requests (until Week 8)
+
+- One pending ask per person, company and role (case ignored). Accept and decline are Week 8, and nothing leaves pending before then, so a second ask for the same role gets a 409 and stays blocked. The form should show the 409 message, not a retry button.
+- The referral list is paged (`limit`/`offset`, like the directory). The conversation list is still unpaged (bounded by the user's own conversations).
+
 ## Decisions the team needs to make at Check-in #2
 
 - Ask the committee lead which day in the week of 11/16 the showcase is.

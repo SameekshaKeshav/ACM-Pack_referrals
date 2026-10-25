@@ -78,8 +78,9 @@ def create_referral_request(sender, recipient, *, company, role_title, job_url,
     """Create a pending ask, or raise if one for the same role is already open.
 
     The same person, company and role (ignoring case) cannot have two pending asks.
-    The unique constraints on the model catch two simultaneous requests that both
-    pass the read below.
+    The unique constraints on the model compare the role case-insensitively too, so
+    they catch two simultaneous requests that both pass the read below, however
+    each one capitalised the role.
     """
     duplicates = ReferralRequest.objects.filter(
         sender=sender,

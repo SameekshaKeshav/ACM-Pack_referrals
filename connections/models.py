@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class ConnectionRequest(models.Model):
@@ -79,16 +80,17 @@ class ReferralRequest(models.Model):
     class Meta:
         ordering = ["-created_at", "-id"]
         constraints = [
-            # One open ask per person, company and role. This is the backstop for the
-            # 409 the API returns, so two simultaneous requests cannot both succeed.
-            # A NULL company never compares equal, so it gets its own constraint.
+            # One open ask per person, company and role, ignoring case. This is the
+            # backstop for the 409 the API returns (which also ignores case), so two
+            # simultaneous requests cannot both succeed whatever capitalisation each
+            # used. A NULL company never compares equal, so it gets its own constraint.
             models.UniqueConstraint(
-                fields=["sender", "recipient", "company", "role_title"],
+                Lower("role_title"), "sender", "recipient", "company",
                 condition=models.Q(status="pending", company__isnull=False),
                 name="unique_pending_referral_with_company",
             ),
             models.UniqueConstraint(
-                fields=["sender", "recipient", "role_title"],
+                Lower("role_title"), "sender", "recipient",
                 condition=models.Q(status="pending", company__isnull=True),
                 name="unique_pending_referral_without_company",
             ),
