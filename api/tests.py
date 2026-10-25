@@ -35,7 +35,6 @@ class HealthCheckTests(TestCase):
             "/api/accounts/profiles/",
             "/api/accounts/past-roles/",
             "/api/companies/",
-            "/api/connections/reports/",
             "/api/chat/conversations/",
             "/api/chat/messages/",
         ):

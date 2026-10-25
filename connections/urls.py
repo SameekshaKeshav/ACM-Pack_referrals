@@ -4,20 +4,21 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AppHealthView,
     ConnectionRequestViewSet,
-    ReportViewSet,
+    UserBlockView,
 )
 
 app_name = "connections"
 
-router = DefaultRouter()
-router.register("reports", ReportViewSet, basename="report")
-
 urlpatterns = [
     path("health/", AppHealthView.as_view(), name="health"),
+    path(
+        "users/<int:user_id>/block/",
+        UserBlockView.as_view(),
+        name="user-block",
+    ),
     path(
         "",
         ConnectionRequestViewSet.as_view({"get": "list", "post": "create"}),
         name="connection-request-list-and-create"
-        ),
-    path("", include(router.urls)),
+        )
 ]

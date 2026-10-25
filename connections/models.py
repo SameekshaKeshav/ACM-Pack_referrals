@@ -31,38 +31,26 @@ class ConnectionRequest(models.Model):
         return f"{self.sender.get_username()} → {self.recipient.get_username()} ({self.status})"
 
 
-class Report(models.Model):
-    class Status(models.TextChoices):
-        OPEN = "open", "Open"
-        REVIEWED = "reviewed", "Reviewed"
-        ACTIONED = "actioned", "Actioned"
-
-    reporter = models.ForeignKey(
+class Block(models.Model):
+    blocker = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="reports_filed",
+        related_name="blocks_created",
     )
-    reported_user = models.ForeignKey(
+    blocked = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="reports_received",
-    )
-    reported_message = models.ForeignKey(
-        "chat.Message",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="reports",
-    )
-    reason = models.TextField()
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.OPEN,
+        related_name="blocks_received",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("blocker", "blocked"),
+                name="unique_user_block",
+            ),
+        ]
+
     def __str__(self):
-        return f"Report {self.pk} ({self.status})"
+        return f"{self.blocker.get_username()} blocked {self.blocked.get_username()}"

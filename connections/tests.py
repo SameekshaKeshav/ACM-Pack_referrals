@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import Profile
 from companies.models import Company
-from connections.models import ConnectionRequest
+from connections.models import Block, ConnectionRequest
 
 
 User = get_user_model()
@@ -61,6 +61,55 @@ class ConnectionTests(TestCase):
             self.client.post("/api/connections/", payload, format="json").status_code,
             409,
         )
+
+    def test_block_user(self):
+        response = self.client.post(
+            f"/api/connections/users/{self.recipient.pk}/block/"
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(
+            Block.objects.filter(
+                blocker=self.sender,
+                blocked=self.recipient,
+            ).exists()
+        )
+
+    def test_block_user_is_idempotent(self):
+        url = f"/api/connections/users/{self.recipient.pk}/block/"
+
+        self.assertEqual(self.client.post(url).status_code, 201)
+        self.assertEqual(self.client.post(url).status_code, 200)
+        self.assertEqual(Block.objects.count(), 1)
+
+    def test_unblock_user(self):
+        Block.objects.create(blocker=self.sender, blocked=self.recipient)
+
+        response = self.client.delete(
+            f"/api/connections/users/{self.recipient.pk}/block/"
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Block.objects.exists())
+
+    def test_blocked_pair_cannot_create_connection_in_either_direction(self):
+        Block.objects.create(blocker=self.recipient, blocked=self.sender)
+
+        response = self.client.post(
+            "/api/connections/",
+            {"recipient_id": self.recipient.pk, "message_text": "Hello"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(ConnectionRequest.objects.exists())
+
+    def test_block_unknown_user_returns_not_found(self):
+        response = self.client.post(
+            "/api/connections/users/9999/block/"
+        )
+
+        self.assertEqual(response.status_code, 404)
 
     def test_incoming_connections_list(self):
         self.client.post(

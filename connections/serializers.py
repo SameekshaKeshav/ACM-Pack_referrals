@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import ConnectionRequest, Report
+from .models import ConnectionRequest
 
 
 User = get_user_model()
@@ -75,9 +75,3 @@ class OutgoingConnectionRequestListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConnectionRequest
         fields = ("id", "recipient", "message_text", "status", "created_at")
-
-
-class ReportSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Report
-        fields = "__all__"

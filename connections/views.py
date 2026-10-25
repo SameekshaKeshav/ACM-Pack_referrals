@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework import mixins, viewsets
@@ -10,18 +11,52 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import Profile
-from .models import ConnectionRequest, Report
+from .models import Block, ConnectionRequest
 from .serializers import (
     IncomingConnectionRequestListSerializer,
     ConnectionRequestSerializer,
     OutgoingConnectionRequestListSerializer,
-    ReportSerializer,
 )
 
 
 class AppHealthView(APIView):
     def get(self, request):
         return Response({"app": "connections", "status": "ok"})
+
+
+User = get_user_model()
+
+
+class UserBlockView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        try:
+            blocked_user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if blocked_user == request.user:
+            return Response(
+                {"detail": "You cannot block yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        _, created = Block.objects.get_or_create(
+            blocker=request.user,
+            blocked=blocked_user,
+        )
+        return Response(
+            {"detail": "User blocked."},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request, user_id):
+        Block.objects.filter(blocker=request.user, blocked_id=user_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ConnectionRequestViewSet(
@@ -53,6 +88,15 @@ class ConnectionRequestViewSet(
             return Response(
                 {"detail": "You cannot send a connection request to yourself."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if Block.objects.filter(
+            Q(blocker=request.user, blocked=recipient)
+            | Q(blocker=recipient, blocked=request.user)
+        ).exists():
+            return Response(
+                {"detail": "You cannot send a connection request to this user."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         if ConnectionRequest.objects.filter(
@@ -144,8 +188,3 @@ class ConnectionRequestViewSet(
         )
         serializer = serializer_class(queryset, many=True)
         return Response(serializer.data)
-
-
-class ReportViewSet(viewsets.ModelViewSet):
-    queryset = Report.objects.all()
-    serializer_class = ReportSerializer
