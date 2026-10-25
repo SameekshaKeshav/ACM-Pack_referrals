@@ -1,9 +1,8 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
 from django.utils import timezone
-from rest_framework.test import APIClient
+from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import Profile
@@ -14,9 +13,8 @@ from connections.models import Block, ConnectionRequest
 User = get_user_model()
 
 
-class ConnectionTests(TestCase):
+class ConnectionTests(APITestCase):
     def setUp(self):
-        self.client = APIClient()
         self.sender = User.objects.create_user(
             username="sender",
             first_name="Sender",
@@ -236,6 +234,7 @@ class ConnectionTests(TestCase):
         self.assertEqual(response.json(), [])
 
     def test_closed_recipient_returns_forbidden(self):
+        self.assertTrue(self.recipient.profile.open_to_connect)
         Profile.objects.filter(user=self.recipient).update(open_to_connect=False)
 
         response = self.client.post(
@@ -245,6 +244,11 @@ class ConnectionTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json()["detail"],
+            "This user is not open to connection requests.",
+        )
+        self.assertFalse(ConnectionRequest.objects.exists())
 
     def test_suspended_recipient_returns_forbidden(self):
         Profile.objects.filter(user=self.recipient).update(account_status="suspended")
