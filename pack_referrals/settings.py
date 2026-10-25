@@ -38,16 +38,28 @@ ALLOWED_HOSTS = [
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
-EMAIL_HOST = os.getenv("EMAIL_HOST", "").strip()
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT") or 587)  # empty value falls back to 587
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", default=True)
+# Email. Unset EMAIL_BACKEND prints mail to the console, for local development.
+# Staging sets it to Anymail's Resend backend, which sends over Resend's HTTPS
+# API, because Railway's plan blocks outbound SMTP.
+EMAIL_BACKEND = (
+    os.getenv("EMAIL_BACKEND", "").strip()
+    or "django.core.mail.backends.console.EmailBackend"
+)
 
-if EMAIL_HOST:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+ANYMAIL = {
+    "RESEND_API_KEY": os.getenv("RESEND_API_KEY", "").strip(),
+    # (connect, read) seconds. Anymail's default is 30, the same as gunicorn's
+    # worker timeout, so a hung provider could get the worker killed mid-request.
+    "REQUESTS_TIMEOUT": (3.05, 10),
+}
+
+if (
+    EMAIL_BACKEND == "anymail.backends.resend.EmailBackend"
+    and not ANYMAIL["RESEND_API_KEY"]
+):
+    raise RuntimeError(
+        "EMAIL_BACKEND is the Resend backend but RESEND_API_KEY is not set."
+    )
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -204,8 +216,8 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=REFRESH_TOKEN_LIFETIME_DAYS),
 }
 
-# EMAIL_BACKEND is set above from EMAIL_HOST: SMTP when configured, console
-# otherwise, so verification codes print to the runserver output in development.
+# Must be on a domain verified with the email provider, or the provider rejects
+# the send. Staging sets it on Railway once the domain is verified.
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@packreferrals.ncsu.edu")
 
 # --- Logging --------------------------------------------------------------

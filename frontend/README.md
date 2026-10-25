@@ -16,7 +16,8 @@ npm run dev
 
 Open **http://localhost:5173/signup** for a new account, or `/login` for a returning
 user. Both use an emailed six-digit code, not a password. Django's default local
-email backend prints the code to the backend console. Real email requires SMTP.
+email backend prints the code to the backend console. Real email requires
+`EMAIL_BACKEND` and `RESEND_API_KEY` (see the root README).
 
 Verification signs in and opens `/chat`. Access/refresh credentials persist across
 reloads; protected requests attach Bearer auth and refresh once on 401. Log out
