@@ -7,6 +7,8 @@ from .views import (
     ConnectionRequestDetailView,
     ConnectionRequestViewSet,
     DeclineConnectionRequestView,
+    ReferralRequestDetailView,
+    ReferralRequestListCreateView,
     ReportViewSet,
 )
 
@@ -22,6 +24,16 @@ urlpatterns = [
         ConnectionRequestViewSet.as_view({"get": "list", "post": "create"}),
         name="connection-request-list-and-create"
         ),
+    path(
+        "referrals/",
+        ReferralRequestListCreateView.as_view(),
+        name="referral-request-list-and-create",
+    ),
+    path(
+        "referrals/<int:referral_id>/",
+        ReferralRequestDetailView.as_view(),
+        name="referral-request-detail",
+    ),
     path(
         "<int:connection_id>/",
         ConnectionRequestDetailView.as_view(),
