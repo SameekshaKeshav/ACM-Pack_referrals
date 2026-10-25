@@ -485,6 +485,24 @@ class UserDirectoryTests(APITestCase):
             ["Alice S", "Bob S", "Carol S", "Erin S"],
         )
 
+    def test_repeated_major_means_any_of_them(self):
+        self.assertEqual(
+            self.names("?major=Statistics&major=Computer Science"),
+            ["Alice S", "Bob S", "Carol S", "Dave S", "Erin S"],
+        )
+
+    def test_repeated_major_still_combines_with_the_other_filters(self):
+        got = self.names("?major=Statistics&major=Computer Science&grad_year=2026")
+        self.assertEqual(got, ["Carol S"])
+
+    def test_blank_majors_are_ignored(self):
+        self.assertEqual(self.names("?major=&major=%20"), self.names())
+
+    def test_too_many_majors_is_a_400(self):
+        query = "?" + "&".join(f"major=m{i}" for i in range(11))
+        self.assertEqual(self.client.get(f"{self.url}{query}").status_code,
+                         status.HTTP_400_BAD_REQUEST)
+
     def test_grad_year_filter(self):
         self.assertEqual(self.names("?grad_year=2026"), ["Carol S"])
 
