@@ -187,6 +187,40 @@ class WhoMayAskTests(ReferralTestCase):
 
                 self.assertEqual(self.ask().status_code, 403)
 
+    def test_a_suspended_or_unverified_sender_gets_403_and_nothing_is_created(self):
+        # A suspended member may still hold a valid token and an accepted connection.
+        for status in (Profile.AccountStatus.SUSPENDED, Profile.AccountStatus.UNVERIFIED):
+            with self.subTest(status=status):
+                Profile.objects.filter(user=self.alice).update(account_status=status)
+
+                response = self.ask()
+
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(ReferralRequest.objects.count(), 0)
+
+    def test_a_sender_without_a_profile_gets_403(self):
+        Profile.objects.filter(user=self.alice).delete()
+
+        self.assertEqual(self.ask().status_code, 403)
+
+    def test_the_sender_check_comes_before_the_body_is_validated(self):
+        Profile.objects.filter(user=self.alice).update(
+            account_status=Profile.AccountStatus.SUSPENDED
+        )
+
+        self.assertEqual(self.ask(role_title="", job_url="javascript:x").status_code, 403)
+
+    def test_a_reactivated_sender_can_ask_again(self):
+        Profile.objects.filter(user=self.alice).update(
+            account_status=Profile.AccountStatus.SUSPENDED
+        )
+        self.assertEqual(self.ask().status_code, 403)
+        Profile.objects.filter(user=self.alice).update(
+            account_status=Profile.AccountStatus.ACTIVE
+        )
+
+        self.assertEqual(self.ask().status_code, 201)
+
     def test_every_refusal_has_the_same_message(self):
         not_connected = self.ask(recipient_id=self.carol.pk).json()["detail"]
         Block.objects.create(blocker=self.bob, blocked=self.alice)
