@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import sentry_sdk
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -68,6 +69,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "api",
     "accounts",
     "companies",
@@ -79,6 +81,9 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    # Below WhiteNoise so static file requests are served before reaching it
+    # and don't flood the request log.
+    "pack_referrals.middleware.RequestLoggingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -145,13 +150,38 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
+    # JWT is how API clients authenticate. SessionAuthentication stays so the
+    # Django admin and the DRF browsable API keep working in development.
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    # Closed by default. Endpoints that must stay public set AllowAny
+    # explicitly: auth signup/verify and the health checks.
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticated",
     ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Applied per view via throttle classes in accounts.throttling.
+    "DEFAULT_THROTTLE_RATES": {
+        # Requesting a code emails a stranger and runs a slow hash, so it is
+        # both an abuse vector and a cheap way to burn server CPU.
+        "code_request": os.getenv("THROTTLE_CODE_REQUEST", "5/15min"),
+        # Submitting a code. The per-code attempt cap is the real defence
+        # against guessing; this bounds flooding from one source.
+        "verify_attempt": os.getenv("THROTTLE_VERIFY_ATTEMPT", "10/15min"),
+        # Sending a chat message, per signed-in user (chat.throttling).
+        "message_send": os.getenv("THROTTLE_MESSAGE_SEND", "30/min"),
+    },
+    # How many proxies sit in front of the app. Throttles use it to find the
+    # client's IP in X-Forwarded-For. Unset, DRF keys on the whole header,
+    # which the client controls, so a new value each request skips the limit.
+    "NUM_PROXIES": int(os.getenv("NUM_PROXIES")) if os.getenv("NUM_PROXIES") else None,
 }
+
+# A code is destroyed after this many wrong guesses, so a six-digit code
+# cannot be brute-forced regardless of how many addresses an attacker has.
+VERIFICATION_MAX_ATTEMPTS = int(os.getenv("VERIFICATION_MAX_ATTEMPTS") or 5)
 
 # --- Authentication (BE1) -------------------------------------------------
 # Signup is restricted to this domain; see accounts/validators.py.
@@ -173,3 +203,52 @@ SIMPLE_JWT = {
 # EMAIL_BACKEND is set above from EMAIL_HOST: SMTP when configured, console
 # otherwise, so verification codes print to the runserver output in development.
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@packreferrals.ncsu.edu")
+
+# --- Logging --------------------------------------------------------------
+# Level for the request log (pack_referrals.middleware). WARNING hides the
+# per-request INFO lines, e.g. in CI.
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").strip().upper()
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "class": "pythonjsonlogger.json.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+            "stream": "ext://sys.stdout",
+        },
+    },
+    "loggers": {
+        "pack_referrals.middleware": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
+
+# --- Error tracking (Sentry) ----------------------------------------------
+# Only enabled when SENTRY_DSN is set, so CI and local runs without it don't
+# report to Sentry (some tests raise exceptions on purpose).
+SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
+
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        release=COMMIT_HASH,
+    )
+
+# OpenAPI schema and Swagger UI (served at /api/schema/ and /api/docs/).
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Pack Referrals API",
+    "DESCRIPTION": "Verified NC State referral network. Send `Authorization: Bearer <token>`.",
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}

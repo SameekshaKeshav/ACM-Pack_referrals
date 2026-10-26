@@ -6,15 +6,22 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.db import IntegrityError, transaction
-from rest_framework import status, viewsets
+from rest_framework import generics, status, viewsets
+from rest_framework.exceptions import NotFound
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import PastRole, Profile, VerificationCode
+from .directory import filter_directory
+from .pagination import DirectoryPagination
+from .throttling import CodeRequestThrottle, VerifyAttemptThrottle
 from .serializers import (
     PastRoleSerializer,
-    ProfileSerializer,
+    LoginSerializer,
+    DirectoryEntrySerializer,
+    MeSerializer,
     SignupSerializer,
     VerifySerializer,
 )
@@ -44,22 +51,70 @@ def _send_code(email, code):
 
 
 class AppHealthView(APIView):
+    permission_classes = [AllowAny]  # monitoring polls this
+
     def get(self, request):
         return Response({"app": "accounts", "status": "ok"})
 
 
-class ProfileViewSet(viewsets.ModelViewSet):
-    queryset = Profile.objects.all()
-    serializer_class = ProfileSerializer
-
-
 class PastRoleViewSet(viewsets.ModelViewSet):
-    queryset = PastRole.objects.all()
+    """Roles are readable by any verified member - that is what the company
+    directory is - but only the owner may add, change or remove their own.
+    """
+
     serializer_class = PastRoleSerializer
+
+    def get_queryset(self):
+        queryset = PastRole.objects.select_related("company", "user")
+        if self.action in ("update", "partial_update", "destroy"):
+            return queryset.filter(user=self.request.user)
+        return queryset
+
+    def perform_create(self, serializer):
+        # Identity comes from the token, never from the request body.
+        serializer.save(user=self.request.user)
+
+
+class MeView(generics.RetrieveUpdateAPIView):
+    """GET/PATCH /api/accounts/me/ - the caller's own profile.
+
+    Scoped to request.user, so there is no id to tamper with.
+    """
+
+    serializer_class = MeSerializer
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get_object(self):
+        profile = (
+            Profile.objects.select_related("user", "current_company")
+            .filter(user=self.request.user)
+            .first()
+        )
+        if profile is None:
+            raise NotFound("This account has no profile.")
+        return profile
+
+
+class UserDirectoryView(generics.ListAPIView):
+    """Browse verified members, optionally filtered.
+
+    GET /api/accounts/users/?major=X&grad_year=Y&company_id=Z&limit=20&offset=0
+
+    All three filters are optional and combine with AND.
+    """
+
+    serializer_class = DirectoryEntrySerializer
+    pagination_class = DirectoryPagination
+
+    def get_queryset(self):
+        return filter_directory(self.request.query_params)
 
 
 class SignupView(APIView):
     """Create an unverified account and email it a one-time code."""
+
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [CodeRequestThrottle]
 
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
@@ -104,8 +159,35 @@ class SignupView(APIView):
         )
 
 
+class LoginView(APIView):
+    """Send a returning user a fresh code. There is no password to check."""
+
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [CodeRequestThrottle]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+
+        user = User.objects.filter(email__iexact=email).first()
+        if user is not None:
+            _, code = VerificationCode.issue(user)
+            _send_code(email, code)
+
+        # Identical response either way, so this endpoint cannot be used to
+        # discover which addresses are registered.
+        return Response(
+            {"detail": "If that account exists, a verification code has been sent."},
+            status=status.HTTP_200_OK,
+        )
+
+
 class VerifyView(APIView):
     """Exchange a valid code for JWT credentials and activate the account."""
+
+    permission_classes = [AllowAny]  # the caller has no token yet - that is the point
+    throttle_classes = [VerifyAttemptThrottle]
 
     def post(self, request):
         serializer = VerifySerializer(data=request.data)
@@ -125,7 +207,10 @@ class VerifyView(APIView):
             # time does not reveal whether the address is registered.
             check_password(code, _decoy_hash())
             return invalid
-        if verification.is_expired() or not verification.matches(code):
+        if verification.is_expired():
+            return invalid
+        if not verification.matches(code):
+            verification.register_failed_attempt()
             return invalid
 
         with transaction.atomic():

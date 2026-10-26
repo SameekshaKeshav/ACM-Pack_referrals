@@ -1,15 +1,12 @@
 from django.contrib import admin
 
-from .models import Company
+from .models import Company, InterviewExperience
 
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
     list_display = ("name", "industry_tag")
     search_fields = ("name",)
-from django.contrib import admin
-
-from .models import Company, InterviewExperience
 
 
 @admin.register(InterviewExperience)

@@ -228,3 +228,6 @@ docs/recent-updates.md
 
 # Editor / local tooling config
 .claude/
+
+# Local demo aid, not part of the project
+demo_auth.sh

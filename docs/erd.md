@@ -20,7 +20,6 @@ erDiagram
     CONVERSATION ||--o{ CONVERSATIONPARTICIPANT : "has"
     USER ||--o{ MESSAGE : "wrote"
     USER ||--o{ REPORT : "filed"
-    USER ||--o{ REPORT : "reported in"
     USER ||--o{ VERIFICATIONCODE : "issued"
 
     COMPANY ||--o{ PASTROLE : "employed"
@@ -28,7 +27,6 @@ erDiagram
 
     CONNECTIONREQUEST ||--o| CONVERSATION : "opens on accept"
     CONVERSATION ||--o{ MESSAGE : "contains"
-    MESSAGE ||--o{ REPORT : "reported in"
 
     USER {
         int id PK
@@ -108,10 +106,10 @@ erDiagram
     REPORT {
         int id PK
         int reporter_id FK
-        int reported_user_id FK "nullable"
-        int reported_message_id FK "nullable"
-        text reason
-        string status "open | reviewed | actioned"
+        string target_type "user | message"
+        int target_id "a user or message id, checked in the serializer"
+        string reason "fixed set of choices"
+        string details "max 1000"
         datetime created_at
     }
 ```
@@ -137,6 +135,11 @@ automatically from `name` on save — lowercased, whitespace collapsed, trailing
 `inc`/`llc`/`ltd`/`corp` removed. This is what "who works at Google" matches on,
 so that `Google`, `google ` and `Google Inc.` resolve to one company rather than
 three.
+
+**`COMPANY.name_normalized` is how a company is looked up, not `name`.**
+Adding a role resolves the typed name through `Company.find_or_create`, which
+matches on the normalized key, so a company is created only when no existing
+one matches. The first spelling seen becomes the display name.
 
 **Company affiliation is derived, not stored.** There is no explicit
 `CompanyAffiliation` table — "who from NC State works here" is a query across
