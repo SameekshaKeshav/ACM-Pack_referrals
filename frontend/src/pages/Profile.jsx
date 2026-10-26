@@ -9,9 +9,13 @@ const Profile = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getMyProfile()
+    const controller = new AbortController();
+    getMyProfile({ signal: controller.signal })
       .then(setProfile)
-      .catch(() => setError('Could not load your profile.'));
+      .catch((err) => {
+        if (err.name !== 'AbortError') setError(err.message || 'Could not load your profile.');
+      });
+    return () => controller.abort();
   }, []);
 
   const handleSave = async (updatedProfile) => {
@@ -25,12 +29,12 @@ const Profile = () => {
     }
   };
 
-  if (error && !profile) return <p>{error}</p>;
+  if (error && !profile) return <p role="alert">{error}</p>;
   if (!profile) return <p>Loading...</p>;
 
   return (
     <>
-      {error && <p>{error}</p>}
+      {error && <p role="alert">{error}</p>}
       {isEditing ? (
         <ProfileEditForm
           profile={profile}

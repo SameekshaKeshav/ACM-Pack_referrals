@@ -4,7 +4,7 @@ const ProfileView = ({ profile, onEdit }) => {
   return (
     <div>
 
-      <h1>{profile.name}</h1>
+      <h1>{profile.first_name} {profile.last_name}</h1>
       <p>{profile.major} - Class {profile.grad_year}</p>
       <p>Open to connect: {profile.open_to_connect ? 'On' : 'Off'}</p>
       <button onClick={onEdit}>Edit Profile</button>
