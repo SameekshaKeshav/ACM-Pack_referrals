@@ -1,3 +1,6 @@
+import tempfile
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import path as url_path
@@ -137,3 +140,55 @@ class RequestLoggingMiddlewareTests(TestCase):
         record = cm.records[0]
         self.assertEqual(record.path, "/raise-exception/")
         self.assertEqual(record.status_code, 500)
+
+
+class FrontendIndexTests(TestCase):
+    """The catch-all URL serves the React app's index.html for non-API paths."""
+
+    INDEX_HTML = "<!doctype html><title>test app</title>"
+
+    def setUp(self):
+        # A fake build, so these tests don't depend on running npm run build.
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.dist = Path(tmp.name)
+        (self.dist / "index.html").write_text(self.INDEX_HTML)
+        settings_override = override_settings(FRONTEND_DIST=self.dist)
+        settings_override.enable()
+        self.addCleanup(settings_override.disable)
+
+    def test_app_routes_return_index_html(self):
+        for path in ("/", "/chat/5", "/profile"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response["Content-Type"], "text/html")
+                self.assertEqual(response["Cache-Control"], "no-cache")
+                self.assertEqual(response.getvalue().decode(), self.INDEX_HTML)
+
+    def test_unknown_api_path_is_still_404(self):
+        response = self.client.get("/api/nope/")
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn(b"test app", response.content)
+
+    def test_missing_files_are_404_not_index_html(self):
+        for path in ("/favicon.ico", "/robots.txt", "/chat/old-bundle.js", "/.env"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 404)
+                self.assertNotIn(b"test app", response.content)
+
+    def test_admin_without_slash_still_redirects(self):
+        response = self.client.get("/admin")
+        self.assertRedirects(
+            response, "/admin/", status_code=301, fetch_redirect_response=False
+        )
+
+    def test_only_get_and_head_are_allowed(self):
+        self.assertEqual(self.client.post("/chat").status_code, 405)
+
+    def test_missing_build_returns_503(self):
+        with override_settings(FRONTEND_DIST=self.dist / "missing"):
+            response = self.client.get("/chat")
+        self.assertEqual(response.status_code, 503)
+        self.assertIn(b"npm run build", response.content)

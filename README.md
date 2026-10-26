@@ -28,6 +28,8 @@ python manage.py migrate
 
 Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Global health: `/api/health/` (includes `commit_hash`, which is `null` locally). Django admin: `/admin/`.
 
+Django also serves the React app at every other path (see [Deployment](#deployment-railway)). Until you build it, those paths return `503 Frontend not built`, which is expected. The API and admin work either way. To build it, see the [frontend README](frontend/README.md#production-build-served-by-django).
+
 See [docs/architecture.md](docs/architecture.md) for URL layout and ownership.
 
 ## Chat & Connect preview (FE2)
@@ -54,6 +56,7 @@ Open `http://localhost:5173/chat-mock` for three incoming requests and a five-me
 | `NUM_PROXIES` | Yes (`2`) | unset | How many proxies sit in front of the app. Throttles use it to read the real client IP from `X-Forwarded-For`. Staging has two (a CDN node, then Railway's proxy), measured on 2026-10-24 (#28). Re-measure if the hosting setup changes. Unset, DRF uses the whole header, which a client can fill with fake values unless a proxy strips them, so the auth throttles could be bypassed. |
 | `SENTRY_DSN` | Yes | unset (Sentry disabled) | Where errors are sent (see [Error tracking](#error-tracking)). Leave it unset locally and in CI; some tests raise exceptions on purpose. |
 | `SENTRY_ENVIRONMENT` | Yes (`staging`) | unset | Environment name on Sentry events. If it's missing, Sentry labels them `production`. |
+| `RAILPACK_PACKAGES` | Yes (`node@24`) | not used | Build-time only: extra tools Railway's builder installs. Railpack detects a Python app and doesn't install Node unless asked, so without this the frontend build fails with `npm: not found` (see [Deployment](#deployment-railway)). |
 
 ## Running tests and lint
 
@@ -67,21 +70,27 @@ Run both before opening a PR. CI runs the same commands.
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) runs two checks on every pull request and on every push to `main`:
+GitHub Actions runs these checks on every pull request:
 
-- **lint**: `flake8`
-- **test**: `python manage.py test`
+- **lint** (`.github/workflows/ci.yml`): `flake8`
+- **test** (`.github/workflows/ci.yml`): `python manage.py test`
+- **Frontend** (`.github/workflows/frontend.yml`): `npm run build`, the DOM tests and the Playwright tests, on Node 24. It runs on every PR, not only frontend ones, because backend changes (URLs, static settings) can break the deployed app too.
 
-Both must be green before merging. Results appear in the PR's **Checks** tab.
+On pushes to `main`, lint and test always run; Frontend runs only when `frontend/` or its workflow changed. All checks must be green before merging. Results appear in the PR's **Checks** tab.
 
 ## Deployment (Railway)
 
-Staging is hosted on [Railway](https://railway.app) and redeploys automatically when `main` is updated.
+Staging is hosted on [Railway](https://railway.app) and redeploys automatically when `main` is updated. One service runs both the API and the React app.
 
+- **Builder:** Railpack. It installs Python and runs `pip install -r requirements.txt`, then runs the build command. `RAILPACK_PACKAGES=node@24` adds Node (see the table above).
+- **Build command:** `cd frontend && npm ci && npm run build`, which writes the app to `frontend/dist/`
 - **Start command:** `python manage.py collectstatic --noinput && python manage.py migrate && gunicorn pack_referrals.wsgi`
 - **Static files:** `collectstatic` copies them into `staticfiles/`, and [WhiteNoise](https://whitenoise.readthedocs.io/) serves them, since Django doesn't serve static files itself when `DEBUG` is off. Without this, the Django admin is unstyled.
+- **React app:** `STATICFILES_DIRS` includes `frontend/dist`, so `collectstatic` also picks up the built app, and WhiteNoise serves its files under `/static/assets/` (Vite's `base` is `/static/` for builds). Every other path except `/api/`, `/admin/` and `/static/` returns the app's `index.html` (`pack_referrals/views.py`, the last URL in `pack_referrals/urls.py`), and React Router shows the right page. Because the app and API share an origin, there's no CORS setup and no API URL to configure. If the build is missing, app pages return `503 Frontend not built` while the API keeps working; check the build logs for the Vite step.
 - **Environment variables:** see the table above
 - **Volume:** mounted at `/data`, which holds the SQLite database (see below)
+
+The builder, build command and start command are set in Railway's dashboard (service **Settings**), not in this repo, so changes there aren't reviewed. Check them first if a deploy behaves unexpectedly: on 2026-10-25 a changed start command stopped migrations from running, and signup returned 500 until it was restored.
 
 ## Logging
 
