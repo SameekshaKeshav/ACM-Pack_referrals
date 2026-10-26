@@ -20,20 +20,24 @@ const Company = () => {
 
   const [company, setCompany] = useState(null);
   const [error, setError] = useState('');
-  const [notFound, setNotFound] = useState(companyId === null);
+  const [missing, setMissing] = useState(false);
+  // A malformed id is "not found" at once; a well-formed one waits for the API's answer.
+  const notFound = companyId === null || missing;
   const tabRefs = useRef({});
 
   useEffect(() => {
-    if (companyId === null) return undefined;
-    const controller = new AbortController();
+    // Runs on every id change, including to an invalid one, so the previous
+    // company is never left on screen when the route changes without a remount.
     setCompany(null);
     setError('');
-    setNotFound(false);
+    setMissing(false);
+    if (companyId === null) return undefined;
+    const controller = new AbortController();
     getCompany(companyId, { signal: controller.signal })
       .then((row) => { if (!controller.signal.aborted) setCompany(row); })
       .catch((failure) => {
         if (failure.name === 'AbortError' || controller.signal.aborted) return;
-        if (failure.status === 404) setNotFound(true);
+        if (failure.status === 404) setMissing(true);
         else setError(failure.message || 'Could not load this company. Please try again.');
       });
     return () => controller.abort();

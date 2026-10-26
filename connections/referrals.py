@@ -56,9 +56,18 @@ def company_ids_on_profile(user) -> set[int]:
 def check_may_ask(sender, recipient) -> None:
     """Raise ``ReferralNotAllowedError`` unless ``sender`` may ask ``recipient``.
 
-    One message for every refusal, so a refusal does not reveal whether the other
-    person blocked you or has been suspended.
+    The sender must have an active account: a suspended member whose token is
+    still valid must not be able to keep sending asks. That refusal is about the
+    caller's own account, so it has its own message.
+
+    Every refusal about the other person shares one message, so it does not reveal
+    whether they blocked you or have been suspended.
     """
+    sender_profile = getattr(sender, "profile", None)
+    if sender_profile is None or sender_profile.account_status != Profile.AccountStatus.ACTIVE:
+        raise ReferralNotAllowedError(
+            "Your account must be active to ask for a referral."
+        )
     refusal = ReferralNotAllowedError(
         "You can only ask someone you are connected to for a referral."
     )

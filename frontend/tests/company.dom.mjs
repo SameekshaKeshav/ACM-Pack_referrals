@@ -12,7 +12,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { createElement: h } = await import('react');
 const { render, screen, cleanup, waitFor, within } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
-const { MemoryRouter, Routes, Route } = await import('react-router-dom');
+const { MemoryRouter, Routes, Route, Link } = await import('react-router-dom');
 const vite = await createServer({ server: { middlewareMode: true, hmr: false } });
 const { default: Directory } = await vite.ssrLoadModule('/src/pages/Directory.jsx');
 const { default: Company } = await vite.ssrLoadModule('/src/pages/Company.jsx');
@@ -158,6 +158,31 @@ test('an unknown or malformed company id shows a not-found message', async () =>
   cleanup();
   app('/company/abc');
   await screen.findByText('That company could not be found.');
+});
+
+test('moving to an invalid or unknown id clears the company that was showing', async () => {
+  fakeApi();
+  render(h(MemoryRouter, { initialEntries: ['/company/2'] },
+    h(Link, { to: '/company/abc' }, 'go malformed'),
+    h(Link, { to: '/company/999' }, 'go unknown'),
+    h(Link, { to: '/company/3' }, 'go goldman'),
+    h(Routes, null, h(Route, { path: '/company/:id', element: h(Company) }))));
+  assert.equal((await screen.findByRole('heading', { level: 1 })).textContent, 'Google');
+  await screen.findByText('Gina Gomez');
+
+  // Same route element, new param: the component is not remounted.
+  await user().click(screen.getByRole('link', { name: 'go malformed' }));
+  await screen.findByText('That company could not be found.');
+  assert.equal(screen.queryByRole('heading', { name: 'Google' }), null);
+  assert.equal(screen.queryByText('Gina Gomez'), null);
+
+  await user().click(screen.getByRole('link', { name: 'go goldman' }));
+  assert.equal((await screen.findByRole('heading', { level: 1, name: 'Goldman Sachs' })).textContent, 'Goldman Sachs');
+  assert.equal(screen.queryByText('That company could not be found.'), null);
+
+  await user().click(screen.getByRole('link', { name: 'go unknown' }));
+  await screen.findByText('That company could not be found.');
+  assert.equal(screen.queryByRole('heading', { name: 'Goldman Sachs' }), null);
 });
 
 test('a company with no members says so', async () => {
