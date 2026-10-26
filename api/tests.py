@@ -171,6 +171,13 @@ class FrontendIndexTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertNotIn(b"test app", response.content)
 
+    def test_missing_files_are_404_not_index_html(self):
+        for path in ("/favicon.ico", "/robots.txt", "/chat/old-bundle.js", "/.env"):
+            with self.subTest(path=path):
+                response = self.client.get(path)
+                self.assertEqual(response.status_code, 404)
+                self.assertNotIn(b"test app", response.content)
+
     def test_admin_without_slash_still_redirects(self):
         response = self.client.get("/admin")
         self.assertRedirects(

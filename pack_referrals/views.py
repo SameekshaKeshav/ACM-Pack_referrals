@@ -1,11 +1,14 @@
 from django.conf import settings
-from django.http import FileResponse, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.views.decorators.http import require_safe
 
 
 @require_safe
 def frontend_index(request):
     """Serve the React app's index.html; React Router handles the path in the browser."""
+    # Paths that look like files (/favicon.ico, /robots.txt) are 404s, not app routes.
+    if "." in request.path.rstrip("/").rsplit("/", 1)[-1]:
+        raise Http404
     index = settings.FRONTEND_DIST / "index.html"
     if not index.exists():
         return HttpResponse(
