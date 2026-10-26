@@ -15,9 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.permissions import AllowAny
+
+from .views import frontend_index
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -39,4 +41,6 @@ urlpatterns = [
         SpectacularSwaggerView.as_view(url_name='schema', permission_classes=[AllowAny]),
         name='swagger-ui',
     ),
+    # Everything else is a React route. Must stay last.
+    re_path(r'^(?!(?:api|admin|static)(?:/|$)).*$', frontend_index, name='frontend'),
 ]

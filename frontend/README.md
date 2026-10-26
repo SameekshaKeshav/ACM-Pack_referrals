@@ -25,6 +25,26 @@ clears the session. Chat, profile, directory, company and `/chat-mock` require l
 Vite forwards `/api` to Django. To use a different development target, copy
 `.env.example` to `.env.local`, set `VITE_API_PROXY_TARGET`, and restart Vite.
 
+## Production build (served by Django)
+
+Staging doesn't run Vite: Django serves the built app from the same origin as the
+API (see Deployment in the root README). To try that setup locally:
+
+```bash
+cd frontend
+npm run build                      # writes dist/
+cd ..
+python manage.py runserver
+```
+
+Open **http://127.0.0.1:8000/**. With `DEBUG=True`, `runserver` serves `dist/`
+directly, so `collectstatic` isn't needed. Rebuild after frontend changes;
+there's no hot reload in this mode.
+
+Builds link their files under `/static/` (`base` in `vite.config.js`), where
+WhiteNoise serves them. `npm run dev` and `npm run preview` are unaffected and
+still open at `/`.
+
 ## Live chat
 
 - `/chat`: authenticated conversation sidebar.
