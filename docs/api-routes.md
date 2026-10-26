@@ -33,6 +33,9 @@ One place that lists every route the backend serves, so both frontends can code 
 | `GET /api/connections/<id>/` | no | One request; only its sender or recipient (else 404) | Scoped |
 | `PATCH /api/connections/<id>/accept/` | no | Recipient accepts; creates the conversation; returns `{id, status, conversation_id}`; 409 if already resolved | Scoped |
 | `PATCH /api/connections/<id>/decline/` | no | Recipient declines; returns `{id, status, conversation_id: null}`; 409 if already resolved | Scoped |
+| `POST /api/connections/referrals/` | no | Ask a connection for a referral (201, 400, 403, 404, 409). Body: `recipient_id`, `role_title`, `message_text` (max 500), optional `company_id` (on the recipient's profile), `job_url`, `resume_url` (http/https only). 403 unless an accepted connection exists and neither side blocked the other. 409 if you already have a **pending** ask for the same role (compared ignoring case) at the same company, to the same person. Until accept/decline ships (Week 8) nothing leaves pending, so for now that means one ask per role; clients should not offer a retry on a 409 | Scoped |
+| `GET /api/connections/referrals/?type=incoming\|outgoing[&status=pending\|accepted\|declined]` | no | The caller's referral asks, newest first; blocked users' asks are hidden. Paged like the people directory: `?limit=` (default 20, max 100) and `?offset=`; the body is `{count, next, previous, results}` | Scoped |
+| `GET /api/connections/referrals/<id>/` | no | One ask; only its sender or recipient (else 404) | Scoped |
 | `GET, POST /api/connections/reports/`, `GET, PUT, PATCH, DELETE /api/connections/reports/<id>/` | no | Reports | **Open** |
 
 ## Chat: `chat/` (PM)
@@ -59,11 +62,10 @@ Polling: ask for `?after=<last message id>` about every 3 seconds. If a poll ret
 
 ## Not built yet (planned in the tracker)
 
-- `GET, PATCH /api/accounts/me/`, `GET /api/accounts/profiles/<id>/` with owner-only edits (BE1).
-- `GET /api/companies/?search=X` and `GET /api/companies/<id>/` with affiliated people (BE1).
 - Block and unblock: `POST, DELETE /api/connections/users/<id>/block/` and the block check in `POST /api/connections/` (BE2). A sample `Block` model exists so chat can honour blocks; BE2 owns and may replace it (chat only uses `connections.blocks.blocked_user_ids()`).
 - A reports route that takes the reporter from the token and is staff-only to read (BE2).
-- `GET /api/accounts/profiles/?major=&grad_year=&company_id=` directory filters (BE1).
+- Referral accept and decline: `PATCH /api/connections/referrals/<id>/accept|decline/` (PM, Week 8), and the email to the recipient when an ask is created (PM, Week 8, needs real email on staging).
+- Anonymous interview experiences on company pages: `GET, POST /api/companies/<id>/experiences/` (BE2, Week 7).
 
 ## Adding a route
 

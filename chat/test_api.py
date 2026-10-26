@@ -181,6 +181,15 @@ class ConversationMessagesTests(ChatApiTestCase):
 
         self.assertEqual([m["id"] for m in body], [m.pk for m in sent[2:]])
 
+    def test_history_returns_markup_and_ampersands_exactly_as_stored(self):
+        texts = ["<script>alert(1)</script>", "Tom & Jerry", "a &amp; b <3"]
+        for index, text in enumerate(texts):
+            self.send(self.alice, text, offset_seconds=index - 10)
+
+        body = client_for(self.bob).get(self.messages_url()).json()
+
+        self.assertEqual([m["body_text"] for m in body], texts)
+
     def test_poll_returns_only_newer_messages_ascending(self):
         sent = [self.send(self.alice, f"m{i}", offset_seconds=i - 100) for i in range(4)]
 
