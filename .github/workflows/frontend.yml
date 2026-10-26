@@ -1,8 +1,9 @@
 name: Frontend
 
 on:
+  # Every PR, not only frontend ones: backend changes (URLs, static settings)
+  # can break the deployed app too.
   pull_request:
-    paths: ["frontend/**", ".github/workflows/frontend.yml"]
   push:
     branches: [main]
     paths: ["frontend/**", ".github/workflows/frontend.yml"]
