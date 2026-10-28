@@ -39,7 +39,7 @@ ALLOWED_HOSTS = [
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 # Email. Unset EMAIL_BACKEND prints mail to the console, for local development.
-# Staging sets it to Anymail's Resend backend, which sends over Resend's HTTPS
+# Staging sets it to Anymail's Brevo backend, which sends over Brevo's HTTPS
 # API, because Railway's plan blocks outbound SMTP.
 EMAIL_BACKEND = (
     os.getenv("EMAIL_BACKEND", "").strip()
@@ -47,18 +47,20 @@ EMAIL_BACKEND = (
 )
 
 ANYMAIL = {
-    "RESEND_API_KEY": os.getenv("RESEND_API_KEY", "").strip(),
+    "BREVO_API_KEY": os.getenv("BREVO_API_KEY", "").strip(),
     # (connect, read) seconds. Anymail's default is 30, the same as gunicorn's
     # worker timeout, so a hung provider could get the worker killed mid-request.
     "REQUESTS_TIMEOUT": (3.05, 10),
 }
 
+# Anymail only reads the key when the first email is sent, so without this a
+# missing key would surface as a failed signup rather than a failed deploy.
 if (
-    EMAIL_BACKEND == "anymail.backends.resend.EmailBackend"
-    and not ANYMAIL["RESEND_API_KEY"]
+    EMAIL_BACKEND == "anymail.backends.brevo.EmailBackend"
+    and not ANYMAIL["BREVO_API_KEY"]
 ):
     raise RuntimeError(
-        "EMAIL_BACKEND is the Resend backend but RESEND_API_KEY is not set."
+        "EMAIL_BACKEND is the Brevo backend but BREVO_API_KEY is not set."
     )
 
 CSRF_TRUSTED_ORIGINS = [
@@ -82,6 +84,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "anymail",
     "api",
     "accounts",
     "companies",
@@ -216,8 +219,8 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=REFRESH_TOKEN_LIFETIME_DAYS),
 }
 
-# Must be on a domain verified with the email provider, or the provider rejects
-# the send. Staging sets it on Railway once the domain is verified.
+# Must be a sender verified in Brevo, or Brevo rejects the send. Staging sets
+# it on Railway to packreferrals.acm@gmail.com, the account that owns Brevo.
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@packreferrals.ncsu.edu")
 
 # --- Logging --------------------------------------------------------------

@@ -113,7 +113,7 @@ Use Node 24, at least 24.15. `.nvmrc` selects 24; the old 22.13 minimum was too 
 1. Follow the root README: set a local SECRET_KEY, install Python requirements,
    migrate and start Django at `127.0.0.1:8000`.
 2. With no EMAIL_BACKEND, codes appear in Django's development console. Actual
-   inbox delivery requires the Resend settings in the root README. Use disposable
+   inbox delivery requires the Brevo settings in the root README. Use disposable
    test accounts.
 3. In frontend run `npm ci`, then `npm run dev`.
 4. Open `http://localhost:5173/signup`, submit an allowed test email, enter the
