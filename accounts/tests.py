@@ -2,6 +2,7 @@ import re
 from datetime import timedelta
 from unittest import mock
 
+from anymail.exceptions import AnymailAPIError
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -15,6 +16,7 @@ from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken
 
 from .models import Profile, VerificationCode
+from .views import SEND_FAILED_DETAIL
 
 User = get_user_model()
 
@@ -245,6 +247,66 @@ class LoginTests(APITestCase):
             self.verify_url, {"email": EMAIL, "code": first}, format="json"
         )
         self.assertEqual(stale.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class SendFailureTests(APITestCase):
+    """The email provider being down (or out of quota) must not cause a 500,
+    and must not let login reveal which addresses are registered."""
+
+    def setUp(self):
+        cache.clear()  # throttle history is process-wide; isolate each test
+        self.signup_url = reverse("accounts:auth-signup")
+        self.login_url = reverse("accounts:auth-login")
+        self.verify_url = reverse("accounts:auth-verify")
+
+    def _post(self, url, email=EMAIL):
+        return self.client.post(url, {"email": email}, format="json")
+
+    def _failing_send(self):
+        return mock.patch(
+            "accounts.views.send_mail", side_effect=AnymailAPIError("Brevo unreachable")
+        )
+
+    def test_signup_returns_503_and_logs_when_the_send_fails(self):
+        with self._failing_send(), self.assertLogs("accounts.views", "ERROR") as logs:
+            response = self._post(self.signup_url)
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(response.data["detail"], SEND_FAILED_DETAIL)
+        self.assertIn("Brevo unreachable", logs.output[0])
+        # The account exists but is unverified, so nothing is lost.
+        self.assertFalse(User.objects.get(email=EMAIL).is_active)
+
+    def test_signup_can_be_retried_after_a_failed_send(self):
+        with self._failing_send(), self.assertLogs("accounts.views", "ERROR"):
+            self._post(self.signup_url)
+
+        retry = self._post(self.signup_url)
+        self.assertEqual(retry.status_code, status.HTTP_201_CREATED)
+        code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+        verify = self.client.post(
+            self.verify_url, {"email": EMAIL, "code": code}, format="json"
+        )
+        self.assertEqual(verify.status_code, status.HTTP_200_OK)
+
+    def test_signup_reissue_for_an_unverified_account_also_returns_503(self):
+        self._post(self.signup_url)  # unverified account, first send works
+
+        with self._failing_send(), self.assertLogs("accounts.views", "ERROR"):
+            response = self._post(self.signup_url)
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    def test_login_failure_looks_the_same_as_an_unknown_account(self):
+        User.objects.create_user(username=EMAIL, email=EMAIL)
+        unknown = self._post(self.login_url, "nobody@ncsu.edu")
+
+        with self._failing_send(), self.assertLogs("accounts.views", "ERROR") as logs:
+            known = self._post(self.login_url)
+
+        self.assertEqual(known.status_code, status.HTTP_200_OK)
+        self.assertEqual(known.status_code, unknown.status_code)
+        self.assertEqual(known.data, unknown.data)
+        self.assertIn("Brevo unreachable", logs.output[0])
 
 
 class TokenRefreshTests(APITestCase):
