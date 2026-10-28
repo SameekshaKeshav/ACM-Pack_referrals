@@ -3,6 +3,7 @@ Django settings for pack_referrals project.
 """
 
 import os
+import warnings
 from datetime import timedelta
 from pathlib import Path
 
@@ -61,6 +62,14 @@ if (
 ):
     raise RuntimeError(
         "EMAIL_BACKEND is the Brevo backend but BREVO_API_KEY is not set."
+    )
+
+# A warning, not an error: running with DEBUG off locally (e.g. to test error
+# pages) is legitimate. On staging it means codes only reach the logs.
+if not DEBUG and EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
+    warnings.warn(
+        "DEBUG is off but EMAIL_BACKEND is the console backend, so verification "
+        "codes are printed to the logs instead of emailed. Set EMAIL_BACKEND."
     )
 
 CSRF_TRUSTED_ORIGINS = [
@@ -219,9 +228,13 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=REFRESH_TOKEN_LIFETIME_DAYS),
 }
 
-# Must be a sender verified in Brevo, or Brevo rejects the send. Staging sets
-# it on Railway to packreferrals.acm@gmail.com, the account that owns Brevo.
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@packreferrals.ncsu.edu")
+# The address must be a sender verified in Brevo, or Brevo rejects the send.
+# It's the Gmail account that owns the Brevo account; the name is what inboxes
+# show as the sender.
+DEFAULT_FROM_EMAIL = (
+    os.getenv("DEFAULT_FROM_EMAIL", "").strip()
+    or "Pack Referrals <packreferrals.acm@gmail.com>"
+)
 
 # --- Logging --------------------------------------------------------------
 # Level for the request log (pack_referrals.middleware). WARNING hides the
@@ -248,6 +261,12 @@ LOGGING = {
         "pack_referrals.middleware": {
             "handlers": ["console"],
             "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        # Failed verification-code sends (accounts.views) are logged as errors.
+        "accounts": {
+            "handlers": ["console"],
+            "level": "WARNING",
             "propagate": False,
         },
     },

@@ -53,7 +53,7 @@ Open `http://localhost:5173/chat-mock` for three incoming requests and a five-me
 | `FRONTEND_URL` | No | `http://localhost:3000` | Frontend origin for links in emails. |
 | `EMAIL_BACKEND` | Yes (`anymail.backends.brevo.EmailBackend`) | unset (console) | How email is sent. Unset, email (including verification codes) is printed to the console. Staging uses Brevo's HTTPS API because Railway's plan blocks outbound SMTP (#34). |
 | `BREVO_API_KEY` | Yes | unset | Brevo API key (Settings → SMTP & API → API Keys). Required when `EMAIL_BACKEND` is the Brevo backend; the app will not start without it. Never commit it. |
-| `DEFAULT_FROM_EMAIL` | Yes (`packreferrals.acm@gmail.com`) | `no-reply@packreferrals.ncsu.edu` | Sender address for all email. Must be a sender verified in Brevo, or sends are rejected. |
+| `DEFAULT_FROM_EMAIL` | No | `Pack Referrals <packreferrals.acm@gmail.com>` | Sender for all email, as `Name <address>`; the name is what inboxes show. The address must be a sender verified in Brevo, or sends are rejected. |
 | `SQLITE_PATH` | Yes (`/data/db.sqlite3`) | unset (uses `db.sqlite3` in the project root) | Where the SQLite database file lives. On staging it must point at the `/data` volume, or data is wiped on every redeploy (see [Database persistence](#database-persistence-showcase-day)). |
 | `LOG_LEVEL` | No (defaults to `INFO`) | `INFO` | Level for the request log (see [Logging](#logging)). `WARNING` hides the per-request lines; CI sets this to keep test output readable. An invalid value stops the app from starting. |
 | `NUM_PROXIES` | Yes (`2`) | unset | How many proxies sit in front of the app. Throttles use it to read the real client IP from `X-Forwarded-For`. Staging has two (a CDN node, then Railway's proxy), measured on 2026-10-24 (#28). Re-measure if the hosting setup changes. Unset, DRF uses the whole header, which a client can fill with fake values unless a proxy strips them, so the auth throttles could be bypassed. |
@@ -104,6 +104,8 @@ The builder, build command and start command are set in Railway's dashboard (ser
 ```
 
 Static files served by WhiteNoise aren't logged. Under `runserver` you'll also see Django's own plain-text request lines; those don't appear on staging (gunicorn).
+
+If sending a verification code fails (Brevo down, quota used up, bad key), `accounts.views` logs an `ERROR` line, `Sending a verification code failed`, with the traceback, in the same JSON format. Signup then returns `503` with a "try again" message. Login still returns its usual `200`, so it can't be used to find out which addresses are registered. Search the logs for that message if users report codes not arriving.
 
 ## Error tracking
 

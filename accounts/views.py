@@ -1,3 +1,4 @@
+import logging
 import secrets
 from functools import lru_cache
 
@@ -28,7 +29,12 @@ from .serializers import (
 
 User = get_user_model()
 
+logger = logging.getLogger(__name__)
+
 INVALID_CODE_DETAIL = "That code is invalid or has expired. Request a new one."
+SEND_FAILED_DETAIL = (
+    "We couldn't send your verification code right now. Please try again in a few minutes."
+)
 
 
 @lru_cache(maxsize=1)
@@ -39,14 +45,30 @@ def _decoy_hash():
 
 
 def _send_code(email, code):
-    send_mail(
-        subject="Your Pack Referrals verification code",
-        message=(
-            f"Your verification code is {code}.\n\n"
-            f"It expires in {settings.VERIFICATION_CODE_TTL_MINUTES} minutes."
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[email],
+    """Email the code. Returns False instead of raising if the send fails
+    (provider down, daily quota used up, bad key), so callers can answer with
+    a proper response rather than a 500."""
+    try:
+        send_mail(
+            subject="Your Pack Referrals verification code",
+            message=(
+                f"Your verification code is {code}.\n\n"
+                f"It expires in {settings.VERIFICATION_CODE_TTL_MINUTES} minutes."
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+        )
+    except Exception:
+        # Broad on purpose: any failure in the email provider should become a
+        # friendly response. The traceback still reaches the logs and Sentry.
+        logger.exception("Sending a verification code failed")
+        return False
+    return True
+
+
+def _send_failed_response():
+    return Response(
+        {"detail": SEND_FAILED_DETAIL}, status=status.HTTP_503_SERVICE_UNAVAILABLE
     )
 
 
@@ -132,7 +154,8 @@ class SignupView(APIView):
             # covers an expired code, a failed send, and someone else having
             # claimed the address first - only the real inbox sees the code.
             _, code = VerificationCode.issue(existing)
-            _send_code(email, code)
+            if not _send_code(email, code):
+                return _send_failed_response()
             return Response(
                 {"detail": "Verification code sent.", "email": email},
                 status=status.HTTP_201_CREATED,
@@ -152,7 +175,9 @@ class SignupView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
-        _send_code(email, code)
+        if not _send_code(email, code):
+            # The account stays unverified, so signing up again re-issues a code.
+            return _send_failed_response()
         return Response(
             {"detail": "Verification code sent.", "email": email},
             status=status.HTTP_201_CREATED,
@@ -173,6 +198,8 @@ class LoginView(APIView):
         user = User.objects.filter(email__iexact=email).first()
         if user is not None:
             _, code = VerificationCode.issue(user)
+            # A failed send is logged inside _send_code. It must not change the
+            # response, or a 503 here would reveal that the account exists.
             _send_code(email, code)
 
         # Identical response either way, so this endpoint cannot be used to
