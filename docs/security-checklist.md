@@ -12,11 +12,12 @@ Security status of the backend API and the staging deployment.
 | Access | Every endpoint returns only data the caller may see | **FAIL** | #22 |
 | Input | Server-controlled fields can't be set from the request body | **FAIL** | #26 |
 | Input | Every text field has a server-side length limit | **FAIL** | #27 |
-| Email | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **FAIL** | #34 |
+| Email | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **PASS** | #34 |
 | Config | `SECRET_KEY` from the environment, unique and random on staging | **PASS** | — |
 | Config | Email credentials from the environment | **PASS** | — |
 | Config | `DEBUG` off on staging | **PASS** | — |
 | Config | Throttles identify clients correctly behind Railway's proxy | **PASS** | #28 |
+| Config | Error reports (Sentry) leave out request bodies and variable values | **PASS** | — |
 
 ## Access control
 
@@ -65,11 +66,13 @@ The Django admin (`/admin/`) is staff-only and not covered.
 
 **Throttles behind the proxy — PASS (#28).** The signup, login and verify throttles key on the client IP. Staging sits behind two proxies (a CDN77 node and Railway), so `NUM_PROXIES=2` is set on Railway. The proxies also drop client-supplied `X-Forwarded-For` values, so the throttles hold today even without the setting.
 
-## Email on staging — FAIL (#34)
+**Error reports — PASS.** `sentry_sdk.init` sets `include_local_variables=False` and `max_request_body_size="never"`. Sentry sends both by default, even with `send_default_pii` off, and before this change staging events included users' emails and verification codes, from request bodies and stack-frame variables. Sentry still gets the stack trace (file, function, line) and the request URL. Events recorded before the fix should be deleted from Sentry.
+
+## Email on staging — PASS (#34)
 
 Staging is on Railway's free plan, which [blocks outbound SMTP](https://docs.railway.com/networking/outbound-networking), so the app sends mail through **Brevo's HTTPS API** with [`django-anymail`](https://anymail.dev/), on Brevo's free plan. Brevo was picked because it works without a sending domain; Resend and the others need one, and the team doesn't control a domain. The sender is `Pack Referrals <packreferrals.acm@gmail.com>`, the Gmail account that owns the Brevo account and is a verified sender there.
 
-A test send from the Brevo account reached an NC State inbox and a Gmail inbox within seconds, with SPF, DKIM and DMARC passing. This stays FAIL until a real signup on staging delivers a code.
+A test send from the Brevo account reached an NC State inbox and a Gmail inbox within seconds, with SPF, DKIM and DMARC passing. On 2026-10-28, with `main` at `c9477bf` on staging, a login on staging delivered a code to an @ncsu.edu inbox (not spam) within a minute, and the code signed in. That was a login, not a new signup, because the tester's account already existed; both send through the same code path (`_send_code`) with the same sender, subject and body.
 
 If a send fails, signup returns `503` with a "try again" message and login returns its usual `200`, so a failure doesn't reveal which addresses are registered. The failure is logged as an error (see the README's Logging section).
 
@@ -77,4 +80,4 @@ If a send fails, signup returns `503` with a "try again" message and login retur
 
 - `python manage.py check --deploy` warns about `SECURE_HSTS_SECONDS`, `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE`.
 - `/api/accounts/past-roles/` lists roles of unverified and suspended users too, though without saying whose they are.
-- **Registered emails can be discovered (not yet decided).** Signup returns `409` for an address that already has a verified account, so anyone can check whether an NC State address is registered. Login also takes longer for a registered address, because it waits for Brevo to send the code, though its status and message are the same either way. The team hasn't decided whether to fix it. The case for leaving it: it only reveals that a student uses Pack Referrals, code requests are throttled to 5 per 15 minutes per IP, and every check of a real account emails its owner. Closing it would need both fixes together: signup always returns `201` (emailing an existing user "you already have an account" instead of a code), and the email is sent after the response so timing doesn't differ. Sending after the response also means signup can no longer return `503` when the send fails.
+- **Registered emails can be discovered (accepted until after the showcase).** Signup returns `409` for an address that already has a verified account, so anyone can check whether an NC State address is registered. Login also takes longer for a registered address, because it waits for Brevo to send the code, though its status and message are the same either way. Accepted in the review of PR #40, to revisit after the showcase: only @ncsu.edu addresses can be checked, code requests are throttled to 5 per 15 minutes per IP, every check of a real account emails its owner, and the directory already shows membership to logged-in users. Closing it would need both fixes together: signup always returns `201` (emailing an existing user "you already have an account" instead of a code), and the email is sent after the response so timing doesn't differ. Sending after the response also means signup can no longer return `503` when the send fails.
