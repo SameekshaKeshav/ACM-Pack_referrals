@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { listConversations, listMessages, orderMessages, sendMessage } from '../api/chat';
 import { useAuth } from '../auth/AuthProvider';
 import ChatWindow from '../components/ChatWindow';
+import ConnectionRequests from '../components/ConnectionRequests';
 import ConversationListItem from '../components/ConversationListItem';
 
 export function mergeHistory(history, current = []) {
@@ -91,6 +92,7 @@ export default function Chat() {
   return <main className="main-content live-chat-page">
     <div className="section-heading"><div><h1>Messages</h1><p>Continue a conversation with an accepted connection.</p></div><button className="button-secondary" disabled={listLoading} onClick={() => setListVersion((value) => value + 1)}>Refresh conversations</button></div>
     {listError && <p role="alert" className="feedback feedback-error">{listError} <button className="button-secondary" onClick={() => setListVersion((value) => value + 1)}>Retry conversations</button></p>}
+    <ConnectionRequests onAccepted={(id) => { setListVersion((value) => value + 1); navigate(`/chat/${id}`); }} />
     <div className="chat-layout">
       <aside className="conversation-sidebar" aria-label="Conversation list"><div className="sidebar-heading">Messages <span>{conversations.length}</span></div>
         {listLoading && <p role="status" className="empty-state">Loading conversations…</p>}
