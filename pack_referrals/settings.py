@@ -3,6 +3,7 @@ Django settings for pack_referrals project.
 """
 
 import os
+import warnings
 from datetime import timedelta
 from pathlib import Path
 
@@ -38,16 +39,38 @@ ALLOWED_HOSTS = [
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
-EMAIL_HOST = os.getenv("EMAIL_HOST", "").strip()
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT") or 587)  # empty value falls back to 587
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", default=True)
+# Email. Unset EMAIL_BACKEND prints mail to the console, for local development.
+# Staging sets it to Anymail's Brevo backend, which sends over Brevo's HTTPS
+# API, because Railway's plan blocks outbound SMTP.
+EMAIL_BACKEND = (
+    os.getenv("EMAIL_BACKEND", "").strip()
+    or "django.core.mail.backends.console.EmailBackend"
+)
 
-if EMAIL_HOST:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+ANYMAIL = {
+    "BREVO_API_KEY": os.getenv("BREVO_API_KEY", "").strip(),
+    # (connect, read) seconds. Anymail's default is 30, the same as gunicorn's
+    # worker timeout, so a hung provider could get the worker killed mid-request.
+    "REQUESTS_TIMEOUT": (3.05, 10),
+}
+
+# Anymail only reads the key when the first email is sent, so without this a
+# missing key would surface as a failed signup rather than a failed deploy.
+if (
+    EMAIL_BACKEND == "anymail.backends.brevo.EmailBackend"
+    and not ANYMAIL["BREVO_API_KEY"]
+):
+    raise RuntimeError(
+        "EMAIL_BACKEND is the Brevo backend but BREVO_API_KEY is not set."
+    )
+
+# A warning, not an error: running with DEBUG off locally (e.g. to test error
+# pages) is legitimate. On staging it means codes only reach the logs.
+if not DEBUG and EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
+    warnings.warn(
+        "DEBUG is off but EMAIL_BACKEND is the console backend, so verification "
+        "codes are printed to the logs instead of emailed. Set EMAIL_BACKEND."
+    )
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -70,6 +93,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "anymail",
     "api",
     "accounts",
     "companies",
@@ -204,9 +228,13 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=REFRESH_TOKEN_LIFETIME_DAYS),
 }
 
-# EMAIL_BACKEND is set above from EMAIL_HOST: SMTP when configured, console
-# otherwise, so verification codes print to the runserver output in development.
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@packreferrals.ncsu.edu")
+# The address must be a sender verified in Brevo, or Brevo rejects the send.
+# It's the Gmail account that owns the Brevo account; the name is what inboxes
+# show as the sender.
+DEFAULT_FROM_EMAIL = (
+    os.getenv("DEFAULT_FROM_EMAIL", "").strip()
+    or "Pack Referrals <packreferrals.acm@gmail.com>"
+)
 
 # --- Logging --------------------------------------------------------------
 # Level for the request log (pack_referrals.middleware). WARNING hides the
@@ -233,6 +261,12 @@ LOGGING = {
         "pack_referrals.middleware": {
             "handlers": ["console"],
             "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        # Failed verification-code sends (accounts.views) are logged as errors.
+        "accounts": {
+            "handlers": ["console"],
+            "level": "WARNING",
             "propagate": False,
         },
     },

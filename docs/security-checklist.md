@@ -59,7 +59,7 @@ The Django admin (`/admin/`) is staff-only and not covered.
 
 **`SECRET_KEY` — PASS.** Read from the environment; settings refuse to start without it. The staging key was generated randomly on Railway and matches no key in the repo. Early commits (`31ffe48`, `4a26978`) contain development keys, which are public and must never be used.
 
-**Email credentials — PASS.** All `EMAIL_*` settings are read from the environment. None are in the code or git history.
+**Email credentials — PASS.** `EMAIL_BACKEND` and `BREVO_API_KEY` are read from the environment, and the app refuses to start if the Brevo backend is selected without a key. The key is set only on Railway and isn't in the code or git history.
 
 **`DEBUG` — PASS.** Defaults to `False`, and staging serves Django's plain "Not Found" page. Nothing in the code stops it from being turned on via Railway's variables.
 
@@ -67,11 +67,14 @@ The Django admin (`/admin/`) is staff-only and not covered.
 
 ## Email on staging — FAIL (#34)
 
-A signup on staging doesn't deliver a code yet. Staging is on Railway's free plan, which [blocks outbound SMTP](https://docs.railway.com/networking/outbound-networking).
+Staging is on Railway's free plan, which [blocks outbound SMTP](https://docs.railway.com/networking/outbound-networking), so the app sends mail through **Brevo's HTTPS API** with [`django-anymail`](https://anymail.dev/), on Brevo's free plan. Brevo was picked because it works without a sending domain; Resend and the others need one, and the team doesn't control a domain. The sender is `Pack Referrals <packreferrals.acm@gmail.com>`, the Gmail account that owns the Brevo account and is a verified sender there.
 
-The team decided to stay on the free plan and send mail through an email provider's HTTPS API with [`django-anymail`](https://anymail.dev/), on the free tier of Resend, SendGrid or Brevo. No provider has been picked. Most require a verified sending domain, and the current default sender, `no-reply@packreferrals.ncsu.edu`, is on a domain the team doesn't control.
+A test send from the Brevo account reached an NC State inbox and a Gmail inbox within seconds, with SPF, DKIM and DMARC passing. This stays FAIL until a real signup on staging delivers a code.
+
+If a send fails, signup returns `503` with a "try again" message and login returns its usual `200`, so a failure doesn't reveal which addresses are registered. The failure is logged as an error (see the README's Logging section).
 
 ## Known gaps outside the checklist
 
 - `python manage.py check --deploy` warns about `SECURE_HSTS_SECONDS`, `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE`.
 - `/api/accounts/past-roles/` lists roles of unverified and suspended users too, though without saying whose they are.
+- **Registered emails can be discovered (not yet decided).** Signup returns `409` for an address that already has a verified account, so anyone can check whether an NC State address is registered. Login also takes longer for a registered address, because it waits for Brevo to send the code, though its status and message are the same either way. The team hasn't decided whether to fix it. The case for leaving it: it only reveals that a student uses Pack Referrals, code requests are throttled to 5 per 15 minutes per IP, and every check of a real account emails its owner. Closing it would need both fixes together: signup always returns `201` (emailing an existing user "you already have an account" instead of a code), and the email is sent after the response so timing doesn't differ. Sending after the response also means signup can no longer return `503` when the send fails.
