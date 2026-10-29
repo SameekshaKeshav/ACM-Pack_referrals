@@ -109,7 +109,7 @@ If sending a verification code fails (Brevo down, quota used up, bad key), `acco
 
 ## Error tracking
 
-When `SENTRY_DSN` is set, unhandled exceptions are sent to [Sentry](https://sentry.io) with the stack trace and request URL. Each event is tagged with the environment (`SENTRY_ENVIRONMENT`) and the release (the deployed commit, the same `commit_hash` as `/api/health/`). User details, IP addresses and cookies aren't sent (`send_default_pii` is off).
+When `SENTRY_DSN` is set, unhandled exceptions are sent to [Sentry](https://sentry.io) with the stack trace and request URL. Each event is tagged with the environment (`SENTRY_ENVIRONMENT`) and the release (the deployed commit, the same `commit_hash` as `/api/health/`). User details, IP addresses and cookies aren't sent (`send_default_pii` is off). Request bodies and the values of variables in the stack trace aren't sent either, because they can contain emails, verification codes and chat messages. Sentry sends both by default, so `settings.py` turns them off explicitly. You get the file, function and line of each frame, but to see the data involved, reproduce the error locally.
 
 ## Database persistence (showcase day)
 

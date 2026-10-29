@@ -20,7 +20,7 @@ One flow the audience can follow in about five minutes:
 
 | # | What | Backend | Frontend | Staging |
 |---|------|---------|----------|---------|
-| 1 | Sign up, verify, login | Done | Done (#30) | **Email set up but not yet confirmed** (#34): sends through Brevo; a real signup on staging still has to deliver a code |
+| 1 | Sign up, verify, login | Done | Done (#30) | Done (#34): codes arrive through Brevo |
 | 2 | Profile view and edit | Done (`/api/accounts/me/`, #31) | **Still on a mock** (`api/profile.js`) | Not visible |
 | 3 | Directory and company pages | Done (`/api/accounts/users/`, `/api/companies/?search=`, company detail, #18, #31) | **Not wired:** the directory shows placeholder cards and the company page is a stub | Not visible |
 | 4 | Connection request, accept, decline | Done (#10, #16) | Components built; not retested end to end | Not visible |
@@ -55,7 +55,7 @@ The two biggest MUST gaps today are not features, they are wiring: items 2 and 3
 - Ask the committee lead which day in the week of 11/16 the showcase is.
 - Agree this list, in particular that interview experiences are SHOULD and not MUST.
 - Agree who owns the staging deploy of the frontend and by when (suggest: BE3, before the Week 9 dry-run).
-- Email (decided): we send through Brevo's HTTPS API with `django-anymail`, since Railway's free plan blocks SMTP and Brevo needs no sending domain. The sender is `packreferrals.acm@gmail.com`. What's left for #34 is a real signup on staging.
+- Email (decided): we send through Brevo's HTTPS API with `django-anymail`, since Railway's free plan blocks SMTP and Brevo needs no sending domain. The sender is `packreferrals.acm@gmail.com`. Confirmed on staging on 2026-10-28.
 
 ## Testing plan
 

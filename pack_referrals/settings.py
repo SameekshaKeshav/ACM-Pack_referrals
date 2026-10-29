@@ -281,6 +281,13 @@ if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         release=COMMIT_HASH,
+        # Variable values and request bodies hold emails, verification codes
+        # and chat messages, and Sentry sends both by default even with
+        # send_default_pii off. Its scrubber only matches key names, so it
+        # misses an email inside another value's repr. The stack trace (files,
+        # functions, lines) and request URL are still sent.
+        include_local_variables=False,
+        max_request_body_size="never",
     )
 
 # OpenAPI schema and Swagger UI (served at /api/schema/ and /api/docs/).
