@@ -39,10 +39,10 @@ const Profile = () => {
         <ProfileEditForm
           profile={profile}
           onSave={handleSave}
-          onCancel={() => setIsEditing(false)}
+          onCancel={() => { setError(''); setIsEditing(false); }}
         />
       ) : (
-        <ProfileView profile={profile} onEdit={() => setIsEditing(true)} />
+        <ProfileView profile={profile} onEdit={() => { setError(''); setIsEditing(true); }} />
       )}
     </>
   );

@@ -48,7 +48,7 @@ beforeEach(() => {
     if (url !== '/api/accounts/me/') return json({ detail: 'Not found.' }, 404);
     if (method === 'GET') return json(stored);
     if (method === 'PATCH') {
-      if (body.grad_year < 2000) {
+      if (body.grad_year != null && body.grad_year < 2000) {
         return json({ grad_year: ['Ensure this value is greater than or equal to 2000.'] }, 400);
       }
       stored = { ...stored, ...body };
@@ -128,4 +128,48 @@ test('a server validation error is shown and the form keeps the draft', async ()
   await waitFor(() => assert.match(screen.getByRole('alert').textContent, /grad year/i));
   assert.equal(screen.getByLabelText('Graduation Year').value, '1999');
   assert.equal(stored.grad_year, 2028);
+});
+
+test('a profile with no grad year saves with grad_year: null, not 0', async () => {
+  stored.grad_year = null;
+  render(createElement(Profile));
+  const user = userEvent.setup({ document: dom.window.document });
+  await screen.findByRole('heading', { name: 'Jane Doe' });
+  await user.click(screen.getByRole('button', { name: 'Edit Profile' }));
+  assert.equal(screen.getByLabelText('Graduation Year').value, '');
+  const bio = screen.getByDisplayValue('Junior, backend.');
+  await user.clear(bio);
+  await user.type(bio, 'New bio.');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  assert.ok(await screen.findByText('New bio.'));
+  const patch = calls.find((c) => c.method === 'PATCH');
+  assert.deepEqual(patch.body, {
+    first_name: 'Jane', last_name: 'Doe', major: 'Computer Science',
+    grad_year: null, bio: 'New bio.', open_to_connect: true,
+  });
+  assert.equal(stored.grad_year, null);
+});
+
+test('Cancel clears the error banner after a failed save', async () => {
+  render(createElement(Profile));
+  const user = userEvent.setup({ document: dom.window.document });
+  await screen.findByRole('heading', { name: 'Jane Doe' });
+  await user.click(screen.getByRole('button', { name: 'Edit Profile' }));
+  const year = screen.getByLabelText('Graduation Year');
+  await user.clear(year);
+  await user.type(year, '1999');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() => assert.match(screen.getByRole('alert').textContent, /grad year/i));
+  await user.click(screen.getByRole('button', { name: 'Cancel' }));
+  assert.equal(screen.queryByRole('alert'), null);
+  assert.ok(screen.getByRole('button', { name: 'Edit Profile' }));
+});
+
+test('past role dates read "May 2025 - Aug 2025" and ongoing roles read Present', async () => {
+  render(createElement(Profile));
+  await screen.findByRole('heading', { name: 'Jane Doe' });
+  assert.ok(screen.getByText(/May 2025 - Aug 2025/));
+  assert.ok(screen.getByText(/Jan 2024 - Present/));
+  assert.equal(screen.queryByText(/2025-05-01/), null);
+  assert.equal(screen.queryByText(/2024-01-01/), null);
 });

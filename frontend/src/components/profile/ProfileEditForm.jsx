@@ -10,7 +10,11 @@ const ProfileEditForm = ({ profile, onSave, onCancel }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({ ...form, grad_year: Number(form.grad_year) });
+    onSave({
+    ...form,
+    grad_year: form.grad_year === '' || form.grad_year == null ? null : Number(form.grad_year),
+    });
+
   };
 
   return (

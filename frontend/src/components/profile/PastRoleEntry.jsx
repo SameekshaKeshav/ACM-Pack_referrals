@@ -1,9 +1,19 @@
+function formatMonthYear(iso) {
+  if (!iso) return '';
+  const [year, month] = iso.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+
 const PastRoleEntry = ({ role, editable = false, onChange, onRemove }) => {
 
   if (!editable) {
     return (
       <div>
-        {role.company} · {role.role_title} ({role.start_date} - {role.end_date || 'Present'})
+        {role.company} · {role.role_title} ({formatMonthYear(role.start_date)} - {role.end_date ? formatMonthYear(role.end_date) : 'Present'})
       </div>
     );
   }
