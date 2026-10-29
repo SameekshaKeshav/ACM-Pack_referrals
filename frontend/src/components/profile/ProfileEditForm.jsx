@@ -8,42 +8,30 @@ const ProfileEditForm = ({ profile, onSave, onCancel }) => {
     setForm({ ...form, [field]: value });
   };
 
-  const handleRoleChange = (index, field, value) => {
-    const updatedRoles = form.past_roles.map((role, i) =>
-      i === index ? { ...role, [field]: value } : role
-    );
-    setForm({ ...form, past_roles: updatedRoles });
-  };
-
-  const addRole = () => {
-  setForm({
-    ...form,
-    past_roles: [
-      ...form.past_roles,
-      { id: crypto.randomUUID(), company: '', role_title: '', start_date: '', end_date: '' },
-    ],
-  });
-};
-
-  const removeRole = (index) => {
-    setForm({
-      ...form,
-      past_roles: form.past_roles.filter((_, i) => i !== index),
-    });
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave({ ...form, grad_year: Number(form.grad_year) });
+    onSave({
+    ...form,
+    grad_year: form.grad_year === '' || form.grad_year == null ? null : Number(form.grad_year),
+    });
+
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <label>
-        Name
+        First name
         <input
-          value={form.name}
-          onChange={(e) => handleChange('name', e.target.value)}
+          value={form.first_name}
+          onChange={(e) => handleChange('first_name', e.target.value)}
+        />
+      </label>
+
+      <label>
+        Last name
+        <input
+          value={form.last_name}
+          onChange={(e) => handleChange('last_name', e.target.value)}
         />
       </label>
 
@@ -81,17 +69,11 @@ const ProfileEditForm = ({ profile, onSave, onCancel }) => {
         Open to connect
       </label>
 
-      <h2>Roles</h2>
-      {form.past_roles.map((role, index) => (
-        <PastRoleEntry
-          key={role.id}
-          role={role}
-          editable
-          onChange={(field, value) => handleRoleChange(index, field, value)}
-          onRemove={() => removeRole(index)}
-        />
+      <h2>Job Roles</h2>
+      {form.past_roles.map((role) => (
+        <PastRoleEntry key={role.id} role={role} />
       ))}
-      <button type="button" onClick={addRole}>+ Add a Role</button>
+      <p>Editing roles is coming in the next update.</p>
 
       <div>
         <button type="button" onClick={onCancel}>Cancel</button>
