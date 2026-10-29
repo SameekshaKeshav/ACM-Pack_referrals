@@ -173,3 +173,11 @@ test('past role dates read "May 2025 - Aug 2025" and ongoing roles read Present'
   assert.equal(screen.queryByText(/2025-05-01/), null);
   assert.equal(screen.queryByText(/2024-01-01/), null);
 });
+
+test('a profile with no grad year shows the major without a dangling "Class"', async () => {
+  stored.grad_year = null;
+  render(createElement(Profile));
+  await screen.findByRole('heading', { name: 'Jane Doe' });
+  assert.ok(screen.getByText('Computer Science'));
+  assert.equal(screen.queryByText(/Class/), null);
+});

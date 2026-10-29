@@ -1,11 +1,17 @@
 import PastRoleEntry from './PastRoleEntry';
 
 const ProfileView = ({ profile, onEdit }) => {
+
+  const summary = [
+    profile.major,
+    profile.grad_year ? `Class ${profile.grad_year}` : '',
+  ].filter(Boolean).join(' - ');
+  
   return (
     <div>
 
       <h1>{profile.first_name} {profile.last_name}</h1>
-      <p>{profile.major} - Class {profile.grad_year}</p>
+      <p>{summary}</p>
       <p>Open to connect: {profile.open_to_connect ? 'On' : 'Off'}</p>
       <button onClick={onEdit}>Edit Profile</button>
 
