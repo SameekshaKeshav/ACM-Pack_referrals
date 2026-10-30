@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { listPeople } from '../../api/directory';
+import { getSession } from '../../auth/session';
+import { useConnectionStates } from '../../connections/useConnectionStates';
+import ConnectDialog from '../ConnectDialog';
 import FilterSidebar from './FilterSidebar';
 import PersonCard from './PersonCard';
 
@@ -19,6 +22,10 @@ const PeopleDirectory = ({ companyId = null }) => {
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const generation = useRef(0);
+  const myId = getSession()?.user?.id ?? null;
+  const { states, mark, reload } = useConnectionStates();
+  const [connecting, setConnecting] = useState(null);
+  const [sentNotice, setSentNotice] = useState('');
 
   const majorsKey = [...majors].sort().join('|');
 
@@ -97,8 +104,22 @@ const PeopleDirectory = ({ companyId = null }) => {
 
         {people.length > 0 && (
           <ul className="people-grid" aria-busy={loading}>
-            {people.map((person) => <PersonCard key={person.user_id} person={person} />)}
+            {people.map((person) => (
+              <PersonCard key={person.user_id} person={person} isMe={person.user_id === myId}
+                state={states.get(person.user_id) || null} onConnect={(target) => { setSentNotice(''); setConnecting(target); }} />
+            ))}
           </ul>
+        )}
+
+        <p className="local-notice" aria-live="polite">{sentNotice}</p>
+
+        {connecting && (
+          <ConnectDialog
+            person={connecting}
+            onClose={() => setConnecting(null)}
+            onConflict={reload}
+            onSent={() => { mark(connecting.user_id, { kind: 'sent' }); setSentNotice(`Request sent to ${connecting.name}.`); setConnecting(null); }}
+          />
         )}
 
         {hasMore && !error && (

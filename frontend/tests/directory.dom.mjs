@@ -42,6 +42,8 @@ function fakeDirectory(rows = everyone, { onRequest } = {}) {
   const requests = [];
   globalThis.fetch = async (path) => {
     const url = new URL(path, 'http://localhost:5173');
+    // Connection state lookups (Connect buttons) are not what these tests are about: nobody is connected.
+    if (url.pathname === '/api/connections/' || url.pathname === '/api/chat/conversations/') return json([]);
     requests.push(url);
     const special = await onRequest?.(url, requests.length);
     if (special) return special;

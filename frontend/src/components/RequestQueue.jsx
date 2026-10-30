@@ -1,9 +1,10 @@
 import ConnectionRequestCard from './ConnectionRequestCard';
 
-export default function RequestQueue({ requests, direction = 'incoming', onAccept, onDecline }) {
+export default function RequestQueue({ requests, direction = 'incoming', onAccept, onDecline, busyId = null, errors = {} }) {
   return <div className="request-grid">
     {requests.length === 0 ? <p className="empty-state">You’re all caught up. No {direction} requests.</p> : requests.map((request) => (
-      <ConnectionRequestCard key={request.id} request={request} direction={direction} onAccept={onAccept} onDecline={onDecline} />
+      <ConnectionRequestCard key={request.id} request={request} direction={direction} onAccept={onAccept} onDecline={onDecline}
+        busy={busyId === request.id} error={errors[request.id] || ''} />
     ))}
   </div>;
 }
