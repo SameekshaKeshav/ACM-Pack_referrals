@@ -273,6 +273,65 @@ test('a duplicate (409) explains itself and refreshes what the card shows', asyn
   await screen.findByRole('button', { name: 'Connection request sent to Alice Adams' });
 });
 
+test('a lookup that finishes after a send does not bring the Connect button back', async () => {
+  const world = { incoming: [], outgoing: [], people: [person(1, 'Alice Adams')] };
+  backend(world);
+  const inner = globalThis.fetch;
+  let release;
+  // The first outgoing lookup is held open and will answer with the old, empty list.
+  globalThis.fetch = (path, options) => {
+    if (!release && String(path).startsWith('/api/connections/?type=outgoing')) {
+      return new Promise((resolve) => { release = () => resolve(json([])); });
+    }
+    return inner(path, options);
+  };
+  const actor = user();
+  mountDirectory();
+
+  await actor.click(await screen.findByRole('button', { name: 'Connect with Alice Adams' }));
+  await actor.type(screen.getByLabelText('Your note'), 'Hello Alice');
+  await actor.click(screen.getByRole('button', { name: 'Send request' }));
+  await screen.findByRole('button', { name: 'Connection request sent to Alice Adams' });
+  assert.ok(release, 'the initial lookup should still be waiting');
+
+  await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+
+  assert.ok(screen.getByRole('button', { name: 'Connection request sent to Alice Adams' }));
+  assert.equal(screen.queryByRole('button', { name: 'Connect with Alice Adams' }), null);
+});
+
+for (const [verb, noun] of [['Accept', 'accepted'], ['Decline', 'declined']]) {
+  test(`an older refresh that arrives after a request is ${noun} does not bring the card back`, async () => {
+    const stale = [incomingRow(1, sender(31, 'Maya Patel')), incomingRow(2, sender(32, 'Alex Rivera', 'IBM'))];
+    backend({ incoming: [...stale], outgoing: [] });
+    const inner = globalThis.fetch;
+    let hold = false;
+    let release;
+    // After the page has loaded, the next incoming list (the Refresh) is held and will answer with `stale`.
+    globalThis.fetch = (path, options) => {
+      if (hold && String(path).startsWith('/api/connections/?type=incoming')) {
+        hold = false;
+        return new Promise((resolve) => { release = () => resolve(json(stale)); });
+      }
+      return inner(path, options);
+    };
+    const actor = user();
+    mountApp();
+    await screen.findByRole('article', { name: 'Request from Maya Patel' });
+
+    hold = true;
+    await actor.click(screen.getByRole('button', { name: 'Refresh requests' }));
+    await waitFor(() => assert.ok(release, 'the refresh should be waiting'));
+    await actor.click(screen.getByRole('button', { name: `${verb} Maya Patel` }));
+    await waitFor(() => assert.equal(screen.queryByRole('article', { name: 'Request from Maya Patel' }), null));
+
+    await act(async () => { release(); await new Promise((resolve) => setTimeout(resolve, 20)); });
+
+    assert.equal(screen.queryByRole('article', { name: 'Request from Maya Patel' }), null);
+    assert.ok(screen.getByRole('article', { name: 'Request from Alex Rivera' }));
+  });
+}
+
 test('cards reflect connection state: connected, received, not open, and me', async () => {
   backend({
     incoming: [incomingRow(3, sender(3, 'Carol Chen'))],

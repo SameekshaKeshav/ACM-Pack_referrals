@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listConnectionRequests } from '../api/connections';
 import { listConversations } from '../api/chat';
 
@@ -10,10 +10,15 @@ import { listConversations } from '../api/chat';
 export function useConnectionStates() {
   const [states, setStates] = useState(() => new Map());
   const [attempt, setAttempt] = useState(0);
+  // Changes made with mark() since the current lookup started. A lookup answers
+  // with what the server knew when it began, so without this a slow lookup could
+  // finish after "Request sent" and put the Connect button back.
+  const marksSinceLookup = useRef(new Map());
 
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
+    marksSinceLookup.current = new Map();
     Promise.allSettled([
       listConnectionRequests('outgoing', { signal }),
       listConnectionRequests('incoming', { signal }),
@@ -29,12 +34,17 @@ export function useConnectionStates() {
       if (conversations.status === 'fulfilled') {
         conversations.value.forEach((row) => next.set(row.other_user.id, { kind: 'connected', conversationId: row.id }));
       }
+      // What happened after the lookup began is newer than anything it returned.
+      marksSinceLookup.current.forEach((state, userId) => next.set(userId, state));
       setStates(next);
     });
     return () => controller.abort();
   }, [attempt]);
 
-  const mark = useCallback((userId, state) => setStates((current) => new Map(current).set(userId, state)), []);
+  const mark = useCallback((userId, state) => {
+    marksSinceLookup.current.set(userId, state);
+    setStates((current) => new Map(current).set(userId, state));
+  }, []);
   const reload = useCallback(() => setAttempt((value) => value + 1), []);
   return { states, mark, reload };
 }

@@ -19,9 +19,13 @@ export default function ConnectionRequests({ onAccepted }) {
   const [notice, setNotice] = useState('');
   const answering = useRef(false);
   const tabRefs = useRef({});
+  // Requests answered since the current list fetch began. That fetch may have been
+  // answered by the server before the answer landed, so it can still list them.
+  const answeredSinceFetch = useRef(new Set());
 
   useEffect(() => {
     const controller = new AbortController();
+    answeredSinceFetch.current = new Set();
     setLoading(true);
     setError('');
     Promise.all([
@@ -29,7 +33,7 @@ export default function ConnectionRequests({ onAccepted }) {
       listConnectionRequests('outgoing', { signal: controller.signal }),
     ]).then(([inbound, outbound]) => {
       if (controller.signal.aborted) return;
-      setIncoming(inbound);
+      setIncoming(inbound.filter((row) => !answeredSinceFetch.current.has(row.id)));
       setOutgoing(outbound);
     }).catch((failure) => {
       if (failure.name === 'AbortError' || controller.signal.aborted) return;
@@ -47,6 +51,7 @@ export default function ConnectionRequests({ onAccepted }) {
     const request = incoming.find((row) => row.id === id);
     try {
       const result = await respondToRequest(id, action);
+      answeredSinceFetch.current.add(id);
       setIncoming((rows) => rows.filter((row) => row.id !== id));
       setNotice(action === 'accept' ? `You are now connected with ${request?.sender.name || 'them'}.` : 'Request declined.');
       notifyRequestsChanged();
