@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "companies",
     "connections",
     "chat",
+    "reports",
 ]
 
 MIDDLEWARE = [

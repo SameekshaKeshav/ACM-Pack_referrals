@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import Profile
@@ -33,12 +34,14 @@ class Command(BaseCommand):
         )
         sender.first_name = "Sender"
         sender.last_name = "User"
+        sender.is_active = True
         sender.set_password("SenderPass123!")
         sender.save()
 
         recipient, _ = User.objects.get_or_create(
             username="postman_recipient",
         )
+        recipient.is_active = True
         recipient.set_password("RecipientPass123!")
         recipient.save()
 
@@ -53,11 +56,16 @@ class Command(BaseCommand):
             defaults={
                 "current_company": company,
                 "open_to_connect": True,
+                "account_status": Profile.AccountStatus.ACTIVE,
             },
         )
         Profile.objects.update_or_create(
             user=recipient,
-            defaults={"open_to_connect": True},
+            defaults={
+                "current_company": company,
+                "open_to_connect": True,
+                "account_status": Profile.AccountStatus.ACTIVE,
+            },
         )
         Profile.objects.update_or_create(
             user=outsider,
@@ -65,8 +73,8 @@ class Command(BaseCommand):
         )
 
         ConnectionRequest.objects.filter(
-            sender=sender,
-            recipient=recipient,
+            Q(sender=sender, recipient=recipient)
+            | Q(sender=recipient, recipient=sender),
         ).delete()
 
         self.stdout.write(self.style.SUCCESS("Postman fixtures are ready."))

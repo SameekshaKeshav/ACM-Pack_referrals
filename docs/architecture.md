@@ -16,11 +16,12 @@ Each backend dev runs `makemigrations` only inside their app(s), which avoids co
 | App | Models |
 |-----|--------|
 | `accounts` | `Profile`, `PastRole` |
-| `companies` | `Company` |
-| `connections` | `ConnectionRequest`, `Report` |
+| `companies` | `Company`, `InterviewExperience` |
+| `connections` | `ConnectionRequest`, `ReferralRequest`, `Block` |
+| `reports` | `Report` |
 | `chat` | `Conversation`, `ConversationParticipant`, `Message` |
 
-Cross-app foreign keys use string references (e.g. `Report.reported_message` → `"chat.Message"`, `Profile.current_company` → `"companies.Company"`).
+Cross-app foreign keys use string references (e.g. `InterviewExperience.company` → `"companies.Company"`, `Profile.current_company` → `"companies.Company"`).
 
 See [`api-contract-accounts-companies.md`](api-contract-accounts-companies.md)
 for request and response shapes on the accounts and companies endpoints,
@@ -33,7 +34,8 @@ and [`api-contract-chat.md`](api-contract-chat.md) for chat.
 | `/api/health/` | Global health |
 | `/api/accounts/` | `me/`, `past-roles/`, `users/` (directory), `auth/*`, `health/` |
 | `/api/companies/` | company list (`?search=`), detail with affiliations, `health/` |
-| `/api/connections/` | `connection-requests/`, `reports/`, `health/` |
+| `/api/connections/` | requests (`?type=incoming\|outgoing`), `<id>/accept\|decline/`, `referrals/`, `users/<id>/block/`, `health/` |
+| `/api/reports/` | file a report (`POST`) |
 | `/api/chat/` | `conversations/`, `messages/`, `health/` |
 
 Tell frontend before wiring clients: paths are prefixed (e.g. `/api/accounts/users/`, not `/api/users/`).

@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/companies/', include('companies.urls')),
     path('api/connections/', include('connections.urls')),
     path('api/chat/', include('chat.urls')),
+    path('api/reports/', include('reports.urls')),
     path('api/', include('api.urls')),
     # API reference. Public on purpose: it describes routes, not data, and lets
     # teammates open Swagger UI without a token (use Authorize to call endpoints).

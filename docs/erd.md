@@ -20,7 +20,6 @@ erDiagram
     CONVERSATION ||--o{ CONVERSATIONPARTICIPANT : "has"
     USER ||--o{ MESSAGE : "wrote"
     USER ||--o{ REPORT : "filed"
-    USER ||--o{ REPORT : "reported in"
     USER ||--o{ VERIFICATIONCODE : "issued"
 
     COMPANY ||--o{ PASTROLE : "employed"
@@ -28,7 +27,6 @@ erDiagram
 
     CONNECTIONREQUEST ||--o| CONVERSATION : "opens on accept"
     CONVERSATION ||--o{ MESSAGE : "contains"
-    MESSAGE ||--o{ REPORT : "reported in"
 
     USER {
         int id PK
@@ -108,10 +106,10 @@ erDiagram
     REPORT {
         int id PK
         int reporter_id FK
-        int reported_user_id FK "nullable"
-        int reported_message_id FK "nullable"
-        text reason
-        string status "open | reviewed | actioned"
+        string target_type "user | message"
+        int target_id "a user or message id, checked in the serializer"
+        string reason "fixed set of choices"
+        string details "max 1000"
         datetime created_at
     }
 ```

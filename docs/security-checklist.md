@@ -21,7 +21,7 @@ Security status of the backend API and the staging deployment.
 
 ## Access control
 
-Every endpoint requires a JWT unless it is deliberately public (`IsAuthenticated` is the default in `REST_FRAMEWORK`). The one open problem is reports: `ReportViewSet` is a plain `ModelViewSet` over all reports, so any logged-in user can list every report, edit or delete any of them, and change their `status`.
+Every endpoint requires a JWT unless it is deliberately public (`IsAuthenticated` is the default in `REST_FRAMEWORK`). Reports were the open problem (#22): the old `ReportViewSet` is gone, and `POST /api/reports/` can only create a report, with the reporter taken from the token. Re-audit the new block and interview-experience routes before marking this check PASS.
 
 | Endpoint | Who can use it | Status |
 |----------|----------------|--------|
@@ -38,15 +38,15 @@ Every endpoint requires a JWT unless it is deliberately public (`IsAuthenticated
 | `/api/connections/<id>/accept/`, `decline/` | The recipient only; outsiders get 404, the sender 403 | PASS |
 | `/api/chat/conversations/` | The caller's conversations, minus blocked users | PASS |
 | `/api/chat/conversations/<id>/messages/`, `<id>/read/`, `/api/chat/messages/` | Participants who aren't blocked; unknown ids 404, others 403 | PASS |
-| `/api/connections/reports/` | Any logged-in user, for every report | **FAIL** (#22) |
+| `/api/reports/` | Any logged-in user can file a report; nobody can list, read, edit or delete reports through the API | PASS |
 
 The Django admin (`/admin/`) is staff-only and not covered.
 
 ## Input validation
 
-**Server-controlled fields — FAIL (#26).** `ReportSerializer` uses `fields = "__all__"`, so `reporter` and `status` are writable from the request body, and a user can file a report in someone else's name. It is the last serializer using `"__all__"`. Elsewhere, identity fields (`sender`, `user`) are set from the token and `account_status` is read-only.
+**Server-controlled fields — report part fixed (#26).** `reports.ReportSerializer` lists its fields explicitly and `reporter` is read-only, so a report can no longer be filed in someone else's name and `status` no longer exists on it. Elsewhere, identity fields (`sender`, `user`, `author`) are set from the token and `account_status` is read-only. Re-check the new interview-experience and block serializers before marking this check PASS.
 
-**Length limits — FAIL (#27).** `Profile.bio` (written through `/api/accounts/me/`) and `Report.reason` are `TextField`s with no limit in the model or serializer. All other text fields are limited:
+**Length limits — FAIL (#27).** `Profile.bio` (written through `/api/accounts/me/`) is a `TextField` with no limit in the model or serializer. A report's `reason` is now a fixed set of choices and its `details` is limited to 1000. All other text fields are limited:
 
 | Field | Limit |
 |-------|-------|
@@ -54,7 +54,8 @@ The Django admin (`/admin/`) is staff-only and not covered.
 | Chat message `body_text` | 2000 (also a database constraint) |
 | `first_name`, `last_name` | 150 |
 | `major`, `current_role`, `role_title`, company names | 255 |
-| `bio`, `reason` | **none** |
+| Report `details` | 1000 |
+| `bio` | **none** |
 
 ## Configuration
 

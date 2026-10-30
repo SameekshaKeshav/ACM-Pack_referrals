@@ -36,7 +36,9 @@ One place that lists every route the backend serves, so both frontends can code 
 | `POST /api/connections/referrals/` | no | Ask a connection for a referral (201, 400, 403, 404, 409). Body: `recipient_id`, `role_title`, `message_text` (max 500), optional `company_id` (on the recipient's profile), `job_url`, `resume_url` (http/https only). 403 unless an accepted connection exists and neither side blocked the other. 409 if you already have a **pending** ask for the same role (compared ignoring case) at the same company, to the same person. Until accept/decline ships (Week 8) nothing leaves pending, so for now that means one ask per role; clients should not offer a retry on a 409 | Scoped |
 | `GET /api/connections/referrals/?type=incoming\|outgoing[&status=pending\|accepted\|declined]` | no | The caller's referral asks, newest first; blocked users' asks are hidden. Paged like the people directory: `?limit=` (default 20, max 100) and `?offset=`; the body is `{count, next, previous, results}` | Scoped |
 | `GET /api/connections/referrals/<id>/` | no | One ask; only its sender or recipient (else 404) | Scoped |
-| `GET, POST /api/connections/reports/`, `GET, PUT, PATCH, DELETE /api/connections/reports/<id>/` | no | Reports | **Open** |
+| `POST /api/reports/` | no | File a report. Body: `target_type` (`user` or `message`), `target_id`, `reason` (one of a fixed set), optional `details` (max 1000). The reporter is the caller; the target must exist. Create-only: nothing can list or edit reports through the API, use the admin | Scoped |
+| `POST, DELETE /api/connections/users/<id>/block/` | no | Block (201, or 200 if already blocked; 400 for yourself; 404 unknown user) or unblock (204). Blocking never deletes messages | Scoped |
+| `GET, POST /api/companies/<id>/experiences/`, `DELETE /api/companies/<id>/experiences/<experience_id>/` | no | Anonymous interview experiences. Active members only. The author is never returned (`is_mine` says whether a post is yours); posts show month and year only; 5 posts a day (429); you can delete only your own (403); hidden posts are not listed | Scoped |
 
 ## Chat: `chat/` (PM)
 
@@ -62,10 +64,7 @@ Polling: ask for `?after=<last message id>` about every 3 seconds. If a poll ret
 
 ## Not built yet (planned in the tracker)
 
-- Block and unblock: `POST, DELETE /api/connections/users/<id>/block/` and the block check in `POST /api/connections/` (BE2). A sample `Block` model exists so chat can honour blocks; BE2 owns and may replace it (chat only uses `connections.blocks.blocked_user_ids()`).
-- A reports route that takes the reporter from the token and is staff-only to read (BE2).
 - Referral accept and decline: `PATCH /api/connections/referrals/<id>/accept|decline/` (PM, Week 8), and the email to the recipient when an ask is created (PM, Week 8, needs real email on staging).
-- Anonymous interview experiences on company pages: `GET, POST /api/companies/<id>/experiences/` (BE2, Week 7).
 
 ## Adding a route
 

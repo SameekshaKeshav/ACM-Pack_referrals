@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -14,7 +15,7 @@ from rest_framework.views import APIView
 
 from accounts.models import Profile
 from .blocks import blocked_user_ids
-from .models import ConnectionRequest, ReferralRequest, Report
+from .models import Block, ConnectionRequest, ReferralRequest
 from .pagination import ReferralPagination
 from .referrals import ReferralError, check_may_ask, create_referral_request
 from .serializers import (
@@ -23,7 +24,6 @@ from .serializers import (
     ConnectionRequestSerializer,
     OutgoingConnectionRequestListSerializer,
     ReferralRequestSerializer,
-    ReportSerializer,
 )
 from .services import (
     ConnectionActionError,
@@ -37,6 +37,41 @@ class AppHealthView(APIView):
 
     def get(self, request):
         return Response({"app": "connections", "status": "ok"})
+
+
+User = get_user_model()
+
+
+class UserBlockView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, user_id):
+        try:
+            blocked_user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if blocked_user == request.user:
+            return Response(
+                {"detail": "You cannot block yourself."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        _, created = Block.objects.get_or_create(
+            blocker=request.user,
+            blocked=blocked_user,
+        )
+        return Response(
+            {"detail": "User blocked."},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request, user_id):
+        Block.objects.filter(blocker=request.user, blocked_id=user_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ConnectionRequestViewSet(
@@ -68,6 +103,15 @@ class ConnectionRequestViewSet(
             return Response(
                 {"detail": "You cannot send a connection request to yourself."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if Block.objects.filter(
+            Q(blocker=request.user, blocked=recipient)
+            | Q(blocker=recipient, blocked=request.user)
+        ).exists():
+            return Response(
+                {"detail": "You cannot send a connection request to this user."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         if ConnectionRequest.objects.filter(
@@ -343,8 +387,3 @@ class ReferralRequestDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return _visible_referrals(self.request.user)
-
-
-class ReportViewSet(viewsets.ModelViewSet):
-    queryset = Report.objects.all()
-    serializer_class = ReportSerializer
