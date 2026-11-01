@@ -139,3 +139,23 @@ label { display: block; font-size: 11px; font-weight: 650; margin: 13px 0 6px; }
 .dialog textarea { width: 100%; border: 1px solid #b9bdb2; border-radius: 6px; padding: 10px 12px; font-size: 14px; line-height: 1.5; resize: vertical; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .requests-section { margin-bottom: 28px; }
+
+/* Referrals use the shared authenticated layout. */
+.referral-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin: 24px 0; }
+.referral-panel { min-width: 0; background: white; border: 1px solid #dedfd8; border-radius: 12px; padding: 24px; }
+.referral-panel h2 { margin-top: 0; }
+.referral-panel p { line-height: 1.6; overflow-wrap: anywhere; }
+.referral-panel fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.referral-panel label { font-size: 14px; }
+.referral-panel input, .referral-panel select, .referral-panel textarea { box-sizing: border-box; width: 100%; font: inherit; padding: 10px 12px; border: 1px solid #b9bdb2; border-radius: 6px; background: white; }
+.referral-panel select:focus-visible { outline: 3px solid #a74646; outline-offset: 3px; }
+.referral-panel textarea { resize: vertical; }
+.referral-card { border-top: 1px solid #dedfd8; padding: 18px 0; }
+.referral-card h3 { margin: 0; }
+.referral-note { white-space: pre-wrap; }
+.referral-links, .referral-pagination, .referral-directions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.referral-directions { margin-bottom: 12px; }
+.referral-directions button, .referral-pagination button { padding: 8px 12px; border: 1px solid #b9bdb2; border-radius: 6px; }
+.referral-directions button[aria-pressed="true"] { background: #a00000; color: white; }
+.chat-thread-panel { min-width: 0; }
+@media (max-width: 760px) { .referral-layout { grid-template-columns: minmax(0, 1fr); } .referral-panel { padding: 16px; } }

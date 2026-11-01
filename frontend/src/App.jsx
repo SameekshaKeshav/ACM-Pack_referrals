@@ -2,6 +2,7 @@ import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'rea
 import { RequireAuth, useAuth } from './auth/AuthProvider';
 import { EmailPage, EnterCodePage } from './pages/Auth';
 import Chat from './pages/Chat';
+import Referrals from './pages/Referrals';
 import ChatMockPage from './ChatMockPage';
 import Profile from './pages/Profile';
 import Directory from './pages/Directory';
@@ -13,7 +14,7 @@ function AppLayout() {
   const location = useLocation();
   const pending = usePendingRequestCount(location.pathname);
   return <><header className="site-header authenticated-header"><Link className="brand" to="/chat"><span className="brand-mark">PR</span>Pack Referrals</Link>
-    <nav aria-label="Main navigation"><NavLink to="/chat">Messages{pending > 0 && <span className="nav-badge">{pending > 9 ? '9+' : pending}<span className="visually-hidden"> pending connection {pending === 1 ? 'request' : 'requests'}</span></span>}</NavLink><NavLink to="/directory">Directory</NavLink><NavLink to="/profile">Profile</NavLink></nav>
+    <nav aria-label="Main navigation"><NavLink to="/chat">Messages{pending > 0 && <span className="nav-badge">{pending > 9 ? '9+' : pending}<span className="visually-hidden"> pending connection {pending === 1 ? 'request' : 'requests'}</span></span>}</NavLink><NavLink to="/referrals">Referrals</NavLink><NavLink to="/directory">Directory</NavLink><NavLink to="/profile">Profile</NavLink></nav>
     <span className="signed-in-email">{user.email}</span><button className="button-secondary" onClick={logout}>Log out</button></header><Outlet /></>;
 }
 
@@ -25,6 +26,7 @@ export default function App() {
     <Route element={<RequireAuth />}>
       <Route element={<AppLayout />}>
         <Route path="/chat" element={<Chat />} /><Route path="/chat/:conversationId" element={<Chat />} />
+        <Route path="/referrals" element={<Referrals />} />
         <Route path="/profile" element={<Profile />} /><Route path="/directory" element={<Directory />} /><Route path="/company/:id" element={<Company />} />
       </Route>
       <Route path="/chat-mock" element={<ChatMockPage />} />

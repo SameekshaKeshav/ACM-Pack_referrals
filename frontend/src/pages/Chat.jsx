@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { listConversations, listMessages, orderMessages, sendMessage } from '../api/chat';
 import { useAuth } from '../auth/AuthProvider';
 import ChatWindow from '../components/ChatWindow';
@@ -99,10 +99,12 @@ export default function Chat() {
         {!listLoading && !listError && !conversations.length && <p className="empty-state">No conversations yet. An accepted connection starts a conversation.</p>}
         {conversations.map((row) => <ConversationListItem key={row.id} conversation={row} selected={row.id === selectedId} onSelect={(id) => navigate(`/chat/${id}`)} />)}
       </aside>
+      <div className="chat-thread-panel">{active && <p><Link to={`/referrals?recipient=${active.other_user.id}`}>Ask {active.other_user.name} for a referral</Link></p>}
       {active ? <ChatWindow key={active.id} conversation={active} messages={threads[selectedId]?.messages || []} currentUser={{ id: user.id, name: 'You' }}
         onSend={compose} loading={!!threads[selectedId]?.loading || !threads[selectedId]} error={threads[selectedId]?.error}
         onReload={() => setThreadVersion((value) => value + 1)} onRetry={(message) => submit(active.id, message)} />
         : <section className="chat-window empty-state" aria-label="Conversation"><p>{listLoading ? 'Loading…' : selectedId && !listError ? 'This conversation is unavailable.' : 'Select a conversation to see its messages.'}</p></section>}
+      </div>
     </div>
   </main>;
 }
