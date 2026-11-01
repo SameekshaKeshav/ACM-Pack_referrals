@@ -16,13 +16,16 @@ One place that lists every route the backend serves, so both frontends can code 
 | `POST /api/accounts/auth/login/` | yes | Email a fresh code to a returning user | Scoped (rate limited) |
 | `POST /api/accounts/auth/refresh/` | yes | Exchange a refresh token for a new access token | Scoped |
 | ~~`/api/accounts/profiles/`~~ | - | Removed; use `/api/accounts/users/` or `/api/accounts/me/` | Closed |
-| `GET, POST /api/accounts/past-roles/`, `GET, PUT, PATCH, DELETE /api/accounts/past-roles/<id>/` | no | Past roles | **Open** |
+| `GET, PATCH /api/accounts/me/` | no | Read or edit your own profile | Scoped |
+| `GET /api/accounts/users/` | no | Active member directory; `major`, `grad_year`, `company_id`, `limit` and `offset` filters | Scoped |
+| `GET, POST /api/accounts/past-roles/`, `GET, PUT, PATCH, DELETE /api/accounts/past-roles/<id>/` | no | Members can read roles; creation uses the caller; only the owner can update/delete | Scoped writes |
 
 ## Companies: `companies/` (BE1)
 
 | Method and path | Public | What it does | Status |
 |---|---|---|---|
-| `GET, POST /api/companies/`, `GET, PUT, PATCH, DELETE /api/companies/<id>/` | no | Company directory | **Open** |
+| `GET /api/companies/?search=` | no | Company search by display or normalized name | Read-only |
+| `GET /api/companies/<id>/` | no | Company details and affiliated users | Read-only |
 
 ## Connections: `connections/` (BE2, PM for accept and decline)
 
@@ -66,6 +69,24 @@ Polling: ask for `?after=<last message id>` about every 3 seconds. If a poll ret
 - A reports route that takes the reporter from the token and is staff-only to read (BE2).
 - Referral accept and decline: `PATCH /api/connections/referrals/<id>/accept|decline/` (PM, Week 8), and the email to the recipient when an ask is created (PM, Week 8, needs real email on staging).
 - Anonymous interview experiences on company pages: `GET, POST /api/companies/<id>/experiences/` (BE2, Week 7).
+
+## Referral frontend (Week 7)
+
+The authenticated `/referrals` page uses the existing referral collection routes above,
+not `POST /api/connections/`. The navigation and a link from an accepted chat open it.
+`?recipient=<user id>` preselects a connection only if they appear in the authenticated
+conversation list; this parameter does not authorize a recipient. The backend checks
+accepted connection, account status, blocks, company eligibility and duplicates on POST.
+
+Lists request `limit=20&offset=N`, render incoming/outgoing cards and all three statuses,
+and construct their own same-origin page URLs. The form sends required `recipient_id`,
+`role_title` (max 255) and `message_text` (max 500 Unicode code points), plus optional
+`company_id`, `job_url` and `resume_url` (max 500 each). It never sends sender or status.
+A 409 keeps the draft and disables resubmission until edited; there is no retry action.
+Company selection is optional and lists directory companies; the server rejects a choice
+absent from the recipient's profile. See [referral UI handoff](referral-ui.md).
+
+No referral accept/decline endpoint or new backend route is added by this frontend work.
 
 ## Adding a route
 

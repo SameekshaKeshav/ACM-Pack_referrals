@@ -91,3 +91,9 @@ The frontend GitHub Actions workflow runs the build and both suites on Node 24.
 
 Detailed API shapes, backend dependencies, storage tradeoffs and acceptance steps:
 [chat-auth-integration.md](../docs/chat-auth-integration.md).
+
+## Referral requests (Week 7)
+
+Open `/referrals` after signing in, or use “Ask … for a referral” in an accepted
+chat. Create an ask, view incoming/outgoing asks, and page through older asks.
+See [the referral UI handoff](../docs/referral-ui.md) for setup and limitations.
