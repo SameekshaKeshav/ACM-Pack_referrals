@@ -22,6 +22,9 @@ async function setup(page, conflict = false) {
     return json(route, {}, 404);
   });
   await page.goto('/referrals?recipient=12');
+  await expect(page).toHaveURL(/\/referrals\?recipient=12$/);
+  await expect(page.getByRole('heading', { name: 'Referral requests', exact: true })).toBeVisible();
+  await expect(page.getByRole('option', { name: 'Maya', exact: true })).toBeAttached();
   await expect(page.getByLabel('Accepted connection (required)')).toHaveValue('12');
   await page.getByLabel('Role title (required)').fill('Engineer');
   await page.getByLabel('Why you fit (required)').fill('Relevant experience');

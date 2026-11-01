@@ -101,3 +101,17 @@ npm run dev
 After checks and review, push `sanjana/referral-ui` and open a PR into the team's
 agreed base (normally current main for this package). This package is local only;
 no remote branch, PR or teammate message was created by preparing it.
+
+## Browser test isolation follow-up
+
+Mac verification reported build and all 95 DOM tests passing, but 8/16 browser tests
+failing. The inherited chat browser fixtures did not intercept the new connection
+inbox/header fetches. Those fixtures now return an empty connection queue instead of
+letting synthetic JWT requests reach a live backend and potentially clear the session.
+
+Playwright now starts its own Vite server on port 5174 with server reuse disabled.
+This avoids running against a stale or different development frontend on 5173.
+The referral test explicitly waits for the page heading and loaded recipient option.
+The full browser suite must be rerun on Mac/CI; these changes do not establish a pass
+for the previously missing referral form. If it still fails, inspect the generated
+`frontend/test-results/**/error-context.md` and the failed test's current URL.

@@ -9,6 +9,9 @@ const history = [
 ];
 const fulfill = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 async function mockChat(page) {
+  // The authenticated header and connection inbox also load requests. Never let
+  // synthetic JWTs reach Django: a real 401 could invalidate the test session.
+  await page.route('**/api/connections/?*', (route) => fulfill(route, []));
   await page.route('**/api/chat/conversations/', (route) => fulfill(route, conversations));
   await page.route(/\/api\/chat\/conversations\/5\/messages\//, (route) => fulfill(route, history));
 }
