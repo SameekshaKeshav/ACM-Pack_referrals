@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from .views import (
+    AlumniAccessRequestView,
     AppHealthView,
     LoginView,
     MeView,
@@ -19,6 +20,11 @@ router.register("past-roles", PastRoleViewSet, basename="past-role")
 
 urlpatterns = [
     path("health/", AppHealthView.as_view(), name="health"),
+    path(
+        "alumni-access-requests/",
+        AlumniAccessRequestView.as_view(),
+        name="alumni-access-request",
+    ),
     path("auth/signup/", SignupView.as_view(), name="auth-signup"),
     path("auth/login/", LoginView.as_view(), name="auth-login"),
     path("auth/verify/", VerifyView.as_view(), name="auth-verify"),

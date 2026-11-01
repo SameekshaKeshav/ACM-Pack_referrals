@@ -200,6 +200,9 @@ REST_FRAMEWORK = {
         "verify_attempt": os.getenv("THROTTLE_VERIFY_ATTEMPT", "10/15min"),
         # Sending a chat message, per signed-in user (chat.throttling).
         "message_send": os.getenv("THROTTLE_MESSAGE_SEND", "30/min"),
+        # Asking for alumni access. Each one costs a reviewer's attention, so
+        # the budget is small; the honeypot catches the naive bots.
+        "alumni_request": os.getenv("THROTTLE_ALUMNI_REQUEST", "3/15min"),
     },
     # How many proxies sit in front of the app. Throttles use it to find the
     # client's IP in X-Forwarded-For. Unset, DRF keys on the whole header,
