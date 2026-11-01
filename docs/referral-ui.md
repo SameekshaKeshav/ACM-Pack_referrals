@@ -115,3 +115,11 @@ The referral test explicitly waits for the page heading and loaded recipient opt
 The full browser suite must be rerun on Mac/CI; these changes do not establish a pass
 for the previously missing referral form. If it still fails, inspect the generated
 `frontend/test-results/**/error-context.md` and the failed test's current URL.
+
+### Referral mock routing correction
+
+The remaining referral browser failures occurred before the page heading appeared.
+The referral fixture's `**/api/**` glob also matched Vite's `/src/api/*.js` module
+requests, returning JSON in place of JavaScript. It now matches only URL paths that
+start with `/api/`, leaving frontend module loads untouched. Rerun `npm test` on Mac
+or CI to confirm the browser suite; browser execution remains unavailable here.

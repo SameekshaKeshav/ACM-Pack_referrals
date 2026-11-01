@@ -6,7 +6,9 @@ const json = (route, data, status = 200) => route.fulfill({ status, contentType:
 async function setup(page, conflict = false) {
   let saved = [];
   await page.addInitScript(() => localStorage.setItem('pack-referrals.session.v1', JSON.stringify({ access: 'access', refresh: 'refresh', user: { id: 7, email: 'me@ncsu.edu' } })));
-  await page.route('**/api/**', (route) => {
+  // Match backend requests only. A glob like **/api/** also matches
+  // Vite modules under /src/api/ and replaces JavaScript with JSON.
+  await page.route((url) => url.pathname.startsWith('/api/'), (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === '/api/chat/conversations/') return json(route, [{ id: 9, other_user: person(12, 'Maya') }]);
     if (url.pathname === '/api/companies/' || url.pathname === '/api/connections/') return json(route, []);
