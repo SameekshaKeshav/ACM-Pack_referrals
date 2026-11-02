@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import AlumniAccessRequest, PastRole, Profile, VerificationCode
+from .models import PastRole, Profile, VerificationCode
 from .directory import filter_directory
 from .pagination import DirectoryPagination
 from .throttling import AlumniRequestThrottle, CodeRequestThrottle, VerifyAttemptThrottle
@@ -32,6 +32,7 @@ from .serializers import (
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
 
 def _verified_via(email):
     """Which route let this address in, recorded on the profile at creation."""
