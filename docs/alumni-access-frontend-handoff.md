@@ -15,6 +15,27 @@ alumni get in by **manual admin approval**.
 **The endpoint is unreachable until someone builds a form.** Nothing below is
 assigned yet.
 
+## Who does what
+
+Three separate pieces. Only the first is a form — **Rawan, item 3 is yours and
+has nothing to do with the form**, so please don't skip it on the assumption
+this is all Sanjana's.
+
+| # | What | Where | Size | Owner |
+|---|---|---|---|---|
+| 1 | The request form, on a new public route | new component + `src/App.jsx` | most of the work | **unclaimed** |
+| 2 | A "Request alumni access" link on the signup page | `src/pages/Auth.jsx` | small | **unclaimed** |
+| 3 | Add `verified_via` to `fromServer()` | `src/api/profile.js` | one line | **Rawan** |
+
+**Items 1 and 2 need owners.** `src/pages/Auth.jsx` sits in neither FE column of
+the tracker and `git log` shows it last touched by Codex, so it belongs to nobody
+right now. Sanjana is the likelier fit, being adjacent to the auth integration in
+#30 — but say so if that is wrong rather than assuming the other person has it.
+
+Item 3 is the one that fails quietly: `fromServer()` is an explicit allowlist, so
+a missing line drops the field with no error anywhere.
+
+
 ## 1. The request form — a new public route
 
 ```js
@@ -74,9 +95,9 @@ That is currently a dead end, and the form is unreachable without a link.
 link near the email field, and ideally that 400 should surface it inline rather
 than only showing the raw message.
 
-**`Auth.jsx` has no clear owner** — `git log` shows it last touched by Codex, and
-it sits in neither FE column of the tracker. One of you needs to claim it.
-Sanjana is the likelier fit, being adjacent to the auth integration in #30.
+**`Auth.jsx` has no clear owner** — see the table at the top. Without this link
+the form is unreachable however well it is built, so it is not an optional
+polish item.
 
 ## 3. After approval, nothing new
 
