@@ -1,46 +1,81 @@
 import { useState } from 'react';
 import PastRoleEntry from './PastRoleEntry';
 
-const ProfileEditForm = ({ profile, onSave, onCancel }) => {
+const EMPTY_ROLE = { company: '', role_title: '', start_date: '', end_date: '' };
+
+const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole }) => {
   const [form, setForm] = useState(profile);
+  const [newRole, setNewRole] = useState(EMPTY_ROLE);
+  const [roleError, setRoleError] = useState('');
 
   const handleChange = (field, value) => {
     setForm({ ...form, [field]: value });
   };
 
+  const handleRoleField = (field, value) => {
+    setNewRole({ ...newRole, [field]: value });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave({
-    ...form,
-    grad_year: form.grad_year === '' || form.grad_year == null ? null : Number(form.grad_year),
+      ...form,
+      grad_year: form.grad_year === '' || form.grad_year == null ? null : Number(form.grad_year),
     });
+  };
 
+  const handleAddRole = async () => {
+    const company = newRole.company.trim();
+    const role_title = newRole.role_title.trim();
+    if (!company || !role_title || !newRole.start_date) {
+      setRoleError('Company, role and start date are required.');
+      return;
+    }
+    if (newRole.end_date && newRole.end_date < newRole.start_date) {
+      setRoleError('The end date cannot be before the start date.');
+      return;
+    }
+    try {
+      await onAddRole({ ...newRole, company, role_title });
+      setNewRole(EMPTY_ROLE);
+      setRoleError('');
+    } catch (err) {
+      setRoleError(err.message || 'Could not add the role. Please try again.');
+    }
+  };
+
+  const handleRemoveRole = async (id) => {
+    try {
+      await onRemoveRole(id);
+      setRoleError('');
+    } catch (err) {
+      setRoleError(err.message || 'Could not remove the role. Please try again.');
+    }
+  };
+
+  // Enter inside the Add a Role fields adds the role instead of saving the whole form.
+  const handleRoleKeyDown = (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      e.preventDefault();
+      handleAddRole();
+    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <label>
         First name
-        <input
-          value={form.first_name}
-          onChange={(e) => handleChange('first_name', e.target.value)}
-        />
+        <input value={form.first_name} onChange={(e) => handleChange('first_name', e.target.value)} />
       </label>
 
       <label>
         Last name
-        <input
-          value={form.last_name}
-          onChange={(e) => handleChange('last_name', e.target.value)}
-        />
+        <input value={form.last_name} onChange={(e) => handleChange('last_name', e.target.value)} />
       </label>
 
       <label>
         Major
-        <input
-          value={form.major}
-          onChange={(e) => handleChange('major', e.target.value)}
-        />
+        <input value={form.major} onChange={(e) => handleChange('major', e.target.value)} />
       </label>
 
       <label>
@@ -53,11 +88,21 @@ const ProfileEditForm = ({ profile, onSave, onCancel }) => {
       </label>
 
       <label>
-        About
-        <textarea
-          value={form.bio}
-          onChange={(e) => handleChange('bio', e.target.value)}
+        Current role
+        <input value={form.current_role} onChange={(e) => handleChange('current_role', e.target.value)} />
+      </label>
+
+      <label>
+        Current company
+        <input
+          value={form.current_company}
+          onChange={(e) => handleChange('current_company', e.target.value)}
         />
+      </label>
+
+      <label>
+        About
+        <textarea value={form.bio} onChange={(e) => handleChange('bio', e.target.value)} />
       </label>
 
       <label>
@@ -70,10 +115,52 @@ const ProfileEditForm = ({ profile, onSave, onCancel }) => {
       </label>
 
       <h2>Job Roles</h2>
-      {form.past_roles.map((role) => (
-        <PastRoleEntry key={role.id} role={role} />
+      <p>Roles save as you add or remove them. Cancel does not undo them.</p>
+      {profile.past_roles.map((role) => (
+        <div key={role.id}>
+          <PastRoleEntry role={role} />
+          <button
+            type="button"
+            aria-label={`Remove ${role.company} ${role.role_title}`}
+            onClick={() => handleRemoveRole(role.id)}
+          >
+            Remove
+          </button>
+        </div>
       ))}
-      <p>Editing roles is coming in the next update.</p>
+
+      <h3>Add a Role</h3>
+      <div onKeyDown={handleRoleKeyDown}>
+        <label>
+          Company
+          <input value={newRole.company} onChange={(e) => handleRoleField('company', e.target.value)} />
+        </label>
+        <label>
+          Role title
+          <input
+            value={newRole.role_title}
+            onChange={(e) => handleRoleField('role_title', e.target.value)}
+          />
+        </label>
+        <label>
+          Start date
+          <input
+            type="date"
+            value={newRole.start_date}
+            onChange={(e) => handleRoleField('start_date', e.target.value)}
+          />
+        </label>
+        <label>
+          End date (leave blank if ongoing)
+          <input
+            type="date"
+            value={newRole.end_date}
+            onChange={(e) => handleRoleField('end_date', e.target.value)}
+          />
+        </label>
+        <button type="button" onClick={handleAddRole}>Add role</button>
+      </div>
+      {roleError && <p role="alert">{roleError}</p>}
 
       <div>
         <button type="button" onClick={onCancel}>Cancel</button>

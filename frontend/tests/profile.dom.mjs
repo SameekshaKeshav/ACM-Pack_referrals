@@ -14,7 +14,7 @@ window.localStorage.setItem('pack-referrals.session.v1', JSON.stringify({
   access: 'test-access', refresh: 'test-refresh', user: { id: 1, email: 'jane@ncsu.edu' },
 }));
 const { createElement } = await import('react');
-const { render, screen, cleanup, waitFor } = await import('@testing-library/react');
+const { render, screen, cleanup, waitFor, fireEvent } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
 const vite = await createServer({ server: { middlewareMode: true, hmr: false } });
 const { default: Profile } = await vite.ssrLoadModule('/src/pages/Profile.jsx');
@@ -35,26 +35,51 @@ const freshProfile = () => ({
 let stored;
 let calls;
 let originalFetch;
+let nextRoleId;
+let failRoleCalls;
 
 beforeEach(() => {
   stored = freshProfile();
   calls = [];
+  nextRoleId = 100;
+  failRoleCalls = false;
   originalFetch = globalThis.fetch;
-  // A tiny stand-in for the server's /api/accounts/me/ endpoint.
   globalThis.fetch = async (url, options = {}) => {
     const method = options.method || 'GET';
     const body = options.body ? JSON.parse(options.body) : undefined;
     calls.push({ url, method, headers: options.headers, body });
-    if (url !== '/api/accounts/me/') return json({ detail: 'Not found.' }, 404);
-    if (method === 'GET') return json(stored);
-    if (method === 'PATCH') {
-      if (body.grad_year != null && body.grad_year < 2000) {
-        return json({ grad_year: ['Ensure this value is greater than or equal to 2000.'] }, 400);
+    if (url === '/api/accounts/me/') {
+      if (method === 'GET') return json(stored);
+      if (method === 'PATCH') {
+        if (body.grad_year != null && body.grad_year < 2000) {
+          return json({ grad_year: ['Ensure this value is greater than or equal to 2000.'] }, 400);
+        }
+        const { current_company_name, ...rest } = body;
+        stored = { ...stored, ...rest };
+        if (current_company_name !== undefined) {
+          stored.current_company = current_company_name ? company(50, current_company_name) : null;
+        }
+        return json(stored);
       }
-      stored = { ...stored, ...body };
-      return json(stored);
+      return json({ detail: 'Method not allowed.' }, 405);
     }
-    return json({ detail: 'Method not allowed.' }, 405);
+    if (url === '/api/accounts/past-roles/' && method === 'POST') {
+      if (failRoleCalls) return json({ detail: 'Could not save the role.' }, 500);
+      const id = nextRoleId++;
+      const role = {
+        id, company: company(id, body.company_name), role_title: body.role_title,
+        start_date: body.start_date, end_date: body.end_date,
+      };
+      stored.past_roles = [...stored.past_roles, role];
+      return json(role, 201);
+    }
+    const match = url.match(/^\/api\/accounts\/past-roles\/(\d+)\/$/);
+    if (match && method === 'DELETE') {
+      if (failRoleCalls) return json({ detail: 'Could not remove the role.' }, 500);
+      stored.past_roles = stored.past_roles.filter((r) => r.id !== Number(match[1]));
+      return new Response(null, { status: 204 });
+    }
+    return json({ detail: 'Not found.' }, 404);
   };
 });
 afterEach(() => { cleanup(); globalThis.fetch = originalFetch; });
@@ -98,6 +123,7 @@ test('Save sends PATCH with the right body and shows the stored result', async (
   assert.deepEqual(patch.body, {
     first_name: 'Jane', last_name: 'Doe', major: 'Computer Science',
     grad_year: 2028, bio: 'Now a senior.', open_to_connect: true,
+    current_role: '', current_company_name: '',
   });
   assert.equal(stored.bio, 'Now a senior.');
 });
@@ -146,6 +172,7 @@ test('a profile with no grad year saves with grad_year: null, not 0', async () =
   assert.deepEqual(patch.body, {
     first_name: 'Jane', last_name: 'Doe', major: 'Computer Science',
     grad_year: null, bio: 'New bio.', open_to_connect: true,
+    current_role: '', current_company_name: '',
   });
   assert.equal(stored.grad_year, null);
 });
@@ -180,4 +207,86 @@ test('a profile with no grad year shows the major without a dangling "Class"', a
   await screen.findByRole('heading', { name: 'Jane Doe' });
   assert.ok(screen.getByText('Computer Science'));
   assert.equal(screen.queryByText(/Class/), null);
+});
+
+async function openEditor() {
+  render(createElement(Profile));
+  const user = userEvent.setup({ document: dom.window.document });
+  await screen.findByRole('heading', { name: 'Jane Doe' });
+  await user.click(screen.getByRole('button', { name: 'Edit Profile' }));
+  return user;
+}
+
+async function fillNewRole(user) {
+  await user.type(screen.getByLabelText('Company'), 'Amazon');
+  await user.type(screen.getByLabelText('Role title'), 'SDE Intern');
+  fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2025-06-01' } });
+}
+
+test('adding a role posts company_name and shows the new row', async () => {
+  const user = await openEditor();
+  await fillNewRole(user);
+  await user.click(screen.getByRole('button', { name: 'Add role' }));
+  assert.ok(await screen.findByText(/Amazon/));
+  const post = calls.find((c) => c.method === 'POST');
+  assert.equal(post.url, '/api/accounts/past-roles/');
+  assert.deepEqual(post.body, {
+    company_name: 'Amazon', role_title: 'SDE Intern', start_date: '2025-06-01', end_date: null,
+  });
+  assert.equal(screen.getByLabelText('Company').value, '');
+});
+
+test('adding a role without required fields shows an alert and sends nothing', async () => {
+  const user = await openEditor();
+  await user.click(screen.getByRole('button', { name: 'Add role' }));
+  assert.match(screen.getByRole('alert').textContent, /required/i);
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
+});
+
+test('an end date before the start date is rejected before any request', async () => {
+  const user = await openEditor();
+  await fillNewRole(user);
+  fireEvent.change(screen.getByLabelText('End date (leave blank if ongoing)'), { target: { value: '2025-01-01' } });
+  await user.click(screen.getByRole('button', { name: 'Add role' }));
+  assert.match(screen.getByRole('alert').textContent, /end date/i);
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 0);
+});
+
+test('removing a role sends DELETE and the row disappears', async () => {
+  const user = await openEditor();
+  await user.click(screen.getByRole('button', { name: 'Remove Google SWE Intern' }));
+  await waitFor(() => assert.equal(screen.queryByText(/Google/), null));
+  const del = calls.find((c) => c.method === 'DELETE');
+  assert.equal(del.url, '/api/accounts/past-roles/1/');
+  assert.ok(screen.getByText(/Red Hat/));
+});
+
+test('Cancel keeps roles that were already added', async () => {
+  const user = await openEditor();
+  await fillNewRole(user);
+  await user.click(screen.getByRole('button', { name: 'Add role' }));
+  await screen.findByText(/Amazon/);
+  await user.click(screen.getByRole('button', { name: 'Cancel' }));
+  assert.ok(screen.getByRole('button', { name: 'Edit Profile' }));
+  assert.ok(screen.getByText(/Amazon/));
+});
+
+test('a failed add shows an alert and no row', async () => {
+  failRoleCalls = true;
+  const user = await openEditor();
+  await fillNewRole(user);
+  await user.click(screen.getByRole('button', { name: 'Add role' }));
+  await waitFor(() => assert.ok(screen.getByRole('alert')));
+  assert.equal(screen.queryByText(/Amazon · /), null);
+});
+
+test('saving current role and company sends them and shows them', async () => {
+  const user = await openEditor();
+  await user.type(screen.getByLabelText('Current role'), 'Engineer');
+  await user.type(screen.getByLabelText('Current company'), 'Red Hat');
+  await user.click(screen.getByRole('button', { name: 'Save' }));
+  assert.ok(await screen.findByText('Engineer at Red Hat'));
+  const patch = calls.find((c) => c.method === 'PATCH');
+  assert.equal(patch.body.current_role, 'Engineer');
+  assert.equal(patch.body.current_company_name, 'Red Hat');
 });
