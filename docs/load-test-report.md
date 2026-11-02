@@ -13,9 +13,9 @@ Load test of the chat polling endpoint on staging: 50 clients polling `GET /api/
 | Poll p95 response time | ≤ 500ms | 290ms | **PASS** |
 | Failed requests | 0 | 0 of 5,026 | **PASS** |
 | Errors in Sentry during the run | None | None | **PASS** |
-| `database is locked` errors | Document if seen | None, but this test only read (see [Limitations](#limitations)) | **NOT TESTED** |
+| `database is locked` errors | Document if seen | None on staging (read-only). None locally with writes, up to 100 messages/s across 4 workers (see [Write test](#write-test-local-multiple-workers)) | **PASS** (local) |
 
-p95 is under 500ms, so no issue was filed. The read path has plenty of headroom: Django spent about 5ms per poll, and the single gunicorn worker was busy about 8% of the time. Because the test sent no writes, it says nothing about SQLite's concurrent-write limits. Whether to run a write test before showcase is an open question for the PM.
+p95 is under 500ms, so no issue was filed. The read path has plenty of headroom: Django spent about 5ms per poll, and the single gunicorn worker was busy about 8% of the time. The staging run sent no writes, so a second, local test sent messages while the same 50 clients polled. It found no `database is locked` errors, even with 4 workers writing at 100 messages/s.
 
 ## Setup
 
@@ -68,9 +68,57 @@ Throughput averaged 16.6 polls/s. It ran higher (up to 24 requests/s) only durin
 - **Requests arrived in bursts, and the worker queued them.** Clients started in groups of 10 per second and `constant_pacing` kept each group in step, so in the logged sample each second brought a burst of 10–20 polls within 80–170ms, then nothing until the next second. The log timestamps in each burst are spaced about one request's duration apart, so the single worker handled them one after another, and the last poll in a large burst waited up to about 150ms. This probably explains most of the rise from the 1-client baseline. Real users aren't synchronized, so this test was harsher than real traffic in this respect.
 - **The worker had large headroom.** At 16.6 requests/s × 5ms, the worker was busy about 8% of the time. Don't read this as a capacity figure: waiting times grow sharply well before 100%, and real polls return messages, which costs more than an empty list.
 
+## Write test (local, multiple workers)
+
+- **Run:** 2026-11-01, on a laptop (10 cores), `main` at `ab3c07f`
+- **Script:** the same [`loadtests/locustfile.py`](../loadtests/locustfile.py), with `LOADTEST_SENDER_TOKEN` set so senders run alongside the pollers
+
+### Why local instead of staging
+
+Staging runs one gunicorn sync worker, which handles one request at a time over one database connection. `database is locked` needs two connections to overlap: one holds the write lock, and the other waits past Django's 5-second timeout. With one worker that can't happen, so a write test on staging would pass whatever the load. It would also leave test messages in staging's database permanently. A local server can run several workers, which is what would cause the error if anyone raised `WEB_CONCURRENCY`.
+
+### Setup
+
+| | |
+|---|---|
+| Server | `gunicorn -w <1 or 4> pack_referrals.wsgi` on `127.0.0.1`, `DEBUG=false`, settings from `loadtests/loadtest_settings.py` (the real settings, plus 500 tracebacks printed to the console) |
+| Database | A fresh SQLite file per scenario, in the default rollback-journal mode (`PRAGMA journal_mode` = `delete`). Nothing in the settings changes this, so staging should be in the same mode, but staging's database file wasn't checked. |
+| Accounts | `python -m loadtests.setup_local` creates a reader and a writer and a conversation between them. Pollers use the reader's token, senders the writer's. |
+| Clients | 50 pollers as in the staging test (one poll every 3s), plus 1–25 senders, each posting a message every 0.25–3s |
+| Throttle | `THROTTLE_MESSAGE_SEND=1000000/min`, so the 30/min limit doesn't cap the senders |
+| Duration | 3 minutes per scenario |
+
+Before the runs, holding an exclusive lock on the database from another process for 7 seconds made a send return 500 after 5.2s, with `database is locked` in the server log. So the setup reports the error when it happens.
+
+### Results
+
+0 failed requests and 0 `database is locked` errors in every scenario. Client times include no network (Locust and gunicorn on the same machine), so compare them with each other, not with staging. Server times are `duration_ms` from the request log.
+
+| Scenario | Workers | Messages/s | Requests | Failures | Poll p95 (client) | Send p95 (client) | Send p50 / p95 / max (server) |
+|----------|---------|------------|----------|----------|-------------------|-------------------|-------------------------------|
+| 1 sender every 3s (the follow-up proposed below) | 1 | 0.3 | 3,089 | 0 | 59ms | 44ms | 3.9 / 5.9 / 6.5ms |
+| 1 sender every 3s | 4 | 0.3 | 3,089 | 0 | 30ms | 31ms | 8.0 / 12.9 / 17.1ms |
+| 10 senders every 1s | 4 | 10 | 4,820 | 0 | 46ms | 39ms | 7.3 / 24.2 / 62.8ms |
+| 25 senders every 0.25s | 4 | 100 | 20,860 | 0 | 67ms | 60ms | 5.5 / 15.3 / 89.0ms |
+| 25 senders every 0.25s | 1 | 100 | 20,835 | 0 | 130ms | 76ms | 1.9 / 3.9 / 25.0ms |
+
+The 100 messages/s runs wrote about 17,900 messages each. The database holds about 50 more than Locust counted, because sends still in progress when Locust stopped finished on the server.
+
+### Interpretation
+
+- **Writes did contend, and SQLite handled it.** At 100 messages/s, a send took 1.9ms inside Django with 1 worker and 5.5ms with 4. The difference is time spent waiting for another worker's write lock. The longest send took 89ms, far below the 5-second timeout where `database is locked` would be raised.
+- **One worker never sees the error, but it queues.** With 1 worker at 100 messages/s, every request waits its turn, so poll p95 doubled (67ms → 130ms) even though Django's own time stayed lowest.
+- **Real use is far below this.** 100 messages/s is many times what a student app will see. Under the default throttle, one user can send at most 0.5 messages/s.
+
+### Limitations of the write test
+
+- **Laptop disk, not Railway's volume.** A write's lock is held until the data is synced to disk, and the laptop's SSD is fast. Railway's volume may be slower, which would make writes hold the lock longer. The largest wait seen was about 55 times shorter than the timeout, which leaves a lot of room, but it wasn't measured on Railway.
+- **Only one kind of write.** Senders only posted messages. Other writes (mark as read, connection requests, profile edits) weren't tested, but they are also short single statements or small transactions.
+- **Throttle disabled.** The throttle was raised so the senders could reach these rates. Throttle counts are kept in each worker's memory (no `CACHES` setting), so with 4 workers the real limit would be about 4 times the configured one.
+
 ## Limitations
 
-- **Read-only.** The test only sent GETs, and SQLite lets many readers work at once. `database is locked` happens when a writer holds the lock and other connections wait past the timeout, so this test could not surface it. It does not show that SQLite is fine for chat.
+- **Read-only on staging.** The staging test only sent GETs, and SQLite lets many readers work at once, so it could not surface `database is locked`. See the [write test](#write-test-local-multiple-workers) for writes.
 - **Empty conversation.** Every response was `[]` (2 bytes), so no messages were serialized. This is close to the cheapest possible poll.
 - **One user.** All clients shared one token and conversation. The server runs the same queries for each request and caches nothing per user, so the load per request is realistic, but per-user effects aren't covered.
 - **Synchronized clients.** See the bursts above.
@@ -78,7 +126,8 @@ Throughput averaged 16.6 polls/s. It ran higher (up to 24 requests/s) only durin
 
 ## Follow-ups
 
-- **Write test (PM decision).** A second run in which account B sends a message every few seconds (under the `message_send` throttle, 30/minute by default) would make polls return data and test SQLite under concurrent reads and writes. It would leave about 100 test messages in conversation 1 on staging permanently.
+- **Write test.** Done locally instead of on staging (see [Write test](#write-test-local-multiple-workers)). A staging run with one sender would pass by construction while staging has one worker.
+- **Throttles with more workers.** If `WEB_CONCURRENCY` is ever raised, the message and auth throttles need a shared cache (for example `DatabaseCache`). Otherwise each worker counts separately and the limits multiply.
 - **Gunicorn log severity.** Gunicorn writes its own log lines to stderr, which Railway labels `severity: error` (for example `Booting worker`). They aren't errors.
 - **Start command.** Before this test, staging's start command had been changed so `migrate` no longer ran on deploy. Migration `accounts.0003_verificationcode_attempts` was missing, and signup returned 500 (`no column named attempts`). The start command has been restored and signup works. The start command only lives in Railway's dashboard; keeping it in the repo (Railway config file) would put changes through review.
 
@@ -92,3 +141,23 @@ Throughput averaged 16.6 polls/s. It ran higher (up to 24 requests/s) only durin
 6. Check Sentry and Railway's logs for the run's time window. Railway shows UTC.
 
 Results go to `loadtests/results/`, which is gitignored.
+
+### Write test (local)
+
+From the repository root, with the root and `loadtests/` requirements installed:
+
+```bash
+export SQLITE_PATH=/tmp/loadtest.sqlite3 DJANGO_SETTINGS_MODULE=loadtests.loadtest_settings
+export DEBUG=false THROTTLE_MESSAGE_SEND=1000000/min
+eval "$(python -m loadtests.setup_local)"   # migrates and sets the three LOADTEST_* variables
+
+gunicorn -w 4 -b 127.0.0.1:8765 pack_referrals.wsgi > server.log 2>&1 &
+
+LOADTEST_SENDERS=25 LOADTEST_SEND_INTERVAL=0.25 \
+  locust -f loadtests/locustfile.py --headless -u 75 -r 10 -t 3m \
+  --host http://127.0.0.1:8765 --csv loadtests/results/local
+
+grep -c 'database is locked' server.log
+```
+
+`-u` is the total number of clients: `LOADTEST_SENDERS` of them send and the rest poll. Use a new `SQLITE_PATH` file per run. To compare journal modes, set `SQLITE_JOURNAL_MODE=wal` before running `setup_local`.
