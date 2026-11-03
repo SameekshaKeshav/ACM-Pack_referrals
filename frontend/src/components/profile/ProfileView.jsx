@@ -6,12 +6,16 @@ const ProfileView = ({ profile, onEdit }) => {
     profile.major,
     profile.grad_year ? `Class ${profile.grad_year}` : '',
   ].filter(Boolean).join(' - ');
-  
+
+  const job = [profile.current_role, profile.current_company].filter(Boolean).join(' at ');
+
+
   return (
     <div>
 
       <h1>{profile.first_name} {profile.last_name}</h1>
       <p>{summary}</p>
+      {job && <p>{job}</p>}
       <p>Open to connect: {profile.open_to_connect ? 'On' : 'Off'}</p>
       <button onClick={onEdit}>Edit Profile</button>
 

@@ -1,11 +1,24 @@
 import { apiRequest } from './client';
 
-// Real GET/PATCH /api/accounts/me/. See docs/api-contract-accounts-companies.md.
-// The server's shape is converted to the one the profile components use:
-// company is a name string, and an ongoing role has end_date ''.
+// Real GET/PATCH /api/accounts/me/ and /api/accounts/past-roles/.
+// See docs/api-contract-accounts-companies.md. The server's shape is converted
+// to the one the profile components use: company is a name string, and an
+// ongoing role has end_date ''.
 
-// Writable on /me/. Roles go through /api/accounts/past-roles/ (separate PR).
-const WRITABLE_FIELDS = ['first_name', 'last_name', 'major', 'grad_year', 'bio', 'open_to_connect'];
+const WRITABLE_FIELDS = [
+  'first_name', 'last_name', 'major', 'grad_year', 'bio', 'open_to_connect',
+  'current_role', 'current_company_name',
+];
+
+function roleFromServer(role) {
+  return {
+    id: role.id,
+    company: role.company?.name ?? '',
+    role_title: role.role_title ?? '',
+    start_date: role.start_date ?? '',
+    end_date: role.end_date ?? '',
+  };
+}
 
 function fromServer(data) {
   return {
@@ -17,13 +30,7 @@ function fromServer(data) {
     current_role: data.current_role ?? '',
     current_company: data.current_company?.name ?? '',
     open_to_connect: Boolean(data.open_to_connect),
-    past_roles: (data.past_roles ?? []).map((role) => ({
-      id: role.id,
-      company: role.company?.name ?? '',
-      role_title: role.role_title ?? '',
-      start_date: role.start_date ?? '',
-      end_date: role.end_date ?? '',
-    })),
+    past_roles: (data.past_roles ?? []).map(roleFromServer),
   };
 }
 
@@ -32,10 +39,24 @@ export async function getMyProfile({ signal } = {}) {
 }
 
 export async function updateMyProfile(changes) {
+  // The form calls it current_company; the API wants current_company_name.
+  const named = { ...changes, current_company_name: changes.current_company };
   const body = Object.fromEntries(
-    WRITABLE_FIELDS.filter((key) => key in changes).map((key) => [key, changes[key]]),
+    WRITABLE_FIELDS.filter((key) => key in named).map((key) => [key, named[key]]),
   );
   await apiRequest('/api/accounts/me/', { method: 'PATCH', body });
   // Re-read so the page shows exactly what the server stored.
   return getMyProfile();
+}
+
+export async function addPastRole({ company, role_title, start_date, end_date }) {
+  const data = await apiRequest('/api/accounts/past-roles/', {
+    method: 'POST',
+    body: { company_name: company, role_title, start_date, end_date: end_date || null },
+  });
+  return roleFromServer(data);
+}
+
+export async function removePastRole(id) {
+  await apiRequest(`/api/accounts/past-roles/${id}/`, { method: 'DELETE' });
 }
