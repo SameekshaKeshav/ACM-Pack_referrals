@@ -15,7 +15,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken
 
-from .models import Profile, VerificationCode
+from .models import AlumniAccessRequest, Profile, VerificationCode
+from .throttling import AlumniRequestThrottle
 from .views import SEND_FAILED_DETAIL
 
 User = get_user_model()
@@ -749,3 +750,397 @@ class MeEndpointTests(APITestCase):
             self.url, {"current_company_name": "Inc."}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+def _rate(value):
+    """Raise the alumni throttle so a functional test is not starved by it.
+
+    Patches the throttle class rather than using override_settings: DRF binds
+    SimpleRateThrottle.THROTTLE_RATES to the settings dict at import, so
+    overriding REST_FRAMEWORK later leaves the old rates in place. (NUM_PROXIES
+    is read per request, which is why ProxyThrottleTests can override it.)
+
+    The real 3/15min budget is exercised in AlumniRequestThrottleTests.
+    """
+    return mock.patch.dict(
+        AlumniRequestThrottle.THROTTLE_RATES, {"alumni_request": value}
+    )
+
+
+VALID_REQUEST = {
+    "email": "alum@gmail.com",
+    "full_name": "Jo Alum",
+    "unity_id": "jalum",
+    "grad_year": 2019,
+    "major": "Computer Science",
+    "linkedin_url": "https://www.linkedin.com/in/joalum/",
+    "note": "Class of 2019, happy to take referral questions.",
+}
+
+
+@_rate("1000/15min")
+class AlumniAccessRequestSubmissionTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.url = reverse("accounts:alumni-access-request")
+
+    def submit(self, **overrides):
+        payload = {**VALID_REQUEST, **overrides}
+        return self.client.post(self.url, payload, format="json")
+
+    def test_a_valid_request_is_stored(self):
+        response = self.submit()
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        req = AlumniAccessRequest.objects.get()
+        self.assertEqual(req.email, "alum@gmail.com")
+        self.assertEqual(req.status, AlumniAccessRequest.Status.PENDING)
+        self.assertIsNone(req.reviewed_by)
+
+    def test_the_endpoint_needs_no_token(self):
+        self.assertEqual(self.submit().status_code, status.HTTP_202_ACCEPTED)
+
+    def test_email_and_unity_id_are_normalized(self):
+        self.submit(email="  ALUM@Gmail.COM ", unity_id="  JAlum ")
+        req = AlumniAccessRequest.objects.get()
+        self.assertEqual(req.email, "alum@gmail.com")
+        self.assertEqual(req.unity_id, "jalum")
+
+    def test_the_response_never_echoes_the_submission_back(self):
+        """Write-only: the reply must not become a way to read requests."""
+        response = self.submit()
+        self.assertEqual(set(response.data), {"detail"})
+
+    def test_a_bad_unity_id_is_a_400(self):
+        for bad in ("j.doe", "2jdoe", "jdoe!", "", "a" * 40):
+            with self.subTest(unity_id=bad):
+                response = self.submit(unity_id=bad)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("unity_id", response.data)
+
+    def test_digits_after_letters_are_accepted(self):
+        self.assertEqual(self.submit(unity_id="jdoe2").status_code, status.HTTP_202_ACCEPTED)
+
+    def test_a_missing_required_field_is_a_400(self):
+        for field in ("email", "full_name", "unity_id", "grad_year", "major"):
+            with self.subTest(field=field):
+                payload = {k: v for k, v in VALID_REQUEST.items() if k != field}
+                response = self.client.post(self.url, payload, format="json")
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(field, response.data)
+
+    def test_linkedin_and_note_are_optional(self):
+        payload = {k: v for k, v in VALID_REQUEST.items() if k not in ("linkedin_url", "note")}
+        self.assertEqual(
+            self.client.post(self.url, payload, format="json").status_code,
+            status.HTTP_202_ACCEPTED,
+        )
+
+    def test_an_over_long_note_is_a_400_not_an_unbounded_write(self):
+        """Issue #27 is unbounded TextFields; this endpoint does not add one."""
+        response = self.submit(note="x" * 501)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("note", response.data)
+
+    def test_an_implausible_grad_year_is_a_400(self):
+        for year in (1800, 2200):
+            with self.subTest(year=year):
+                self.assertEqual(
+                    self.submit(grad_year=year).status_code, status.HTTP_400_BAD_REQUEST
+                )
+
+    def test_status_and_reviewer_cannot_be_set_from_the_body(self):
+        response = self.submit(status="approved", reviewed_by=1, reviewed_at="2026-01-01T00:00:00Z")
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        req = AlumniAccessRequest.objects.get()
+        self.assertEqual(req.status, AlumniAccessRequest.Status.PENDING)
+        self.assertIsNone(req.reviewed_by)
+        self.assertIsNone(req.reviewed_at)
+
+
+@_rate("1000/15min")
+class AlumniRequestDuplicateTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.url = reverse("accounts:alumni-access-request")
+
+    def submit(self, **overrides):
+        return self.client.post(self.url, {**VALID_REQUEST, **overrides}, format="json")
+
+    def test_a_second_pending_request_is_not_stored(self):
+        self.assertEqual(self.submit().status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(self.submit().status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(AlumniAccessRequest.objects.count(), 1)
+
+    def test_a_duplicate_is_indistinguishable_from_a_first_submission(self):
+        """Otherwise the endpoint reports who has already applied."""
+        first = self.submit()
+        second = self.submit()
+        self.assertEqual(first.status_code, second.status_code)
+        self.assertEqual(first.data, second.data)
+
+    def test_the_database_refuses_a_second_pending_row(self):
+        """The serializer check races; the constraint is what actually holds."""
+        AlumniAccessRequest.objects.create(**VALID_REQUEST)
+        with self.assertRaises(IntegrityError):
+            AlumniAccessRequest.objects.create(**VALID_REQUEST)
+
+    def test_reapplying_after_a_rejection_is_allowed(self):
+        AlumniAccessRequest.objects.create(
+            **VALID_REQUEST, status=AlumniAccessRequest.Status.REJECTED
+        )
+        self.assertEqual(self.submit().status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(AlumniAccessRequest.objects.count(), 2)
+
+    def test_a_clashing_unity_id_is_flagged_not_rejected(self):
+        self.submit()
+        self.submit(email="other@gmail.com")
+        other = AlumniAccessRequest.objects.get(email="other@gmail.com")
+        self.assertTrue(other.other_requests_with_this_unity_id().exists())
+        self.assertEqual(AlumniAccessRequest.objects.count(), 2)
+
+
+@_rate("1000/15min")
+class AlumniRequestHoneypotTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.url = reverse("accounts:alumni-access-request")
+
+    def test_a_filled_honeypot_stores_nothing(self):
+        response = self.client.post(
+            self.url, {**VALID_REQUEST, "confirm_email": "alum@gmail.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(AlumniAccessRequest.objects.count(), 0)
+
+    def test_a_blank_honeypot_is_fine(self):
+        response = self.client.post(
+            self.url, {**VALID_REQUEST, "confirm_email": ""}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(AlumniAccessRequest.objects.count(), 1)
+
+    def test_the_honeypot_response_matches_a_real_one(self):
+        real = self.client.post(self.url, VALID_REQUEST, format="json")
+        cache.clear()
+        AlumniAccessRequest.objects.all().delete()
+        trapped = self.client.post(
+            self.url, {**VALID_REQUEST, "confirm_email": "x@y.com"}, format="json"
+        )
+        self.assertEqual(real.status_code, trapped.status_code)
+        self.assertEqual(real.data, trapped.data)
+
+
+class AlumniRequestThrottleTests(APITestCase):
+    def setUp(self):
+        cache.clear()
+        self.url = reverse("accounts:alumni-access-request")
+
+    def test_a_fourth_request_in_the_window_is_rejected(self):
+        for i in range(3):
+            response = self.client.post(
+                self.url, {**VALID_REQUEST, "email": f"alum{i}@gmail.com"}, format="json"
+            )
+            self.assertNotEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        response = self.client.post(
+            self.url, {**VALID_REQUEST, "email": "alum9@gmail.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_it_has_its_own_budget_separate_from_code_requests(self):
+        for i in range(3):
+            self.client.post(
+                self.url, {**VALID_REQUEST, "email": f"alum{i}@gmail.com"}, format="json"
+            )
+        signup = self.client.post(
+            reverse("accounts:auth-signup"), {"email": "student@ncsu.edu"}, format="json"
+        )
+        self.assertNotEqual(signup.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+@override_settings(REST_FRAMEWORK={**settings.REST_FRAMEWORK, "NUM_PROXIES": 1})
+class AlumniRequestProxyThrottleTests(APITestCase):
+    """The same proxy-aware client identification as the auth throttles.
+
+    Issue #28: with the proxy count unset, a varying X-Forwarded-For bypassed
+    throttling entirely. A new public endpoint has to be covered too.
+    """
+
+    def setUp(self):
+        cache.clear()
+        self.url = reverse("accounts:alumni-access-request")
+
+    def submit(self, i, forwarded_for):
+        return self.client.post(
+            self.url,
+            {**VALID_REQUEST, "email": f"alum{i}@gmail.com"},
+            format="json",
+            HTTP_X_FORWARDED_FOR=forwarded_for,
+        )
+
+    def test_a_spoofed_forwarded_for_does_not_reset_the_budget(self):
+        for i in range(3):
+            self.submit(i, f"9.9.9.{i}, 10.0.0.1")
+        response = self.submit(9, "9.9.9.250, 10.0.0.1")
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_each_real_client_gets_its_own_budget(self):
+        for i in range(3):
+            self.submit(i, f"9.9.9.{i}, 10.0.0.1")
+        response = self.submit(9, "9.9.9.250, 10.0.0.2")
+        self.assertNotEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+@_rate("1000/15min")
+class ApprovedAlumniSignupTests(APITestCase):
+    """An approved address becomes eligible on every auth endpoint."""
+
+    def setUp(self):
+        cache.clear()
+        self.signup_url = reverse("accounts:auth-signup")
+        self.login_url = reverse("accounts:auth-login")
+        self.verify_url = reverse("accounts:auth-verify")
+
+    def approve(self, email="alum@gmail.com"):
+        return AlumniAccessRequest.objects.create(
+            **{**VALID_REQUEST, "email": email},
+            status=AlumniAccessRequest.Status.APPROVED,
+        )
+
+    def test_an_unapproved_non_ncsu_address_is_still_rejected(self):
+        response = self.client.post(
+            self.signup_url, {"email": "stranger@gmail.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("email", response.data)
+
+    def test_a_pending_request_does_not_grant_access(self):
+        AlumniAccessRequest.objects.create(**VALID_REQUEST)
+        response = self.client.post(
+            self.signup_url, {"email": "alum@gmail.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_a_rejected_request_does_not_grant_access(self):
+        AlumniAccessRequest.objects.create(
+            **VALID_REQUEST, status=AlumniAccessRequest.Status.REJECTED
+        )
+        response = self.client.post(
+            self.signup_url, {"email": "alum@gmail.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_an_approved_alum_can_sign_up_and_is_marked_admin_approved(self):
+        self.approve()
+        response = self.client.post(
+            self.signup_url, {"email": "alum@gmail.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        profile = Profile.objects.get(user__email="alum@gmail.com")
+        self.assertEqual(profile.verified_via, Profile.VerifiedVia.ADMIN_APPROVAL)
+        self.assertEqual(profile.account_status, Profile.AccountStatus.UNVERIFIED)
+
+    def test_an_approved_alum_still_has_to_verify_by_email(self):
+        """Approval grants eligibility, not an active account."""
+        self.approve()
+        self.client.post(self.signup_url, {"email": "alum@gmail.com"}, format="json")
+        self.assertEqual(len(mail.outbox), 1)
+        code = re.search(r"\b(\d{6})\b", mail.outbox[0].body).group(1)
+
+        response = self.client.post(
+            self.verify_url, {"email": "alum@gmail.com", "code": code}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+        profile = Profile.objects.get(user__email="alum@gmail.com")
+        self.assertEqual(profile.account_status, Profile.AccountStatus.ACTIVE)
+        self.assertEqual(profile.verified_via, Profile.VerifiedVia.ADMIN_APPROVAL)
+
+    def test_an_approved_alum_can_log_in_later(self):
+        """Eligibility has to agree across endpoints, or they are stranded."""
+        self.approve()
+        self.client.post(self.signup_url, {"email": "alum@gmail.com"}, format="json")
+        mail.outbox.clear()
+        response = self.client.post(
+            self.login_url, {"email": "alum@gmail.com"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_an_ncsu_signup_is_marked_as_verified_by_domain(self):
+        self.client.post(self.signup_url, {"email": "student@ncsu.edu"}, format="json")
+        profile = Profile.objects.get(user__email="student@ncsu.edu")
+        self.assertEqual(profile.verified_via, Profile.VerifiedVia.NCSU_EMAIL)
+
+    def test_the_rejection_message_does_not_mention_approval(self):
+        """The 400 body must not hint that an approved-alum route exists."""
+        response = self.client.post(
+            self.signup_url, {"email": "stranger@gmail.com"}, format="json"
+        )
+        body = str(response.data).lower()
+        for word in ("alum", "approv", "pending"):
+            self.assertNotIn(word, body)
+
+
+class AlumniApprovalFlowTests(APITestCase):
+    """The admin action: idempotent, and it records who decided."""
+
+    def setUp(self):
+        from django.contrib.admin.sites import AdminSite
+
+        from .admin import AlumniAccessRequestAdmin
+
+        self.admin = AlumniAccessRequestAdmin(AlumniAccessRequest, AdminSite())
+        self.reviewer = User.objects.create_user(
+            username="reviewer@ncsu.edu", email="reviewer@ncsu.edu", is_staff=True
+        )
+        self.request = AlumniAccessRequest.objects.create(**VALID_REQUEST)
+
+    def _fake_request(self):
+        fake = mock.Mock()
+        fake.user = self.reviewer
+        return fake
+
+    def approve(self):
+        self.admin.approve_requests(
+            self._fake_request(), AlumniAccessRequest.objects.filter(pk=self.request.pk)
+        )
+        self.request.refresh_from_db()
+
+    def test_approving_records_the_reviewer_and_time(self):
+        self.approve()
+        self.assertEqual(self.request.status, AlumniAccessRequest.Status.APPROVED)
+        self.assertEqual(self.request.reviewed_by, self.reviewer)
+        self.assertIsNotNone(self.request.reviewed_at)
+
+    def test_approval_makes_the_address_eligible(self):
+        self.assertFalse(AlumniAccessRequest.is_approved_email("alum@gmail.com"))
+        self.approve()
+        self.assertTrue(AlumniAccessRequest.is_approved_email("alum@gmail.com"))
+
+    def test_re_approving_does_not_overwrite_the_original_reviewer(self):
+        self.approve()
+        first_reviewer, first_time = self.request.reviewed_by, self.request.reviewed_at
+
+        other = User.objects.create_user(
+            username="other@ncsu.edu", email="other@ncsu.edu", is_staff=True
+        )
+        fake = mock.Mock()
+        fake.user = other
+        self.admin.approve_requests(
+            fake, AlumniAccessRequest.objects.filter(pk=self.request.pk)
+        )
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.reviewed_by, first_reviewer)
+        self.assertEqual(self.request.reviewed_at, first_time)
+
+    def test_rejecting_revokes_eligibility(self):
+        self.approve()
+        self.admin.reject_requests(
+            self._fake_request(), AlumniAccessRequest.objects.filter(pk=self.request.pk)
+        )
+        self.assertFalse(AlumniAccessRequest.is_approved_email("alum@gmail.com"))
+
+    def test_the_clash_flag_spots_a_shared_unity_id(self):
+        self.assertFalse(self.admin.unity_id_clash(self.request))
+        AlumniAccessRequest.objects.create(**{**VALID_REQUEST, "email": "other@gmail.com"})
+        self.assertTrue(self.admin.unity_id_clash(self.request))

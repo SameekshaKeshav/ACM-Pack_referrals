@@ -256,3 +256,73 @@ A non-numeric or negative filter is a **400**, not a silently unfiltered list:
 - If the two response shapes cost you anything, say so and I will align mine.
 - If the "first spelling wins" display name looks wrong in the UI, that is a
   real design question and worth settling before the showcase.
+
+---
+
+## Alumni access requests
+
+NC State has no approved alumni-verification API (the alumni directory ended
+with their CRM change), so alumni cannot self-serve. Signup stays @ncsu.edu
+only, and an alum gets in when an admin approves a request by hand.
+
+### `POST /api/accounts/alumni-access-requests/`
+
+**Public — no token.** Throttled at 3 per 15 minutes per client.
+
+```json
+{
+  "email": "alum@gmail.com",
+  "full_name": "Jo Alum",
+  "unity_id": "jalum",
+  "grad_year": 2019,
+  "major": "Computer Science",
+  "linkedin_url": "https://www.linkedin.com/in/joalum/",
+  "note": "Class of 2019, happy to take referral questions."
+}
+```
+
+`email`, `full_name`, `unity_id`, `grad_year` and `major` are required;
+`linkedin_url` and `note` are optional. `note` is capped at **500 characters**.
+
+Always **202** on anything that is not a field-level mistake:
+
+```json
+{ "detail": "Thanks - your request is with the team. If it is approved you will be able to sign in with this email address." }
+```
+
+**The response is deliberately the same** whether the request was stored, was a
+duplicate, or tripped the spam trap — so the endpoint cannot be used to find
+out who has already applied. Do not write UI that distinguishes those cases;
+there is no way to tell them apart, by design.
+
+A field-level error is a normal **400** with per-field messages:
+
+```json
+{ "unity_id": ["A Unity ID is letters and digits, starting with a letter, e.g. 'jdoe' or 'jdoe2'."] }
+```
+
+### The form needs one hidden field
+
+Include an input named **`confirm_email`**, hidden from users and left empty.
+It is a spam trap: a submission that fills it is silently discarded. Never
+show it, never prefill it, never put it in the tab order.
+
+### What happens after approval
+
+Approval grants **eligibility, not an account**. An approved alum then goes
+through the normal flow — `POST /auth/signup/` → emailed code →
+`POST /auth/verify/` — so their account is still `unverified` until they prove
+they own the inbox. Nothing about the signup or verify request bodies changes.
+
+`GET /api/accounts/me/` gains one read-only field:
+
+| Field | Values |
+|---|---|
+| `verified_via` | `"ncsu_email"` or `"admin_approval"` |
+
+Use it if you want to badge admin-approved alumni. `account_status` is
+unchanged and still only ever `unverified` / `active` / `suspended` — there is
+no fourth value, so existing status checks keep working.
+
+There is no endpoint to read, list or check the status of a request. That is
+intentional; approval is communicated out of band.

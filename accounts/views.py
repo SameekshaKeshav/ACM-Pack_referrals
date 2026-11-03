@@ -17,8 +17,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import PastRole, Profile, VerificationCode
 from .directory import filter_directory
 from .pagination import DirectoryPagination
-from .throttling import CodeRequestThrottle, VerifyAttemptThrottle
+from .throttling import AlumniRequestThrottle, CodeRequestThrottle, VerifyAttemptThrottle
+from .validators import is_ncsu_email
 from .serializers import (
+    AlumniAccessRequestSerializer,
     PastRoleSerializer,
     LoginSerializer,
     DirectoryEntrySerializer,
@@ -30,6 +32,16 @@ from .serializers import (
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
+
+
+def _verified_via(email):
+    """Which route let this address in, recorded on the profile at creation."""
+    if is_ncsu_email(email):
+        return Profile.VerifiedVia.NCSU_EMAIL
+    # The serializer already refused anything that is neither, so by here an
+    # address outside the domain must have an approved request.
+    return Profile.VerifiedVia.ADMIN_APPROVAL
+
 
 INVALID_CODE_DETAIL = "That code is invalid or has expired. Request a new one."
 SEND_FAILED_DETAIL = (
@@ -166,7 +178,7 @@ class SignupView(APIView):
                 user = User(username=email, email=email, is_active=False)
                 user.set_unusable_password()
                 user.save()
-                Profile.objects.create(user=user)
+                Profile.objects.create(user=user, verified_via=_verified_via(email))
                 _, code = VerificationCode.issue(user)
         except IntegrityError:
             # Two concurrent signups for the same address; the other one won.
@@ -258,3 +270,39 @@ class VerifyView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class AlumniAccessRequestView(APIView):
+    """Public: submit a request to be let in as an alum.
+
+    Write-only and deliberately dull. It answers the same way whether the
+    request was stored, was a duplicate, or tripped the honeypot, so it cannot
+    be used to find out who has already applied.
+    """
+
+    permission_classes = [AllowAny]  # alumni have no account yet - that is the point
+    throttle_classes = [AlumniRequestThrottle]
+
+    ACCEPTED_DETAIL = (
+        "Thanks - your request is with the team. If it is approved you will be "
+        "able to sign in with this email address."
+    )
+
+    def post(self, request):
+        serializer = AlumniAccessRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            # A field-level mistake (bad Unity ID, missing name) is worth
+            # reporting; a duplicate or the honeypot is not, and those are the
+            # only errors raised under "detail".
+            if "detail" in serializer.errors:
+                return Response(
+                    {"detail": self.ACCEPTED_DETAIL}, status=status.HTTP_202_ACCEPTED
+                )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            serializer.save()
+        except IntegrityError:
+            # Lost the race against another submission for the same address.
+            pass
+        return Response({"detail": self.ACCEPTED_DETAIL}, status=status.HTTP_202_ACCEPTED)

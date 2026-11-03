@@ -50,3 +50,14 @@ class VerifyAttemptThrottle(WindowedAnonThrottle):
     """
 
     scope = "verify_attempt"
+
+
+class AlumniRequestThrottle(WindowedAnonThrottle):
+    """Bounds submissions to the public alumni access endpoint.
+
+    Separate from code_request because the costs differ: this writes a row a
+    human then has to read, so the damage from abuse is reviewer time rather
+    than email sent to a stranger.
+    """
+
+    scope = "alumni_request"
