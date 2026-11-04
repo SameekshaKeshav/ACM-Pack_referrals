@@ -26,7 +26,7 @@ export default function ChatMockPage() {
 
   return <div className="app-shell">
     <header className="site-header authenticated-header"><a className="brand" href="/chat-mock"><span className="brand-mark">PR</span>Pack Referrals</a><span className="school">NC STATE UNIVERSITY</span>{auth?.session ? <div className="user-chip"><a href="/chat">Live messages</a><button className="button-secondary" onClick={auth.logout}>Log out</button></div> : <span className="user-chip">SS <span>Sanjana</span></span>}</header>
-    <main className="main-content">
+    <main id="main-content" tabIndex={-1} className="main-content">
       <div className="page-heading"><div><p className="eyebrow">YOUR WOLFPACK NETWORK</p><h1>Chat & Connect</h1><p>Good connections start with a conversation.</p></div><button className="button-secondary" onClick={reset}>Reset demo</button></div>
       <div className="demo-banner"><span className="demo-dot" /><span><strong>Chat mock</strong> · requests and conversations below use fictional data. Send Request uses the live API.</span></div>
       <section aria-labelledby="requests-heading" className="requests-section">

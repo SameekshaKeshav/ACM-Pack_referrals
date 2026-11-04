@@ -200,7 +200,7 @@ export default function Referrals() {
   const [version, setVersion] = useState(0);
   const [notice, setNotice] = useState('');
   const initialRecipient = params.get('recipient') || '';
-  return <main className="main-content referrals-page">
+  return <main id="main-content" tabIndex={-1} className="main-content referrals-page">
     <h1>Referral requests</h1><p>A referral ask is separate from a connection request. Only accepted connections can receive an ask.</p>
     <p role="status" className="local-notice">{notice}</p>
     <div className="referral-layout"><ReferralForm key={initialRecipient} initialRecipient={initialRecipient} onCreated={() => { setNotice('Referral request sent. You can find it in your outgoing asks.'); setDirection('outgoing'); setVersion((value) => value + 1); }} />

@@ -12,7 +12,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "playwright test",
     "test:dom": "node --test tests/*.dom.mjs",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:a11y": "playwright test a11y.spec.js accessibility.spec.js"
   },
   "dependencies": {
     "react": "19.2.8",

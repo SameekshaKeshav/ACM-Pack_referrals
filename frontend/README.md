@@ -97,3 +97,40 @@ Detailed API shapes, backend dependencies, storage tradeoffs and acceptance step
 Open `/referrals` after signing in, or use “Ask … for a referral” in an accepted
 chat. Create an ask, view incoming/outgoing asks, and page through older asks.
 See [the referral UI handoff](../docs/referral-ui.md) for setup and limitations.
+
+## Interview experiences and accessibility
+
+Company → Interview experiences loads `/api/companies/<id>/experiences/` and
+creates a post with `{role_title, outcome, difficulty, process_text}`. A row contains
+`id`, those fields, `is_mine`, `month` and `year`; only these public fields reach
+the UI. Own-post deletion uses `DELETE .../<experience_id>/` with confirmation.
+A 404 on deletion removes the stale card; other failures retain it with an error.
+
+These endpoints were added by backend PR #39, which is merged into main.
+Deployments without the routes still show unavailable on 404/501 and disable posting. No backend code or
+notification email is added here. Author identities are hidden from members;
+moderators can still identify authors. Role/process limits are 255/5000 Unicode
+code points. Failed posts retain the draft and submissions are single-flight.
+
+The shared JSX accessibility configuration, dependency versions, `npm run lint`
+and CI lint step come from #49. Profile add/remove single-flight guards from #52
+are preserved. Additional keyboard/contrast fixes and experience scans build on
+that baseline, including focusable chat history and skip-to-main links.
+
+```bash
+npm ci
+npm run lint
+npm run build
+npm run test:dom
+npx playwright install chromium
+npm test
+```
+
+`npm run test:a11y` runs both the existing baseline scans and the additional
+experience/error/mobile scans. Full axe JSON reports are attached to the extra
+scans; CI uploads test results. Automated checks complement keyboard, zoom and
+screen-reader review. Full browser checks must be repeated after rebasing.
+
+Manual acceptance: list/create/delete as two active test accounts against the deployed backend;
+check anonymous output and ownership, error/draft handling, 404 deletion, company
+switch cancellation, keyboard tab navigation, dialog focus and 390px layout.
