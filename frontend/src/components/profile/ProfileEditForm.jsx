@@ -130,15 +130,15 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
       ))}
 
       <h3>Add a Role</h3>
-      <div onKeyDown={handleRoleKeyDown}>
+      <fieldset className="role-fields"><legend>Add role details</legend>
         <label>
           Company
-          <input value={newRole.company} onChange={(e) => handleRoleField('company', e.target.value)} />
+          <input onKeyDown={handleRoleKeyDown} value={newRole.company} onChange={(e) => handleRoleField('company', e.target.value)} />
         </label>
         <label>
           Role title
           <input
-            value={newRole.role_title}
+            onKeyDown={handleRoleKeyDown} value={newRole.role_title}
             onChange={(e) => handleRoleField('role_title', e.target.value)}
           />
         </label>
@@ -146,7 +146,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
           Start date
           <input
             type="date"
-            value={newRole.start_date}
+            onKeyDown={handleRoleKeyDown} value={newRole.start_date}
             onChange={(e) => handleRoleField('start_date', e.target.value)}
           />
         </label>
@@ -154,12 +154,12 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
           End date (leave blank if ongoing)
           <input
             type="date"
-            value={newRole.end_date}
+            onKeyDown={handleRoleKeyDown} value={newRole.end_date}
             onChange={(e) => handleRoleField('end_date', e.target.value)}
           />
         </label>
         <button type="button" onClick={handleAddRole}>Add role</button>
-      </div>
+      </fieldset>
       {roleError && <p role="alert">{roleError}</p>}
 
       <div>
