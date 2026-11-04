@@ -39,7 +39,7 @@ const Directory = () => {
   }, [search, attempt]);
 
   return (
-    <main className="main-content">
+    <main id="main-content" tabIndex={-1} className="main-content">
       <div className="page-heading">
         <div>
           <p className="eyebrow">NC STATE NETWORK</p>

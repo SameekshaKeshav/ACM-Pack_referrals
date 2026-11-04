@@ -13,7 +13,7 @@ const ProfileView = ({ profile, onEdit }) => {
   return (
     <div>
 
-      <h1>{profile.first_name} {profile.last_name}</h1>
+      <h1>{[profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Your profile"}</h1>
       <p>{summary}</p>
       {job && <p>{job}</p>}
       <p>Open to connect: {profile.open_to_connect ? 'On' : 'Off'}</p>

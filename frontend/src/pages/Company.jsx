@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getCompany } from '../api/companies';
 import PeopleDirectory from '../components/directory/PeopleDirectory';
+import InterviewExperiences from '../components/InterviewExperiences';
 
 // Step two of the directory. To add a tab, add an entry here and a panel below.
 // The active tab lives in the URL (?tab=interviews) so a link opens that tab.
@@ -64,7 +65,7 @@ const Company = () => {
 
   if (notFound) {
     return (
-      <main className="main-content">
+      <main id="main-content" tabIndex={-1} className="main-content">
         <p className="empty-state">That company could not be found.</p>
         <Link to="/directory">Back to the directory</Link>
       </main>
@@ -72,7 +73,7 @@ const Company = () => {
   }
 
   return (
-    <main className="main-content">
+    <main id="main-content" tabIndex={-1} className="main-content">
       <p className="meta"><Link to="/directory">← All companies</Link></p>
 
       {error && <div className="feedback feedback-error" role="alert">{error}</div>}
@@ -84,11 +85,12 @@ const Company = () => {
         </div>
       </div>
 
-      <div className="tabs" role="tablist" aria-label="Company sections" onKeyDown={onKeyDown}>
+      <div className="tabs" role="tablist" aria-label="Company sections">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             ref={(node) => { tabRefs.current[tab.id] = node; }}
+            onKeyDown={onKeyDown}
             type="button"
             role="tab"
             id={`tab-${tab.id}`}
@@ -102,13 +104,11 @@ const Company = () => {
         ))}
       </div>
 
-      <div role="tabpanel" id={`panel-${active}`} aria-labelledby={`tab-${active}`}>
+      <div role="tabpanel" id="panel-members" aria-labelledby="tab-members" hidden={active !== 'members'}>
         {active === 'members' && companyId !== null && <PeopleDirectory companyId={companyId} />}
-        {active === 'interviews' && (
-          <p className="empty-state">
-            Interview experiences will appear here: how the process went, the rounds, and what was asked.
-          </p>
-        )}
+      </div>
+      <div role="tabpanel" id="panel-interviews" aria-labelledby="tab-interviews" hidden={active !== 'interviews'}>
+        {active === 'interviews' && company && <InterviewExperiences key={companyId} companyId={companyId} />}
       </div>
     </main>
   );

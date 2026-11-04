@@ -68,7 +68,13 @@ Polling: ask for `?after=<last message id>` about every 3 seconds. If a poll ret
 - Block and unblock: `POST, DELETE /api/connections/users/<id>/block/` and the block check in `POST /api/connections/` (BE2). A sample `Block` model exists so chat can honour blocks; BE2 owns and may replace it (chat only uses `connections.blocks.blocked_user_ids()`).
 - A reports route that takes the reporter from the token and is staff-only to read (BE2).
 - Referral accept and decline: `PATCH /api/connections/referrals/<id>/accept|decline/` (PM, Week 8), and the email to the recipient when an ask is created (PM, Week 8, needs real email on staging).
-- Anonymous interview experiences on company pages: `GET, POST /api/companies/<id>/experiences/` (BE2, Week 7).
+- Anonymous interview experiences: BE2 PR #39 (still pending on main) adds
+  `GET, POST /api/companies/<id>/experiences/` and own-post
+  `DELETE /api/companies/<id>/experiences/<experience_id>/`. POST takes
+  `{role_title, outcome, difficulty, process_text}`. GET/POST return public rows
+  `{id, role_title, outcome, difficulty, process_text, is_mine, month, year}`.
+  The Week 8 company tab follows that contract and shows unavailable on 404/501.
+  See [Week 8 handoff](week8-posts-accessibility.md); this UI does not add the backend routes.
 
 ## Referral frontend (Week 7)
 

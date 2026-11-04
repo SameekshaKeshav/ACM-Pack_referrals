@@ -13,7 +13,7 @@ function readPending() {
 }
 function rememberPending(value) { try { sessionStorage.setItem(PENDING, JSON.stringify(value)); } catch { /* Navigation state remains usable. */ } }
 function AuthShell({ title, children }) {
-  return <main className="auth-shell"><Link className="brand" to="/login"><span className="brand-mark">PR</span>Pack Referrals</Link><section className="auth-card"><h1>{title}</h1>{children}</section></main>;
+  return <><a className="skip-link" href="#main-content">Skip to main content</a><main id="main-content" tabIndex={-1} className="auth-shell"><Link className="brand" to="/login"><span className="brand-mark">PR</span>Pack Referrals</Link><section className="auth-card"><h1>{title}</h1>{children}</section></main></>;
 }
 
 export function EmailPage({ mode }) {
@@ -50,8 +50,8 @@ export function EmailPage({ mode }) {
     <p>Use your NC State email. We will email you a sign-in code; no password is needed.</p>
     <form onSubmit={submit}>
       <label htmlFor="auth-email">University email</label>
-      <input id="auth-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={pending} placeholder="you@ncsu.edu" />
-      {error && <p role="alert" className="feedback feedback-error">{error}</p>}
+      <input id="auth-email" aria-invalid={!!error} aria-describedby={error ? "auth-email-error" : undefined} type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={pending} placeholder="you@ncsu.edu" />
+      {error && <p id="auth-email-error" role="alert" className="feedback feedback-error">{error}</p>}
       <button className="button-primary" disabled={pending}>{pending ? 'Sending code…' : signup ? 'Sign up' : 'Send login code'}</button>
     </form>
     <p>{signup ? 'Already have an account?' : 'New to Pack Referrals?'} <Link to={signup ? '/login' : '/signup'} state={{ from: destination }}>{signup ? 'Log in' : 'Sign up'}</Link></p>
@@ -105,8 +105,8 @@ export function EnterCodePage() {
     <p>{details.mode === 'login' ? 'If your account exists, a code has been sent to' : 'Enter the code sent to'} <strong>{details.email}</strong>.</p>
     <form onSubmit={verify}>
       <label htmlFor="email-code">Six-digit code</label>
-      <input id="email-code" type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} disabled={!!pending} />
-      {error && <p role="alert" className="feedback feedback-error">{error}</p>}
+      <input id="email-code" aria-invalid={!!error} aria-describedby={error ? "auth-code-error" : undefined} type="text" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} disabled={!!pending} />
+      {error && <p id="auth-code-error" role="alert" className="feedback feedback-error">{error}</p>}
       {notice && <p role="status" className="feedback">{notice}</p>}
       <button className="button-primary" disabled={!!pending}>{pending === 'verify' ? 'Verifying…' : 'Verify and sign in'}</button>
       <button type="button" className="button-secondary" disabled={!!pending} onClick={resend}>{pending === 'resend' ? 'Sending…' : 'Resend code'}</button>

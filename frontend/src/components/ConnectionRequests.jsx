@@ -84,11 +84,12 @@ export default function ConnectionRequests({ onAccepted }) {
         <h2 id="requests-heading">Connection requests</h2>
         <button type="button" className="button-secondary" disabled={loading} onClick={() => setVersion((value) => value + 1)}>Refresh requests</button>
       </div>
-      <div className="tabs" role="tablist" aria-label="Request direction" onKeyDown={onKeyDown}>
+      <div className="tabs" role="tablist" aria-label="Request direction">
         {TABS.map((item) => (
           <button
             key={item.id}
             ref={(node) => { tabRefs.current[item.id] = node; }}
+            onKeyDown={onKeyDown}
             type="button"
             role="tab"
             id={`${item.id}-tab`}

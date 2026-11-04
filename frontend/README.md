@@ -97,3 +97,15 @@ Detailed API shapes, backend dependencies, storage tradeoffs and acceptance step
 Open `/referrals` after signing in, or use “Ask … for a referral” in an accepted
 chat. Create an ask, view incoming/outgoing asks, and page through older asks.
 See [the referral UI handoff](../docs/referral-ui.md) for setup and limitations.
+
+## Week 8: interview posts and accessibility
+
+Company → Interview experiences uses BE2 PR #39's GET/POST collection and own-post
+DELETE endpoint. Until that backend is deployed, this tab displays an unavailable
+state. See [Week 8 handoff](../docs/week8-posts-accessibility.md) for the contract,
+verification evidence and remaining integration/manual checks.
+
+`npm run lint:a11y` checks JSX with eslint-plugin-jsx-a11y. `npm run test:a11y` runs
+axe scans in Playwright and rejects serious/critical violations. These scans are
+also included in `npm test` and the Frontend workflow. Full JSON results attach to
+Playwright test results; automated checks complement a keyboard/screen-reader pass.

@@ -40,6 +40,12 @@ export default function ConnectDialog({ person, onSent, onConflict, onClose }) {
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
   };
 
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    dialog?.addEventListener('keydown', onKeyDown);
+    return () => dialog?.removeEventListener('keydown', onKeyDown);
+  }, [pending, onClose]);
+
   async function submit(event) {
     event.preventDefault();
     if (sending.current) return;
@@ -60,8 +66,8 @@ export default function ConnectDialog({ person, onSent, onConflict, onClose }) {
   }
 
   return (
-    <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
-      <div ref={dialogRef} className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={onKeyDown}>
+    <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
+      <div ref={dialogRef} className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <form onSubmit={submit}>
           <h2 id={titleId}>Connect with {person.name}</h2>
           <p className="meta">A short, personal note goes a long way. They can accept or decline.</p>
