@@ -4,6 +4,8 @@ ACM NC State project: a verified NC State alumni/student network for browsing co
 
 **Staging:** https://acm-packreferrals-production.up.railway.app/
 
+**What is left to do:** see [docs/project-checklist.md](docs/project-checklist.md). It replaces the tracker spreadsheet.
+
 ## Local setup
 
 Requires Python 3.11+.
