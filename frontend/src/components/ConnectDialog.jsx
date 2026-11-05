@@ -60,7 +60,11 @@ export default function ConnectDialog({ person, onSent, onConflict, onClose }) {
   }
 
   return (
+    // Clicking the backdrop is a mouse shortcut only: keyboard users close with Escape or Cancel.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div className="dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
+      {/* Escape and the Tab focus trap belong on the dialog itself (WAI-ARIA modal dialog pattern). */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div ref={dialogRef} className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} onKeyDown={onKeyDown}>
         <form onSubmit={submit}>
           <h2 id={titleId}>Connect with {person.name}</h2>

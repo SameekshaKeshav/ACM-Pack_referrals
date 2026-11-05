@@ -84,7 +84,7 @@ const Company = () => {
         </div>
       </div>
 
-      <div className="tabs" role="tablist" aria-label="Company sections" onKeyDown={onKeyDown}>
+      <div className="tabs" role="tablist" aria-label="Company sections">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -96,6 +96,7 @@ const Company = () => {
             aria-controls={`panel-${tab.id}`}
             tabIndex={active === tab.id ? 0 : -1}
             onClick={() => selectTab(tab.id)}
+            onKeyDown={onKeyDown}
           >
             {tab.label}
           </button>

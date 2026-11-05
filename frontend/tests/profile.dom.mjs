@@ -236,6 +236,17 @@ test('adding a role posts company_name and shows the new row', async () => {
   assert.equal(screen.getByLabelText('Company').value, '');
 });
 
+test('Enter in an add-role field adds the role and does not save the profile form', async () => {
+  const user = await openEditor();
+  await fillNewRole(user);
+  await user.type(screen.getByLabelText('Role title'), '{Enter}');
+  assert.ok(await screen.findByText(/Amazon/));
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 1);
+  assert.equal(calls.filter((c) => c.method === 'PATCH').length, 0);
+  // Still editing: Enter did not submit the outer form.
+  assert.ok(screen.getByRole('heading', { name: 'Edit profile' }));
+});
+
 test('adding a role without required fields shows an alert and sends nothing', async () => {
   const user = await openEditor();
   await user.click(screen.getByRole('button', { name: 'Add role' }));
