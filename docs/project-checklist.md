@@ -93,7 +93,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 - [ ] **MUST · Nov 8** Delete the older Sentry events on staging that contain emails or verification codes, and confirm in the #42 thread when it is done.
 - [ ] **MUST · Nov 8** Create an admin login on staging for the person who will approve alumni requests (the admin page is `/admin/`), and tell Sameeksha who has it.
 - [ ] **MUST · Nov 13** Re-run the write load test against the seeded data volume. Write the final decision on SQLite or Postgres for showcase day. The earlier write test passed on SQLite.
-- [ ] **MUST** Do not raise `WEB_CONCURRENCY` above 1 unless a shared cache is configured first. Throttle counts are kept per worker, so every limit would multiply.
+- [x] **MUST** Do not raise `WEB_CONCURRENCY` above 1 unless a shared cache is configured first. Throttle counts are kept per worker, so every limit would multiply.
 - [ ] **SHOULD** Plan for Brevo's 300 emails per day limit on showcase day. For example, check usage the day before, and keep demo accounts pre-verified or use `issue_demo_token`.
 - [ ] **SHOULD** Fix the `manage.py check --deploy` warnings (HSTS and secure cookies) if there is time.
 - [ ] **MUST · before Nov 16** Test a one-command rollback to the last known-good commit in under 2 minutes, at least once.
