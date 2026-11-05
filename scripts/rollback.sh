@@ -48,10 +48,45 @@ for tool in railway git curl jq; do
   command -v "$tool" > /dev/null || { echo "Missing $tool." >&2; exit 1; }
 done
 
-SECONDS=0   # bash's built-in timer; the total time is measured from here
+SECONDS=0   # bash's built-in timer, in whole seconds
 
-deployed_commit() {
-  curl -fsS --max-time 5 "$STAGING_URL/api/health/" 2>/dev/null | jq -r '.commit_hash // empty' 2>/dev/null || true
+# Railway, not /api/health/, says which commit is deployed: health reports
+# commit_hash null after a Railway rollback (checked 2026-11-05). Health only
+# answers "is the app up?".
+#
+# Sets HEALTH to "down" (curl's error goes in HEALTH_ERROR), "no-commit" (it
+# answered, without a commit_hash), or the commit it reports. Sets globals
+# rather than printing, because $(...) runs in a subshell and would lose
+# HEALTH_ERROR.
+HEALTH="" HEALTH_ERROR=""
+check_health() {
+  local body
+  if body="$(curl -fsS --max-time 5 "$STAGING_URL/api/health/" 2>&1)"; then
+    HEALTH="$(jq -r '.commit_hash // "no-commit"' <<< "$body" 2>/dev/null || echo no-commit)"
+    HEALTH_ERROR=""
+  else
+    HEALTH=down
+    HEALTH_ERROR="$body"
+  fi
+}
+
+# The same, but tries 3 times, so a single slow or dropped request does not
+# make staging look down.
+check_health_with_retries() {
+  local attempt
+  for attempt in 1 2 3; do
+    check_health
+    [[ $HEALTH != down ]] && return
+    if (( attempt < 3 )); then sleep 2; fi
+  done
+}
+
+describe_health() {
+  case "$HEALTH" in
+    down) echo "NOT answering (${HEALTH_ERROR:-empty response})" ;;
+    no-commit) echo "answering, without a commit_hash (normal after a Railway rollback)" ;;
+    *) echo "answering, reports ${HEALTH:0:7}" ;;
+  esac
 }
 
 # Migration files in a commit, one path per line, sorted for `comm`.
@@ -69,17 +104,22 @@ if ! git merge-base --is-ancestor "$TARGET" origin/main; then
   echo "Warning: $SHORT is not on origin/main." >&2
 fi
 
-LIVE="$(deployed_commit)"
-if [[ -z "$LIVE" ]]; then
-  echo "Warning: $STAGING_URL/api/health/ did not answer, so the live commit is unknown." >&2
-elif [[ "$LIVE" == "$TARGET" ]]; then
-  echo "Staging is already on $SHORT. Nothing to do."
-  exit 0
-fi
-
 # Newest first. Railway keeps every deployment in this list, including the
 # ones it has since replaced (status REMOVED).
 DEPLOYMENTS="$(railway deployment list --limit 100 --json)"
+
+LIVE="$(jq -r '[.[] | select(.status == "SUCCESS")][0].meta.commitHash // empty' <<< "$DEPLOYMENTS")"
+check_health_with_retries
+if [[ -n "$LIVE" && "$LIVE" == "$TARGET" ]]; then
+  if [[ $HEALTH != down ]]; then
+    echo "Staging is already on $SHORT. Nothing to do."
+    exit 0
+  fi
+  echo "Railway says $SHORT is already deployed, but staging is not answering." >&2
+  echo "Deploying the same commit again will not fix that. Check \`railway logs\`," >&2
+  echo "or roll back to an earlier commit instead." >&2
+  exit 1
+fi
 
 # --- Migration check ----------------------------------------------------------
 # The database has every migration that any deployment since the target was
@@ -128,7 +168,8 @@ if [[ -n "$DEPLOYMENT_ID" && $REBUILD -eq 0 ]]; then
 fi
 
 echo
-echo "Live on staging: ${LIVE:-unknown}"
+echo "Live on staging: ${LIVE:-unknown} (Railway's latest successful deployment)"
+echo "/api/health/:    $(describe_health)"
 echo "Target:          $TARGET  $(git show -s --format=%s "$TARGET")"
 if [[ $METHOD == rollback ]]; then
   echo "Method:          rollback to deployment $DEPLOYMENT_ID (reuses its build)"
@@ -160,42 +201,75 @@ if [[ $DRY_RUN -eq 1 ]]; then
   exit 0
 fi
 
+CHECKS_TOOK=$SECONDS
 if [[ $YES -eq 0 ]]; then
   [[ -t 0 ]] || { echo "Not a terminal, so cannot ask. Pass --yes to deploy." >&2; exit 1; }
   read -r -p "Deploy $SHORT to staging now? [y/N] " answer
   [[ "$answer" == [yY] ]] || { echo "Cancelled."; exit 1; }
 fi
+# The deploy is timed from here, so time spent at the prompt is not counted.
+DEPLOY_START=$SECONDS
+
+# The deployment this run creates is the one for $TARGET that is not in this
+# list. Matching on IDs rather than times means your clock does not matter.
+BEFORE_IDS="$(railway deployment list --limit 100 --json | jq -r '.[].id')"
 
 if [[ $METHOD == rollback ]]; then
   # shellcheck disable=SC2016
-  railway api --compact --raw-var "id=$DEPLOYMENT_ID" \
-    'mutation($id: String!) { deploymentRollback(id: $id) }' > /dev/null
+  started="$(railway api --compact --raw-var "id=$DEPLOYMENT_ID" \
+    'mutation($id: String!) { deploymentRollback(id: $id) }' 2>&1)" || {
+    echo "Railway refused the rollback:" >&2; echo "$started" >&2
+    echo "Try again with --rebuild." >&2; exit 1; }
   TIMEOUT="${TIMEOUT:-300}"
 else
-  railway redeploy --commit "$TARGET" --yes > /dev/null
+  started="$(railway redeploy --commit "$TARGET" --yes 2>&1)" || {
+    echo "Railway refused the redeploy:" >&2; echo "$started" >&2; exit 1; }
   TIMEOUT="${TIMEOUT:-900}"   # a full build
 fi
-echo "Started the $METHOD at ${SECONDS}s. Waiting for /api/health/ to report $SHORT..."
+echo "Started the $METHOD. Waiting for Railway to report the new deployment live..."
 
+# Done when the new deployment is SUCCESS and the app answers. If health still
+# reports the old commit, traffic has not switched yet, so keep waiting.
 DEADLINE=$((SECONDS + TIMEOUT))
 LAST_REPORT=$SECONDS
-current=""
+status="not created yet" new_id=""
 while (( SECONDS < DEADLINE )); do
-  current="$(deployed_commit)"
-  if [[ "$current" == "$TARGET" ]]; then
-    echo
-    echo "Staging is on $SHORT. Total time: ${SECONDS}s."
-    echo "The next merge to main deploys over this. Hold merges until the fix is ready."
-    [[ -n "$LIVE" ]] && echo "To undo this: scripts/rollback.sh ${LIVE:0:7}"
-    exit 0
+  new="$(railway deployment list --limit 10 --json 2>/dev/null \
+    | jq -c --arg c "$TARGET" --arg before "$BEFORE_IDS" \
+      '[.[] | select(.meta.commitHash == $c)
+            | select(.id as $id | ($before | split("\n") | index($id)) | not)][0] // empty' \
+      2>/dev/null || true)"
+  if [[ -n "$new" ]]; then
+    new_id="$(jq -r .id <<< "$new")"
+    status="$(jq -r .status <<< "$new")"
   fi
+  case "$status" in
+    SUCCESS)
+      check_health
+      if [[ $HEALTH != down && ( -z "$LIVE" || $HEALTH != "$LIVE" ) ]]; then
+        deploy_took=$((SECONDS - DEPLOY_START))
+        echo
+        echo "Staging is on $SHORT (deployment $new_id). /api/health/ is $(describe_health)."
+        echo "The $METHOD took ${deploy_took}s; the checks before it took ${CHECKS_TOOK}s."
+        echo "Total without the prompt (as with --yes): $((CHECKS_TOOK + deploy_took))s."
+        echo "The next merge to main deploys over this. Hold merges until the fix is ready."
+        if [[ -n "$LIVE" ]]; then echo "To undo this: scripts/rollback.sh ${LIVE:0:7}"; fi
+        exit 0
+      fi ;;
+    FAILED|CRASHED|REMOVED)
+      echo "The new deployment $new_id ended as $status after $((SECONDS - DEPLOY_START))s." >&2
+      echo "Check \`railway logs --build\` and \`railway logs\`. Staging may still be on ${LIVE:0:7}." >&2
+      exit 1 ;;
+  esac
   if (( SECONDS - LAST_REPORT >= 30 )); then
-    echo "  ${SECONDS}s: staging reports ${current:-(no answer)}"
+    check_health
+    echo "  $((SECONDS - DEPLOY_START))s: new deployment ${status}; /api/health/ $(describe_health)"
     LAST_REPORT=$SECONDS
   fi
   sleep "$POLL_SECONDS"
 done
 
-echo "Gave up after ${TIMEOUT}s: staging still reports ${current:-no answer}." >&2
+check_health
+echo "Gave up after ${TIMEOUT}s: the new deployment is ${status}; /api/health/ $(describe_health)." >&2
 echo "Check \`railway deployment list\` and \`railway logs --build\` / \`railway logs\`." >&2
 exit 1

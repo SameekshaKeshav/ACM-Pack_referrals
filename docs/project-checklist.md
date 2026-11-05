@@ -96,7 +96,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 - [x] **MUST** Do not raise `WEB_CONCURRENCY` above 1 unless a shared cache is configured first. Throttle counts are kept per worker, so every limit would multiply.
 - [ ] **SHOULD** Plan for Brevo's 300 emails per day limit on showcase day. For example, check usage the day before, and keep demo accounts pre-verified or use `issue_demo_token`.
 - [ ] **SHOULD** Fix the `manage.py check --deploy` warnings (HSTS and secure cookies) if there is time.
-- [ ] **MUST · before Nov 16** Test a one-command rollback to the last known-good commit in under 2 minutes, at least once.
+- [x] **MUST · before Nov 16** Test a one-command rollback to the last known-good commit in under 2 minutes, at least once.
 - [ ] **MUST · Nov 16 week** On call during the demo to watch the logs and error tracking.
 
 ## Rawan (FE1: profile and directory)
