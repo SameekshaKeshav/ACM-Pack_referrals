@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import PastRoleEntry from './PastRoleEntry';
 
 const EMPTY_ROLE = { company: '', role_title: '', start_date: '', end_date: '' };
@@ -7,6 +7,20 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
   const [form, setForm] = useState(profile);
   const [newRole, setNewRole] = useState(EMPTY_ROLE);
   const [roleError, setRoleError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+
+  const runRoleRequest = async (request) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      await request();
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
 
   const handleChange = (field, value) => {
     setForm({ ...form, [field]: value });
@@ -24,7 +38,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
     });
   };
 
-  const handleAddRole = async () => {
+  const handleAddRole = () => runRoleRequest(async () => {
     const company = newRole.company.trim();
     const role_title = newRole.role_title.trim();
     if (!company || !role_title || !newRole.start_date) {
@@ -42,16 +56,16 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
     } catch (err) {
       setRoleError(err.message || 'Could not add the role. Please try again.');
     }
-  };
+  });
 
-  const handleRemoveRole = async (id) => {
+  const handleRemoveRole = (id) => runRoleRequest(async () => {
     try {
       await onRemoveRole(id);
       setRoleError('');
     } catch (err) {
       setRoleError(err.message || 'Could not remove the role. Please try again.');
     }
-  };
+  });
 
   // Enter inside the Add a Role fields adds the role instead of saving the whole form.
   const handleRoleKeyDown = (e) => {
@@ -123,6 +137,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
             type="button"
             aria-label={`Remove ${role.company} ${role.role_title}`}
             onClick={() => handleRemoveRole(role.id)}
+            disabled={busy}
           >
             Remove
           </button>
@@ -158,7 +173,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
             onChange={(e) => handleRoleField('end_date', e.target.value)}
           />
         </label>
-        <button type="button" onClick={handleAddRole}>Add role</button>
+        <button type="button" onClick={handleAddRole} disabled={busy}>Add role</button>
       </div>
       {roleError && <p role="alert">{roleError}</p>}
 
