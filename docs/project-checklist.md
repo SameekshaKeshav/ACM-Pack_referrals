@@ -89,8 +89,8 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 
 - [ ] **MUST · Nov 6** Add accessibility checks to the frontend CI: `eslint-plugin-jsx-a11y` in lint, and `@axe-core/playwright` scans of the main pages.
 - [ ] **SHOULD · Nov 6** Add a `get_authed_client(user)` test helper, and document how to run `python manage.py test` in a way that needs no extra setup. Confirm one teammate has run it successfully.
-- [ ] **MUST · Nov 8** Export a Postman (or Insomnia) collection covering every endpoint, each with a saved passing example. Today there are only two collections.
-- [ ] **MUST · Nov 8** Delete the older Sentry events on staging that contain emails or verification codes, and confirm in the #42 thread when it is done.
+- [x] **MUST · Nov 8** Export a Postman (or Insomnia) collection covering every endpoint, each with a saved passing example. Today there are only two collections.
+- [x] **MUST · Nov 8** Delete the older Sentry events on staging that contain emails or verification codes, and confirm in the #42 thread when it is done.
 - [ ] **MUST · Nov 8** Create an admin login on staging for the person who will approve alumni requests (the admin page is `/admin/`), and tell Sameeksha who has it.
 - [ ] **MUST · Nov 13** Re-run the write load test against the seeded data volume. Write the final decision on SQLite or Postgres for showcase day. The earlier write test passed on SQLite.
 - [ ] **MUST** Do not raise `WEB_CONCURRENCY` above 1 unless a shared cache is configured first. Throttle counts are kept per worker, so every limit would multiply.
