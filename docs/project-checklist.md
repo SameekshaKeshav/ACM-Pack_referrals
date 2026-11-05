@@ -91,7 +91,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 - [ ] **SHOULD · Nov 6** Add a `get_authed_client(user)` test helper, and document how to run `python manage.py test` in a way that needs no extra setup. Confirm one teammate has run it successfully.
 - [x] **MUST · Nov 8** Export a Postman (or Insomnia) collection covering every endpoint, each with a saved passing example. Today there are only two collections.
 - [x] **MUST · Nov 8** Delete the older Sentry events on staging that contain emails or verification codes, and confirm in the #42 thread when it is done.
-- [ ] **MUST · Nov 8** Create an admin login on staging for the person who will approve alumni requests (the admin page is `/admin/`), and tell Sameeksha who has it.
+- [x] **MUST · Nov 8** Create an admin login on staging for the person who will approve alumni requests (the admin page is `/admin/`), and tell Sameeksha who has it.
 - [ ] **MUST · Nov 13** Re-run the write load test against the seeded data volume. Write the final decision on SQLite or Postgres for showcase day. The earlier write test passed on SQLite.
 - [ ] **MUST** Do not raise `WEB_CONCURRENCY` above 1 unless a shared cache is configured first. Throttle counts are kept per worker, so every limit would multiply.
 - [ ] **SHOULD** Plan for Brevo's 300 emails per day limit on showcase day. For example, check usage the day before, and keep demo accounts pre-verified or use `issue_demo_token`.
