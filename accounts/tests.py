@@ -1140,6 +1140,59 @@ class AlumniApprovalFlowTests(APITestCase):
         )
         self.assertFalse(AlumniAccessRequest.is_approved_email("alum@gmail.com"))
 
+    def _alum_account(self, email="alum@gmail.com", via=None):
+        """An account created the way signup creates one for this address."""
+        user = User.objects.create_user(username=email, email=email)
+        return Profile.objects.create(
+            user=user,
+            account_status=Profile.AccountStatus.ACTIVE,
+            verified_via=via or Profile.VerifiedVia.ADMIN_APPROVAL,
+        )
+
+    def reject(self):
+        self.admin.reject_requests(
+            self._fake_request(), AlumniAccessRequest.objects.filter(pk=self.request.pk)
+        )
+
+    def test_rejecting_suspends_the_account_the_request_let_in(self):
+        """Revoking eligibility alone leaves the account reachable."""
+        self.approve()
+        profile = self._alum_account()
+        self.reject()
+        profile.refresh_from_db()
+        self.assertEqual(profile.account_status, Profile.AccountStatus.SUSPENDED)
+
+    def test_rejecting_leaves_an_ncsu_account_alone(self):
+        """Their eligibility is the domain, not the request."""
+        self.approve()
+        profile = self._alum_account(
+            email="jo@ncsu.edu", via=Profile.VerifiedVia.NCSU_EMAIL
+        )
+        self.reject()
+        profile.refresh_from_db()
+        self.assertEqual(profile.account_status, Profile.AccountStatus.ACTIVE)
+
+    def test_rejecting_a_resubmission_does_not_revoke_an_earlier_approval(self):
+        """Two requests, one still approved, so the address keeps access."""
+        self.approve()
+        profile = self._alum_account()
+        resubmission = AlumniAccessRequest.objects.create(**VALID_REQUEST)
+
+        self.admin.reject_requests(
+            self._fake_request(),
+            AlumniAccessRequest.objects.filter(pk=resubmission.pk),
+        )
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.account_status, Profile.AccountStatus.ACTIVE)
+        self.assertTrue(AlumniAccessRequest.is_approved_email("alum@gmail.com"))
+
+    def test_rejecting_a_request_with_no_account_yet_is_fine(self):
+        """The usual case: rejected before they ever signed up."""
+        self.reject()
+        self.request.refresh_from_db()
+        self.assertEqual(self.request.status, AlumniAccessRequest.Status.REJECTED)
+
     def test_the_clash_flag_spots_a_shared_unity_id(self):
         self.assertFalse(self.admin.unity_id_clash(self.request))
         AlumniAccessRequest.objects.create(**{**VALID_REQUEST, "email": "other@gmail.com"})
