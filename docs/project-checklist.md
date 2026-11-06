@@ -133,7 +133,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 ## Sameeksha (PM)
 
 - [ ] **MUST · Nov 6** Make the scope-freeze decision and tell the team. In scope: alumni access (backend is merged, form is below), referral accept and decline (Karthik). Out of scope for the showcase: referral notification emails. Confirm or change this.
-- [ ] **MUST · Nov 9** Alumni access, frontend. Build the request form on a new public route and a "Request alumni access" link on the signup page. See [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md) for the contract. Add tests.
+- [x] **MUST · Nov 9** Alumni access, frontend. Build the request form on a new public route and a "Request alumni access" link on the signup page. See [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md) for the contract. Add tests.
 - [ ] **SHOULD · Nov 11** Company endpoint for the referral form: a way to get the current and past companies of a connection, so the form can offer only valid companies. The backend rejects any company that is not on the recipient's profile, with a 400.
 - [ ] **MUST · Nov 8** Run the full demo dry-run, with zero P0 bugs in the connect-to-chat flow. Triage and assign only critical bugs.
 - [ ] **MUST** Present demo readiness at Check-in #3.
