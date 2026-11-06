@@ -68,7 +68,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 
 ## Karthik (BE1: auth and data)
 
-- [ ] **MUST · Nov 9** Referral accept and decline, backend. Today `/api/connections/referrals/` can only list and create, so incoming referral requests stay "pending" forever. Add `PATCH /api/connections/referrals/<id>/accept/` and `decline/`:
+- [x] **MUST · Nov 9** Referral accept and decline, backend. Today `/api/connections/referrals/` can only list and create, so incoming referral requests stay "pending" forever. Add `PATCH /api/connections/referrals/<id>/accept/` and `decline/`:
   - Only the recipient can answer. Anyone else gets 404, and the sender gets 403, the same as connection accept and decline.
   - Answering twice returns 409, and two simultaneous answers must not both succeed.
   - Add tests, and update `docs/api-routes.md` and `docs/security-checklist.md`.
