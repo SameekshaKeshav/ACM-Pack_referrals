@@ -84,7 +84,7 @@ export default function ConnectionRequests({ onAccepted }) {
         <h2 id="requests-heading">Connection requests</h2>
         <button type="button" className="button-secondary" disabled={loading} onClick={() => setVersion((value) => value + 1)}>Refresh requests</button>
       </div>
-      <div className="tabs" role="tablist" aria-label="Request direction" onKeyDown={onKeyDown}>
+      <div className="tabs" role="tablist" aria-label="Request direction">
         {TABS.map((item) => (
           <button
             key={item.id}
@@ -96,6 +96,7 @@ export default function ConnectionRequests({ onAccepted }) {
             aria-controls="requests-panel"
             tabIndex={tab === item.id ? 0 : -1}
             onClick={() => setTab(item.id)}
+            onKeyDown={onKeyDown}
           >
             {item.label} <span>{item.id === 'incoming' ? incoming.length : outgoing.length}</span>
           </button>

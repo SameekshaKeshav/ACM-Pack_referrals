@@ -39,11 +39,11 @@ const Profile = () => {
     setProfile((prev) => ({ ...prev, past_roles: prev.past_roles.filter((r) => r.id !== id) }));
   };
 
-  if (error && !profile) return <p role="alert">{error}</p>;
-  if (!profile) return <p>Loading...</p>;
+  if (error && !profile) return <main className="main-content"><p role="alert">{error}</p></main>;
+  if (!profile) return <main className="main-content"><p>Loading...</p></main>;
 
   return (
-    <>
+    <main className="main-content">
       {error && <p role="alert">{error}</p>}
       {isEditing ? (
         <ProfileEditForm
@@ -56,7 +56,7 @@ const Profile = () => {
       ) : (
         <ProfileView profile={profile} onEdit={() => { setError(''); setIsEditing(true); }} />
       )}
-    </>
+    </main>
   );
 };
 

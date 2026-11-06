@@ -87,7 +87,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 
 ## Danny (BE3: infrastructure and QA)
 
-- [ ] **MUST · Nov 6** Add accessibility checks to the frontend CI: `eslint-plugin-jsx-a11y` in lint, and `@axe-core/playwright` scans of the main pages.
+- [x] **MUST · Nov 6** Add accessibility checks to the frontend CI: `eslint-plugin-jsx-a11y` in lint, and `@axe-core/playwright` scans of the main pages.
 - [ ] **SHOULD · Nov 6** Add a `get_authed_client(user)` test helper, and document how to run `python manage.py test` in a way that needs no extra setup. Confirm one teammate has run it successfully.
 - [ ] **MUST · Nov 8** Export a Postman (or Insomnia) collection covering every endpoint, each with a saved passing example. Today there are only two collections.
 - [ ] **MUST · Nov 8** Delete the older Sentry events on staging that contain emails or verification codes, and confirm in the #42 thread when it is done.
