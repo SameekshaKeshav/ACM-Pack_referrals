@@ -97,6 +97,40 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 
 The builder, build command and start command are set in Railway's dashboard (service **Settings**), not in this repo, so changes there aren't reviewed. Check them first if a deploy behaves unexpectedly: on 2026-10-25 a changed start command stopped migrations from running, and signup returned 500 until it was restored.
 
+### Rolling back staging
+
+If a merge breaks staging, put it back on the last commit that worked:
+
+```bash
+scripts/rollback.sh <commit> --dry-run   # checks only, deploys nothing
+scripts/rollback.sh <commit>             # asks, deploys, prints how long it took
+```
+
+You need the Railway CLI, logged in and linked to the service (`railway status` shows it), plus `jq`. The last commit that worked is usually the one before the bad merge: `git log --oneline --first-parent origin/main`, or `railway deployment list`, which shows the commit of each deployment.
+
+The script picks one of two methods:
+
+- **Rollback** reuses that deployment's existing build, so it takes about as long as a restart. Railway only allows it for recent deployments. On our plan that is just the one before the current one (checked on 2026-11-04).
+- **Rebuild** (`railway redeploy --commit`) builds the commit from source, like a normal deploy. It works for any commit, but takes as long as a deploy. Pass `--rebuild` to use it even when a rollback is possible.
+
+Measured on staging on 2026-11-05, going between `44c859e` and `c95d932`, with the script's totals (checks plus deploy, without time at the prompt):
+
+| Method | Total |
+|---|---|
+| Rollback | **29 s** and **17 s** (Railway timed the three rollbacks at 17, 21 and 11 s) |
+| Rebuild | **81 s** (2 s of checks, 79 s to build and go live) |
+
+Both are under the 2-minute target, but a rebuild's time depends on the build, so allow for more if dependencies have changed.
+
+Things a rollback does not do:
+
+- **It does not undo migrations.** They stay applied on the `/data` database, and older code may fail against newer tables. The script refuses a commit that is missing a migration that a later deployment applied, and lists the files. `--force` skips the check. Use it only if you've read the migration and know the old code copes. Otherwise fix forward.
+- **It does not stop the next deploy.** Railway deploys every merge to `main`, which replaces the rollback. Tell the team to hold merges until the fix is merged.
+
+To undo a rollback, run the script again with the newer commit. It prints that command when it finishes.
+
+**After a rollback, `/api/health/` shows `"commit_hash": null`** (seen on 2026-11-05, even when rolling back to the original deployment of a commit). A rebuild of the same commit reported it again. Both health and Sentry's release tag read `RAILWAY_GIT_COMMIT_SHA`, which a deployment created by a Railway rollback apparently doesn't set, so Sentry events have no release until the next normal deploy. To see which commit is live, use `railway deployment list`. The script checks there too, and only uses `/api/health/` to check the app is answering.
+
 ## Logging
 
 `pack_referrals/middleware.py` logs one JSON line to stdout per request, which Railway shows in the service's logs. Each line has `method`, `path` (without the query string, so tokens or codes in the URL aren't logged), `status_code` and `duration_ms`:
