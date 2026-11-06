@@ -58,5 +58,10 @@ export async function addPastRole({ company, role_title, start_date, end_date })
 }
 
 export async function removePastRole(id) {
-  await apiRequest(`/api/accounts/past-roles/${id}/`, { method: 'DELETE' });
+  try {
+    await apiRequest(`/api/accounts/past-roles/${id}/`, { method: 'DELETE' });
+  } catch (err) {
+    // Already gone (for example a double click): the goal is met.
+    if (err.status !== 404) throw err;
+  }
 }

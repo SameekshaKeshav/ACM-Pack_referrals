@@ -37,12 +37,14 @@ let calls;
 let originalFetch;
 let nextRoleId;
 let failRoleCalls;
+let holdRoleCalls;
 
 beforeEach(() => {
   stored = freshProfile();
   calls = [];
   nextRoleId = 100;
   failRoleCalls = false;
+  holdRoleCalls = null;
   originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, options = {}) => {
     const method = options.method || 'GET';
@@ -65,6 +67,7 @@ beforeEach(() => {
     }
     if (url === '/api/accounts/past-roles/' && method === 'POST') {
       if (failRoleCalls) return json({ detail: 'Could not save the role.' }, 500);
+      if (holdRoleCalls) await holdRoleCalls;
       const id = nextRoleId++;
       const role = {
         id, company: company(id, body.company_name), role_title: body.role_title,
@@ -76,6 +79,9 @@ beforeEach(() => {
     const match = url.match(/^\/api\/accounts\/past-roles\/(\d+)\/$/);
     if (match && method === 'DELETE') {
       if (failRoleCalls) return json({ detail: 'Could not remove the role.' }, 500);
+      if (holdRoleCalls) await holdRoleCalls;
+      const exists = stored.past_roles.some((r) => r.id === Number(match[1]));
+      if (!exists) return json({ detail: 'No PastRole matches the given query.' }, 404);
       stored.past_roles = stored.past_roles.filter((r) => r.id !== Number(match[1]));
       return new Response(null, { status: 204 });
     }
@@ -289,4 +295,36 @@ test('saving current role and company sends them and shows them', async () => {
   const patch = calls.find((c) => c.method === 'PATCH');
   assert.equal(patch.body.current_role, 'Engineer');
   assert.equal(patch.body.current_company_name, 'Red Hat');
+});
+
+test('double-clicking Add role posts once and disables the button while busy', async () => {
+  let release;
+  holdRoleCalls = new Promise((resolve) => { release = resolve; });
+  const user = await openEditor();
+  await fillNewRole(user);
+  const add = screen.getByRole('button', { name: 'Add role' });
+  await user.dblClick(add);
+  assert.equal(add.disabled, true);
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 1);
+  release();
+  assert.ok(await screen.findByText(/Amazon/));
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 1);
+  assert.equal(stored.past_roles.filter((r) => r.company.name === 'Amazon').length, 1);
+});
+
+test('double-clicking Remove sends one DELETE and shows no error', async () => {
+  const user = await openEditor();
+  const remove = screen.getByRole('button', { name: 'Remove Google SWE Intern' });
+  await user.dblClick(remove);
+  await waitFor(() => assert.equal(stored.past_roles.length, 1), { timeout: 3000 });
+  assert.equal(calls.filter((c) => c.method === 'DELETE').length, 1);
+  assert.equal(screen.queryByRole('alert'), null);
+});
+
+test('removing a role that is already gone on the server counts as success', async () => {
+  const user = await openEditor();
+  stored.past_roles = stored.past_roles.filter((r) => r.id !== 1);
+  await user.click(screen.getByRole('button', { name: 'Remove Google SWE Intern' }));
+  await waitFor(() => assert.equal(screen.queryByText(/Google/), null));
+  assert.equal(screen.queryByRole('alert'), null);
 });
