@@ -16,5 +16,12 @@ export default [
       sourceType: 'module',
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    // React Router's Link and NavLink render real <a> elements, so lint
+    // them as anchors. Their destination prop is `to`, which becomes href.
+    settings: { 'jsx-a11y': { components: { Link: 'a', NavLink: 'a' } } },
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      'jsx-a11y/anchor-is-valid': ['error', { components: ['Link', 'NavLink'], specialLink: ['to'] }],
+    },
   },
 ];
