@@ -102,6 +102,7 @@ const pages = [
   { name: 'login', path: '/login', signedIn: false, ready: (page) => page.getByRole('heading', { name: 'Welcome back' }) },
   { name: 'signup', path: '/signup', signedIn: false, ready: (page) => page.getByLabel('University email') },
   { name: 'enter code', path: '/enter-code', signedIn: false, ready: (page) => page.getByLabel('Six-digit code') },
+  { name: 'alumni access request', path: '/alumni-access', signedIn: false, ready: (page) => page.getByLabel(/^Email address/) },
   { name: 'chat and connection requests', path: '/chat/5', signedIn: true, ready: (page) => page.getByRole('list', { name: 'Messages', exact: true }).getByRole('listitem').nth(1) },
   { name: 'referrals', path: '/referrals', signedIn: true, ready: (page) => page.getByRole('article', { name: 'Referral to Avery Chen' }) },
   { name: 'directory', path: '/directory', signedIn: true, ready: (page) => page.getByRole('link', { name: /SAS/ }) },
@@ -117,6 +118,14 @@ for (const { name, path, signedIn, ready } of pages) {
     await expectNoViolations(page, unmocked);
   });
 }
+
+test('no axe violations: alumni access request with every error showing', async ({ page }) => {
+  const unmocked = await mockBackend(page, { signedIn: false });
+  await page.goto('/alumni-access');
+  await page.getByRole('button', { name: 'Send request' }).click();
+  await expect(page.getByText('Enter your graduation year.')).toBeVisible();
+  await expectNoViolations(page, unmocked);
+});
 
 test('no axe violations: profile edit form', async ({ page }) => {
   const unmocked = await mockBackend(page, { signedIn: true });

@@ -165,3 +165,12 @@ label { display: block; font-size: 11px; font-weight: 650; margin: 13px 0 6px; }
 .referral-directions button[aria-pressed="true"] { background: #a00000; color: white; }
 .chat-thread-panel { min-width: 0; }
 @media (max-width: 760px) { .referral-layout { grid-template-columns: minmax(0, 1fr); } .referral-panel { padding: 16px; } }
+
+/* Alumni access request form (public page, built on the auth card) */
+.auth-card textarea { box-sizing: border-box; width: 100%; border: 1px solid #d8dcd1; border-radius: 6px; background: #fff; padding: 10px 12px; font-size: 16px; line-height: 1.5; resize: vertical; }
+.auth-card textarea:focus-visible, .auth-card h1:focus-visible { outline: 3px solid #a74646; outline-offset: 3px; }
+.auth-card .field-hint { margin: 6px 0 0; font-size: 12px; }
+.auth-card .field-error { margin: 6px 0 0; color: #a82822; font-weight: 650; }
+.auth-card input[aria-invalid="true"], .auth-card textarea[aria-invalid="true"] { border-color: #a82822; }
+/* The spam trap: off-screen, not display:none, because bots skip hidden fields only sometimes. */
+.honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
