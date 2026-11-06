@@ -15,6 +15,7 @@ One place that lists every route the backend serves, so both frontends can code 
 | `POST /api/accounts/auth/verify/` | yes | Exchange the code for an access and refresh token | Scoped (rate limited, 5 wrong guesses) |
 | `POST /api/accounts/auth/login/` | yes | Email a fresh code to a returning user | Scoped (rate limited) |
 | `POST /api/accounts/auth/refresh/` | yes | Exchange a refresh token for a new access token | Scoped |
+| `POST /api/accounts/alumni-access-requests/` | yes | Ask to be let in as an alum; an admin approves by hand. Always 202 unless a field is invalid (400), so it cannot reveal who applied. See [the contract](api-contract-accounts-companies.md) | Scoped (rate limited) |
 | ~~`/api/accounts/profiles/`~~ | - | Removed; use `/api/accounts/users/` or `/api/accounts/me/` | Closed |
 | `GET, PATCH /api/accounts/me/` | no | Read or edit your own profile | Scoped |
 | `GET /api/accounts/users/` | no | Active member directory; `major`, `grad_year`, `company_id`, `limit` and `offset` filters | Scoped |
@@ -93,3 +94,4 @@ No referral accept/decline endpoint or new backend route is added by this fronte
 1. Put it in your app's `urls.py` (never the root `urls.py`).
 2. Use a DRF view with a `serializer_class` (or `@extend_schema`) so it shows up properly in `/api/docs/`.
 3. Add it to this page.
+4. Add it to the Postman collection with a status test, then run `postman/run_collection.sh --save-examples` (see [postman/README.md](../postman/README.md)).
