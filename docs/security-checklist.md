@@ -44,6 +44,8 @@ Every endpoint requires a JWT unless it is deliberately public (`IsAuthenticated
 | `/api/companies/`, `/api/companies/<id>/` | Logged in, read-only; affiliated users are active members only | PASS |
 | `/api/connections/`, `/api/connections/<id>/` | Requests the caller sent or received; others get 404 | PASS |
 | `/api/connections/<id>/accept/`, `decline/` | The recipient only; outsiders get 404, the sender 403 | PASS |
+| `/api/connections/referrals/`, `/api/connections/referrals/<id>/` | Asks the caller sent or received, minus blocked users; others get 404 | PASS |
+| `/api/connections/referrals/<id>/accept/`, `decline/` | The recipient only; outsiders and unknown ids get an identical 404, the sender 403. A block hides the ask from answering as well as from reading | PASS |
 | `/api/chat/conversations/` | The caller's conversations, minus blocked users | PASS |
 | `/api/chat/conversations/<id>/messages/`, `<id>/read/`, `/api/chat/messages/` | Participants who aren't blocked; unknown ids 404, others 403 | PASS |
 | `/api/reports/` | Any logged-in user can file a report; nobody can list, read, edit or delete reports through the API | PASS |

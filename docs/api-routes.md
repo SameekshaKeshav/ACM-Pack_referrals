@@ -37,9 +37,11 @@ One place that lists every route the backend serves, so both frontends can code 
 | `GET /api/connections/<id>/` | no | One request; only its sender or recipient (else 404) | Scoped |
 | `PATCH /api/connections/<id>/accept/` | no | Recipient accepts; creates the conversation; returns `{id, status, conversation_id}`; 409 if already resolved | Scoped |
 | `PATCH /api/connections/<id>/decline/` | no | Recipient declines; returns `{id, status, conversation_id: null}`; 409 if already resolved | Scoped |
-| `POST /api/connections/referrals/` | no | Ask a connection for a referral (201, 400, 403, 404, 409). Body: `recipient_id`, `role_title`, `message_text` (max 500), optional `company_id` (on the recipient's profile), `job_url`, `resume_url` (http/https only). 403 unless an accepted connection exists and neither side blocked the other. 409 if you already have a **pending** ask for the same role (compared ignoring case) at the same company, to the same person. Until accept/decline ships (Week 8) nothing leaves pending, so for now that means one ask per role; clients should not offer a retry on a 409 | Scoped |
+| `POST /api/connections/referrals/` | no | Ask a connection for a referral (201, 400, 403, 404, 409). Body: `recipient_id`, `role_title`, `message_text` (max 500), optional `company_id` (on the recipient's profile), `job_url`, `resume_url` (http/https only). 403 unless an accepted connection exists and neither side blocked the other. 409 if you already have a **pending** ask for the same role (compared ignoring case) at the same company, to the same person. Once the recipient accepts or declines, the ask is no longer pending and the same role can be asked again; clients should not offer a retry on a 409 while it is still pending | Scoped |
 | `GET /api/connections/referrals/?type=incoming\|outgoing[&status=pending\|accepted\|declined]` | no | The caller's referral asks, newest first; blocked users' asks are hidden. Paged like the people directory: `?limit=` (default 20, max 100) and `?offset=`; the body is `{count, next, previous, results}` | Scoped |
 | `GET /api/connections/referrals/<id>/` | no | One ask; only its sender or recipient (else 404) | Scoped |
+| `PATCH /api/connections/referrals/<id>/accept/` | no | Recipient accepts the ask; returns the full referral object with `status: "accepted"` and `resolved_at` set. 403 for the sender, 404 for anyone else and for unknown ids, 409 if already answered | Scoped |
+| `PATCH /api/connections/referrals/<id>/decline/` | no | Same, with `status: "declined"`. No conversation is created either way: the two are already connected, so one already exists | Scoped |
 | `POST /api/reports/` | no | File a report. Body: `target_type` (`user`, `message`, or `experience`), `target_id`, `reason` (one of a fixed set), optional `details` (max 1000). The reporter is the caller; message targets must be in one of the caller's conversations. Self-reports are rejected, duplicate reports from the same reporter are ignored, and reporting is throttled per user. Create-only: nothing can list or edit reports through the API, use the admin | Scoped |
 | `POST, DELETE /api/connections/users/<id>/block/` | no | Block (201, or 200 if already blocked; 400 for yourself; 404 unknown user) or unblock (204). Blocking never deletes messages | Scoped |
 | `GET, POST /api/companies/<id>/experiences/`, `DELETE /api/companies/<id>/experiences/<experience_id>/` | no | Anonymous interview experiences. Active members only. The author is never returned (`is_mine` says whether a post is yours); posts show month and year only; 5 posts a day (429); you can delete only your own (403); hidden posts are not listed | Scoped |
@@ -68,7 +70,7 @@ Polling: ask for `?after=<last message id>` about every 3 seconds. If a poll ret
 
 ## Not built yet (planned in the tracker)
 
-- Referral accept and decline: `PATCH /api/connections/referrals/<id>/accept|decline/` (PM, Week 8), and the email to the recipient when an ask is created (PM, Week 8, needs real email on staging).
+- The email to the recipient when a referral ask is created (PM, Week 8, needs real email on staging). Accept and decline themselves are now built, and deliberately send no notification email.
 
 ## Referral frontend (Week 7)
 

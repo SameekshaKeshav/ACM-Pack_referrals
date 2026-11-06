@@ -17,7 +17,12 @@ from accounts.models import Profile
 from .blocks import blocked_user_ids
 from .models import Block, ConnectionRequest, ReferralRequest
 from .pagination import ReferralPagination
-from .referrals import ReferralError, check_may_ask, create_referral_request
+from .referrals import (
+    ReferralError,
+    answer_referral_request,
+    check_may_ask,
+    create_referral_request,
+)
 from .serializers import (
     ConnectionRequestDetailSerializer,
     IncomingConnectionRequestListSerializer,
@@ -387,3 +392,36 @@ class ReferralRequestDetailView(generics.RetrieveAPIView):
 
     def get_queryset(self):
         return _visible_referrals(self.request.user)
+
+
+class _ReferralActionView(APIView):
+    """Shared error handling for referral accept/decline."""
+
+    permission_classes = [IsAuthenticated]
+    new_status: str
+
+    def patch(self, request, referral_id):
+        try:
+            referral = answer_referral_request(referral_id, request.user, self.new_status)
+        except ReferralRequest.DoesNotExist:
+            return Response(
+                {"detail": "Referral request not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except ReferralError as exc:
+            return Response({"detail": exc.detail}, status=exc.status_code)
+        return Response(
+            ReferralRequestSerializer(referral).data, status=status.HTTP_200_OK
+        )
+
+
+class AcceptReferralRequestView(_ReferralActionView):
+    """PATCH /api/connections/referrals/<id>/accept/ - the recipient agrees to refer."""
+
+    new_status = ReferralRequest.Status.ACCEPTED
+
+
+class DeclineReferralRequestView(_ReferralActionView):
+    """PATCH /api/connections/referrals/<id>/decline/ - the recipient turns it down."""
+
+    new_status = ReferralRequest.Status.DECLINED
