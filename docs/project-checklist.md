@@ -137,7 +137,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 - [ ] **SHOULD · Nov 11** Company endpoint for the referral form: a way to get the current and past companies of a connection, so the form can offer only valid companies. The backend rejects any company that is not on the recipient's profile, with a 400.
 - [ ] **MUST · Nov 8** Run the full demo dry-run, with zero P0 bugs in the connect-to-chat flow. Triage and assign only critical bugs.
 - [ ] **MUST** Present demo readiness at Check-in #3.
-- [ ] **MUST · Nov 8** Write the end-to-end test: signup, verify, send request, accept, send message, fetch message, in one test. Include the referral fields (company, role title, job link) and check that a non-connection gets 403.
+- [x] **MUST · Nov 8** Write the end-to-end test: signup, verify, send request, accept, send message, fetch message, in one test. Include the referral fields (company, role title, job link) and check that a non-connection gets 403.
 - [ ] **SHOULD** Extend the Postman collection with the referral fields, and keep a bug log with priorities.
 - [ ] **MUST · Nov 10** Write `python manage.py reset_demo_data` and `python manage.py issue_demo_token <email>` (prints a login token, and only runs when `ALLOW_DEMO_TOOLS=1`). Run the reset once and confirm it works.
 - [ ] **MUST · Nov 13** Recruit 15 to 20 real ACM members to sign up on staging and fill out real profiles and company history. Start this week.
