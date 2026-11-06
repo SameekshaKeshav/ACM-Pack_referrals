@@ -9,8 +9,14 @@ def _suspend_revoked_alumni(emails):
 
     Rejecting a request does not by itself take access away: nothing in the
     login or verify path reads AlumniAccessRequest, so the account stays
-    reachable. Suspending the profile is what removes them from the directory,
-    the company pages, and sending or receiving new requests.
+    reachable. Suspending the profile is what removes them from the directory
+    and the company pages, stops them sending or receiving referral asks, and
+    stops anyone sending them a connection request.
+
+    It does not close everything. POST /api/connections/ checks the
+    recipient's status but not the sender's, so a suspended user can still
+    send connection requests, and their own profile and the chat and company
+    reads stay open. Those are recorded in the security checklist.
 
     Two addresses are deliberately left alone: one still covered by another
     approved request, and an @ncsu.edu account, whose eligibility never came
@@ -108,7 +114,9 @@ class AlumniAccessRequestAdmin(admin.ModelAdmin):
         if suspended:
             self.message_user(
                 request,
-                f"{suspended} profile(s) suspended, so they are hidden from the "
-                "directory and cannot send or receive new requests. Any access "
-                "token they already hold keeps working until it expires.",
+                f"{suspended} profile(s) suspended, so they are hidden from "
+                "the directory and can no longer exchange referral asks. This "
+                "does not sign them out: a token they already hold keeps "
+                "working, and they can still send connection requests. See the "
+                "security checklist.",
             )

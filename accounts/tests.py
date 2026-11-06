@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
-from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 from .models import AlumniAccessRequest, Profile, VerificationCode
 from .throttling import AlumniRequestThrottle
@@ -1192,6 +1192,31 @@ class AlumniApprovalFlowTests(APITestCase):
         self.reject()
         self.request.refresh_from_db()
         self.assertEqual(self.request.status, AlumniAccessRequest.Status.REJECTED)
+
+    def test_a_suspended_account_can_still_refresh_its_token(self):
+        """The limit of what suspension buys, pinned so the docs stay honest.
+
+        /auth/refresh/ is the stock TokenRefreshView: no rotation, no denylist,
+        and it never looks the user up. So a suspended user keeps minting fresh
+        access tokens from the refresh token they already hold. Recorded as a
+        known gap in docs/security-checklist.md; if this test ever fails,
+        suspension got stronger and that entry should be rewritten.
+        """
+        self.approve()
+        profile = self._alum_account()
+        refresh = RefreshToken.for_user(profile.user)
+        self.reject()
+
+        response = self.client.post(
+            reverse("accounts:auth-refresh"), {"refresh": str(refresh)}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
+        self.assertEqual(self.client.get(reverse("accounts:me")).status_code, 200)
+        profile.refresh_from_db()
+        self.assertEqual(profile.account_status, Profile.AccountStatus.SUSPENDED)
+        self.assertTrue(profile.user.is_active)  # suspension never touches this
 
     def test_the_clash_flag_spots_a_shared_unity_id(self):
         self.assertFalse(self.admin.unity_id_clash(self.request))
