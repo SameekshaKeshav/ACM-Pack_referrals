@@ -62,6 +62,7 @@ Open `http://localhost:5173/chat-mock` for three incoming requests and a five-me
 | `SENTRY_DSN` | Yes | unset (Sentry disabled) | Where errors are sent (see [Error tracking](#error-tracking)). Leave it unset locally and in CI; some tests raise exceptions on purpose. |
 | `SENTRY_ENVIRONMENT` | Yes (`staging`) | unset | Environment name on Sentry events. If it's missing, Sentry labels them `production`. |
 | `RAILPACK_PACKAGES` | Yes (`node@24`) | not used | Build-time only: extra tools Railway's builder installs. Railpack detects a Python app and doesn't install Node unless asked, so without this the frontend build fails with `npm: not found` (see [Deployment](#deployment-railway)). |
+| `ALLOW_DEMO_TOOLS` | No (leave unset) | unset | Switches on `reset_demo_data` and `issue_demo_token` (see [Demo accounts](#demo-accounts-for-the-showcase)). Only the value `1` works. Set it for one command, not as a permanent Railway variable. |
 
 ## Running tests and lint
 
@@ -131,6 +132,32 @@ To undo a rollback, run the script again with the newer commit. It prints that c
 
 **After a rollback, `/api/health/` shows `"commit_hash": null`** (seen on 2026-11-05, even when rolling back to the original deployment of a commit). A rebuild of the same commit reported it again. Both health and Sentry's release tag read `RAILWAY_GIT_COMMIT_SHA`, which a deployment created by a Railway rollback apparently doesn't set, so Sentry events have no release until the next normal deploy. To see which commit is live, use `railway deployment list`. The script checks there too, and only uses `/api/health/` to check the app is answering.
 
+### Demo accounts for the showcase
+
+Five fictional members (`demo.sam@ncsu.edu`, `demo.avery@`, `demo.jordan@`, `demo.maya@`, `demo.lee@`) let the presenter run the demo from a known start, without real members' data. Two commands manage them. Both do nothing unless `ALLOW_DEMO_TOOLS=1` is set for that command.
+
+```bash
+# See what a reset would delete. Changes nothing.
+ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data --dry-run
+
+# Put the demo accounts back to the start (asks first; --yes skips the question).
+ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data
+
+# A login for the presenter, without waiting for an emailed code.
+ALLOW_DEMO_TOOLS=1 python manage.py issue_demo_token demo.sam@ncsu.edu
+
+# After the showcase: delete the demo accounts entirely.
+ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data --remove
+```
+
+**The starting state:** Sam (the presenter) already chats with Avery (3 messages, 1 unread) and can ask Avery for a referral at Red Hat. Maya's connection request is waiting in Sam's inbox to accept. Jordan is open to connect but not yet connected, so Sam can send a new request live. Lee is not open to connect. All five appear in the directory.
+
+**What it touches:** only these five accounts and their requests, conversations, referrals, reports, blocks and past roles. No other member's profile or data is changed, and the command prints the counts first. A conversation or request between a demo account and a real member is removed too (counted separately as "with a real member"), because it cannot exist without the demo account.
+
+**`issue_demo_token`** only works for the five demo addresses, never for a real member or an admin. It prints one line to paste into the browser's developer console: it saves the login where the app looks for it and opens `/chat`. The login lasts about a day. Treat it like a password.
+
+**Running it on staging:** the database is on the Railway volume, so the command has to run inside the service, for example from a shell opened with `railway ssh`. `railway run` does not work: it runs on your laptop, where `/data` does not exist. Set the variable only for that command, as in the examples above.
+
 ## Logging
 
 `pack_referrals/middleware.py` logs one JSON line to stdout per request, which Railway shows in the service's logs. Each line has `method`, `path` (without the query string, so tokens or codes in the URL aren't logged), `status_code` and `duration_ms`:
@@ -184,7 +211,7 @@ STAGING=https://acm-packreferrals-production.up.railway.app
 
 **Note:** Migrations run on every deploy against the volume's database. Test migrations locally before merging so a bad migration doesn't break staging data.
 
-**Never run a seed command (such as `seed_demo_data`) on staging.** The database lives on the volume, so anything a seed writes stays there for good.
+**Never run a seed command (such as `seed_demo_data`) on staging.** The database lives on the volume, so anything a seed writes stays there for good. The one exception is `reset_demo_data`, which is built for staging: it only touches the five [demo accounts](#demo-accounts-for-the-showcase), shows what it will delete first, and refuses to run unless `ALLOW_DEMO_TOOLS=1` is set.
 
 ## Stack
 
