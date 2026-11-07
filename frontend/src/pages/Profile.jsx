@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ProfileView from '../components/profile/ProfileView';
 import ProfileEditForm from '../components/profile/ProfileEditForm';
-import { getMyProfile, updateMyProfile } from '../api/profile';
+import { getMyProfile, updateMyProfile, addPastRole, removePastRole } from '../api/profile';
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
@@ -9,9 +9,13 @@ const Profile = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    getMyProfile()
+    const controller = new AbortController();
+    getMyProfile({ signal: controller.signal })
       .then(setProfile)
-      .catch(() => setError('Could not load your profile.'));
+      .catch((err) => {
+        if (err.name !== 'AbortError') setError(err.message || 'Could not load your profile.');
+      });
+    return () => controller.abort();
   }, []);
 
   const handleSave = async (updatedProfile) => {
@@ -25,22 +29,34 @@ const Profile = () => {
     }
   };
 
-  if (error && !profile) return <p>{error}</p>;
-  if (!profile) return <p>Loading...</p>;
+  const handleAddRole = async (role) => {
+    const created = await addPastRole(role);
+    setProfile((prev) => ({ ...prev, past_roles: [...prev.past_roles, created] }));
+  };
+
+  const handleRemoveRole = async (id) => {
+    await removePastRole(id);
+    setProfile((prev) => ({ ...prev, past_roles: prev.past_roles.filter((r) => r.id !== id) }));
+  };
+
+  if (error && !profile) return <main className="main-content"><p role="alert">{error}</p></main>;
+  if (!profile) return <main className="main-content"><p>Loading...</p></main>;
 
   return (
-    <>
-      {error && <p>{error}</p>}
+    <main className="main-content">
+      {error && <p role="alert">{error}</p>}
       {isEditing ? (
         <ProfileEditForm
           profile={profile}
           onSave={handleSave}
-          onCancel={() => setIsEditing(false)}
+          onCancel={() => { setError(''); setIsEditing(false); }}
+          onAddRole={handleAddRole}
+          onRemoveRole={handleRemoveRole}
         />
       ) : (
-        <ProfileView profile={profile} onEdit={() => setIsEditing(true)} />
+        <ProfileView profile={profile} onEdit={() => { setError(''); setIsEditing(true); }} />
       )}
-    </>
+    </main>
   );
 };
 

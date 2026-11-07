@@ -4,6 +4,8 @@ ACM NC State project: a verified NC State alumni/student network for browsing co
 
 **Staging:** https://acm-packreferrals-production.up.railway.app/
 
+**What is left to do:** see [docs/project-checklist.md](docs/project-checklist.md). It replaces the tracker spreadsheet.
+
 ## Local setup
 
 Requires Python 3.11+.
@@ -17,7 +19,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Environment variables are loaded from `.env` (see [`.env.example`](.env.example)). With `EMAIL_HOST` left empty, outbound email is printed to the console — fine for local auth spikes.
+Environment variables are loaded from `.env` (see [`.env.example`](.env.example)). With `EMAIL_BACKEND` unset, outbound email is printed to the console — fine for local auth spikes.
 
 If migrations were reset on a branch (no production data yet), reset your local DB:
 
@@ -27,6 +29,8 @@ python manage.py migrate
 ```
 
 Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). Global health: `/api/health/` (includes `commit_hash`, which is `null` locally). Django admin: `/admin/`.
+
+Django also serves the React app at every other path (see [Deployment](#deployment-railway)). Until you build it, those paths return `503 Frontend not built`, which is expected. The API and admin work either way. To build it, see the [frontend README](frontend/README.md#production-build-served-by-django).
 
 See [docs/architecture.md](docs/architecture.md) for URL layout and ownership.
 
@@ -48,12 +52,16 @@ Open `http://localhost:5173/chat-mock` for three incoming requests and a five-me
 | `DEBUG` | No (defaults to `False`) | `True` (from `.env.example`) | Turns debug mode on/off. Never set to `True` on staging. |
 | `ALLOWED_HOSTS` | Yes | `127.0.0.1,localhost` | Comma-separated hostnames Django will serve (no `https://`). Staging: `acm-packreferrals-production.up.railway.app`. If it's missing, every request returns 400 Bad Request. |
 | `CSRF_TRUSTED_ORIGINS` | Yes | unset (empty list) | Comma-separated origins trusted for form POSTs such as the admin login. Unlike `ALLOWED_HOSTS`, each value must include the scheme. Staging: `https://acm-packreferrals-production.up.railway.app`. If it's missing or wrong, admin login fails with 403 CSRF verification failed. |
-| `FRONTEND_URL`, `EMAIL_*` | No | see `.env.example` | Frontend origin for links in emails, and SMTP settings. With `EMAIL_HOST` empty, email is printed to the console. |
+| `FRONTEND_URL` | No | `http://localhost:3000` | Frontend origin for links in emails. |
+| `EMAIL_BACKEND` | Yes (`anymail.backends.brevo.EmailBackend`) | unset (console) | How email is sent. Unset, email (including verification codes) is printed to the console. Staging uses Brevo's HTTPS API because Railway's plan blocks outbound SMTP (#34). |
+| `BREVO_API_KEY` | Yes | unset | Brevo API key (Settings → SMTP & API → API Keys). Required when `EMAIL_BACKEND` is the Brevo backend; the app will not start without it. Never commit it. |
+| `DEFAULT_FROM_EMAIL` | No | `Pack Referrals <packreferrals.acm@gmail.com>` | Sender for all email, as `Name <address>`; the name is what inboxes show. The address must be a sender verified in Brevo, or sends are rejected. |
 | `SQLITE_PATH` | Yes (`/data/db.sqlite3`) | unset (uses `db.sqlite3` in the project root) | Where the SQLite database file lives. On staging it must point at the `/data` volume, or data is wiped on every redeploy (see [Database persistence](#database-persistence-showcase-day)). |
 | `LOG_LEVEL` | No (defaults to `INFO`) | `INFO` | Level for the request log (see [Logging](#logging)). `WARNING` hides the per-request lines; CI sets this to keep test output readable. An invalid value stops the app from starting. |
 | `NUM_PROXIES` | Yes (`2`) | unset | How many proxies sit in front of the app. Throttles use it to read the real client IP from `X-Forwarded-For`. Staging has two (a CDN node, then Railway's proxy), measured on 2026-10-24 (#28). Re-measure if the hosting setup changes. Unset, DRF uses the whole header, which a client can fill with fake values unless a proxy strips them, so the auth throttles could be bypassed. |
 | `SENTRY_DSN` | Yes | unset (Sentry disabled) | Where errors are sent (see [Error tracking](#error-tracking)). Leave it unset locally and in CI; some tests raise exceptions on purpose. |
 | `SENTRY_ENVIRONMENT` | Yes (`staging`) | unset | Environment name on Sentry events. If it's missing, Sentry labels them `production`. |
+| `RAILPACK_PACKAGES` | Yes (`node@24`) | not used | Build-time only: extra tools Railway's builder installs. Railpack detects a Python app and doesn't install Node unless asked, so without this the frontend build fails with `npm: not found` (see [Deployment](#deployment-railway)). |
 
 ## Running tests and lint
 
@@ -67,21 +75,61 @@ Run both before opening a PR. CI runs the same commands.
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) runs two checks on every pull request and on every push to `main`:
+GitHub Actions runs these checks on every pull request:
 
-- **lint**: `flake8`
-- **test**: `python manage.py test`
+- **lint** (`.github/workflows/ci.yml`): `flake8`
+- **test** (`.github/workflows/ci.yml`): `python manage.py test`
+- **Frontend** (`.github/workflows/frontend.yml`): `npm run build`, the DOM tests and the Playwright tests, on Node 24. It runs on every PR, not only frontend ones, because backend changes (URLs, static settings) can break the deployed app too.
 
-Both must be green before merging. Results appear in the PR's **Checks** tab.
+On pushes to `main`, lint and test always run; Frontend runs only when `frontend/` or its workflow changed. All checks must be green before merging. Results appear in the PR's **Checks** tab.
 
 ## Deployment (Railway)
 
-Staging is hosted on [Railway](https://railway.app) and redeploys automatically when `main` is updated.
+Staging is hosted on [Railway](https://railway.app) and redeploys automatically when `main` is updated. One service runs both the API and the React app.
 
+- **Builder:** Railpack. It installs Python and runs `pip install -r requirements.txt`, then runs the build command. `RAILPACK_PACKAGES=node@24` adds Node (see the table above).
+- **Build command:** `cd frontend && npm ci && npm run build`, which writes the app to `frontend/dist/`
 - **Start command:** `python manage.py collectstatic --noinput && python manage.py migrate && gunicorn pack_referrals.wsgi`
 - **Static files:** `collectstatic` copies them into `staticfiles/`, and [WhiteNoise](https://whitenoise.readthedocs.io/) serves them, since Django doesn't serve static files itself when `DEBUG` is off. Without this, the Django admin is unstyled.
+- **React app:** `STATICFILES_DIRS` includes `frontend/dist`, so `collectstatic` also picks up the built app, and WhiteNoise serves its files under `/static/assets/` (Vite's `base` is `/static/` for builds). Every other path except `/api/`, `/admin/` and `/static/` returns the app's `index.html` (`pack_referrals/views.py`, the last URL in `pack_referrals/urls.py`), and React Router shows the right page. Because the app and API share an origin, there's no CORS setup and no API URL to configure. If the build is missing, app pages return `503 Frontend not built` while the API keeps working; check the build logs for the Vite step.
 - **Environment variables:** see the table above
 - **Volume:** mounted at `/data`, which holds the SQLite database (see below)
+
+The builder, build command and start command are set in Railway's dashboard (service **Settings**), not in this repo, so changes there aren't reviewed. Check them first if a deploy behaves unexpectedly: on 2026-10-25 a changed start command stopped migrations from running, and signup returned 500 until it was restored.
+
+### Rolling back staging
+
+If a merge breaks staging, put it back on the last commit that worked:
+
+```bash
+scripts/rollback.sh <commit> --dry-run   # checks only, deploys nothing
+scripts/rollback.sh <commit>             # asks, deploys, prints how long it took
+```
+
+You need the Railway CLI, logged in and linked to the service (`railway status` shows it), plus `jq`. The last commit that worked is usually the one before the bad merge: `git log --oneline --first-parent origin/main`, or `railway deployment list`, which shows the commit of each deployment.
+
+The script picks one of two methods:
+
+- **Rollback** reuses that deployment's existing build, so it takes about as long as a restart. Railway only allows it for recent deployments. On our plan that is just the one before the current one (checked on 2026-11-04).
+- **Rebuild** (`railway redeploy --commit`) builds the commit from source, like a normal deploy. It works for any commit, but takes as long as a deploy. Pass `--rebuild` to use it even when a rollback is possible.
+
+Measured on staging on 2026-11-05, going between `44c859e` and `c95d932`, with the script's totals (checks plus deploy, without time at the prompt):
+
+| Method | Total |
+|---|---|
+| Rollback | **29 s** and **17 s** (Railway timed the three rollbacks at 17, 21 and 11 s) |
+| Rebuild | **81 s** (2 s of checks, 79 s to build and go live) |
+
+Both are under the 2-minute target, but a rebuild's time depends on the build, so allow for more if dependencies have changed.
+
+Things a rollback does not do:
+
+- **It does not undo migrations.** They stay applied on the `/data` database, and older code may fail against newer tables. The script refuses a commit that is missing a migration that a later deployment applied, and lists the files. `--force` skips the check. Use it only if you've read the migration and know the old code copes. Otherwise fix forward.
+- **It does not stop the next deploy.** Railway deploys every merge to `main`, which replaces the rollback. Tell the team to hold merges until the fix is merged.
+
+To undo a rollback, run the script again with the newer commit. It prints that command when it finishes.
+
+**After a rollback, `/api/health/` shows `"commit_hash": null`** (seen on 2026-11-05, even when rolling back to the original deployment of a commit). A rebuild of the same commit reported it again. Both health and Sentry's release tag read `RAILWAY_GIT_COMMIT_SHA`, which a deployment created by a Railway rollback apparently doesn't set, so Sentry events have no release until the next normal deploy. To see which commit is live, use `railway deployment list`. The script checks there too, and only uses `/api/health/` to check the app is answering.
 
 ## Logging
 
@@ -93,9 +141,11 @@ Staging is hosted on [Railway](https://railway.app) and redeploys automatically 
 
 Static files served by WhiteNoise aren't logged. Under `runserver` you'll also see Django's own plain-text request lines; those don't appear on staging (gunicorn).
 
+If sending a verification code fails (Brevo down, quota used up, bad key), `accounts.views` logs an `ERROR` line, `Sending a verification code failed`, with the traceback, in the same JSON format. Signup then returns `503` with a "try again" message. Login still returns its usual `200`, so it can't be used to find out which addresses are registered. Search the logs for that message if users report codes not arriving.
+
 ## Error tracking
 
-When `SENTRY_DSN` is set, unhandled exceptions are sent to [Sentry](https://sentry.io) with the stack trace and request URL. Each event is tagged with the environment (`SENTRY_ENVIRONMENT`) and the release (the deployed commit, the same `commit_hash` as `/api/health/`). User details, IP addresses and cookies aren't sent (`send_default_pii` is off).
+When `SENTRY_DSN` is set, unhandled exceptions are sent to [Sentry](https://sentry.io) with the stack trace and request URL. Each event is tagged with the environment (`SENTRY_ENVIRONMENT`) and the release (the deployed commit, the same `commit_hash` as `/api/health/`). User details, IP addresses and cookies aren't sent (`send_default_pii` is off). Request bodies and the values of variables in the stack trace aren't sent either, because they can contain emails, verification codes and chat messages. Sentry sends both by default, so `settings.py` turns them off explicitly. You get the file, function and line of each frame, but to see the data involved, reproduce the error locally.
 
 ## Database persistence (showcase day)
 

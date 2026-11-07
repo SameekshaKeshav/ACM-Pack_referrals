@@ -38,6 +38,7 @@ function chatFetch(handler = () => null) {
   globalThis.fetch = async (path, options = {}) => {
     const special = await handler(path, options);
     if (special) return special;
+    if (path.startsWith('/api/connections/?type=')) return json([]);
     if (path === '/api/chat/conversations/') return json(conversations);
     if (path.startsWith('/api/chat/conversations/5/messages/')) return json([message(3, 'Third', 3), message(2, 'Second', 1), message(1, 'First', 1)]);
     if (path.startsWith('/api/chat/conversations/6/messages/')) return json([]);

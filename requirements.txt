@@ -7,3 +7,4 @@ python-dotenv==1.1.0
 python-json-logger==4.2.0
 sentry-sdk==2.72.0
 drf-spectacular==0.30.0
+django-anymail==15.2

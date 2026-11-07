@@ -3,8 +3,8 @@ from rest_framework import serializers
 from companies.models import Company
 from companies.serializers import CompanySerializer
 
-from .models import PastRole, Profile, VerificationCode
-from .validators import normalize_email, validate_ncsu_email
+from .models import AlumniAccessRequest, PastRole, Profile, VerificationCode
+from .validators import normalize_email, validate_eligible_email
 
 
 def _resolve_company(raw_name, field):
@@ -183,21 +183,21 @@ class MeSerializer(serializers.ModelSerializer):
 
 
 class SignupSerializer(serializers.Serializer):
-    email = serializers.EmailField(validators=[validate_ncsu_email])
+    email = serializers.EmailField(validators=[validate_eligible_email])
 
     def validate_email(self, value):
         return normalize_email(value)
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField(validators=[validate_ncsu_email])
+    email = serializers.EmailField(validators=[validate_eligible_email])
 
     def validate_email(self, value):
         return normalize_email(value)
 
 
 class VerifySerializer(serializers.Serializer):
-    email = serializers.EmailField(validators=[validate_ncsu_email])
+    email = serializers.EmailField(validators=[validate_eligible_email])
     code = serializers.CharField(
         min_length=VerificationCode.CODE_LENGTH,
         max_length=VerificationCode.CODE_LENGTH,
@@ -205,3 +205,69 @@ class VerifySerializer(serializers.Serializer):
 
     def validate_email(self, value):
         return normalize_email(value)
+
+
+class AlumniAccessRequestSerializer(serializers.ModelSerializer):
+    """A public submission asking to be let in as an alum.
+
+    Everything the reviewer decides on is write-only: the endpoint confirms
+    receipt and nothing more, so it cannot be used to read back other
+    people's requests or to check whether an address already applied.
+    """
+
+    # Declared explicitly with no validators: the conditional UniqueConstraint
+    # on the model makes DRF attach a UniqueValidator here, which would reject a
+    # duplicate as a field error ("...with this email already exists") before
+    # validate() runs - telling the caller who has already applied. The
+    # duplicate check below, plus the constraint itself, does the job quietly.
+    email = serializers.EmailField(max_length=254, validators=[])
+
+    # A hidden field no real person fills in. Bots fill every input they find.
+    confirm_email = serializers.CharField(
+        required=False, allow_blank=True, write_only=True
+    )
+
+    class Meta:
+        model = AlumniAccessRequest
+        fields = (
+            "email",
+            "full_name",
+            "unity_id",
+            "grad_year",
+            "major",
+            "linkedin_url",
+            "note",
+            "confirm_email",
+        )
+        extra_kwargs = {
+            # status, reviewed_by and reviewed_at are not in `fields` at all, so
+            # no request body can set them.
+            "linkedin_url": {"required": False},
+            "note": {"required": False},
+        }
+
+    def validate_email(self, value):
+        return normalize_email(value)
+
+    def validate_unity_id(self, value):
+        return value.strip().lower()
+
+    def validate_grad_year(self, value):
+        if not 1900 <= value <= 2100:
+            raise serializers.ValidationError("Enter a four-digit graduation year.")
+        return value
+
+    def validate(self, attrs):
+        if attrs.pop("confirm_email", ""):
+            # Say the same thing a duplicate says, so a bot learns nothing.
+            raise serializers.ValidationError(
+                {"detail": "We could not accept that request."}
+            )
+        email = attrs.get("email")
+        if AlumniAccessRequest.objects.filter(
+            email=email, status=AlumniAccessRequest.Status.PENDING
+        ).exists():
+            raise serializers.ValidationError(
+                {"detail": "We could not accept that request."}
+            )
+        return attrs

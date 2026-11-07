@@ -3,6 +3,7 @@ Django settings for pack_referrals project.
 """
 
 import os
+import warnings
 from datetime import timedelta
 from pathlib import Path
 
@@ -38,16 +39,38 @@ ALLOWED_HOSTS = [
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
-EMAIL_HOST = os.getenv("EMAIL_HOST", "").strip()
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT") or 587)  # empty value falls back to 587
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", default=True)
+# Email. Unset EMAIL_BACKEND prints mail to the console, for local development.
+# Staging sets it to Anymail's Brevo backend, which sends over Brevo's HTTPS
+# API, because Railway's plan blocks outbound SMTP.
+EMAIL_BACKEND = (
+    os.getenv("EMAIL_BACKEND", "").strip()
+    or "django.core.mail.backends.console.EmailBackend"
+)
 
-if EMAIL_HOST:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+ANYMAIL = {
+    "BREVO_API_KEY": os.getenv("BREVO_API_KEY", "").strip(),
+    # (connect, read) seconds. Anymail's default is 30, the same as gunicorn's
+    # worker timeout, so a hung provider could get the worker killed mid-request.
+    "REQUESTS_TIMEOUT": (3.05, 10),
+}
+
+# Anymail only reads the key when the first email is sent, so without this a
+# missing key would surface as a failed signup rather than a failed deploy.
+if (
+    EMAIL_BACKEND == "anymail.backends.brevo.EmailBackend"
+    and not ANYMAIL["BREVO_API_KEY"]
+):
+    raise RuntimeError(
+        "EMAIL_BACKEND is the Brevo backend but BREVO_API_KEY is not set."
+    )
+
+# A warning, not an error: running with DEBUG off locally (e.g. to test error
+# pages) is legitimate. On staging it means codes only reach the logs.
+if not DEBUG and EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
+    warnings.warn(
+        "DEBUG is off but EMAIL_BACKEND is the console backend, so verification "
+        "codes are printed to the logs instead of emailed. Set EMAIL_BACKEND."
+    )
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -70,6 +93,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "anymail",
     "api",
     "accounts",
     "companies",
@@ -147,6 +171,11 @@ STATIC_URL = "static/"
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Built React app (npm run build in frontend/). collectstatic copies it into
+# STATIC_ROOT, so WhiteNoise serves it under STATIC_URL.
+FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
+STATICFILES_DIRS = [FRONTEND_DIST] if FRONTEND_DIST.exists() else []
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
@@ -172,6 +201,9 @@ REST_FRAMEWORK = {
         "verify_attempt": os.getenv("THROTTLE_VERIFY_ATTEMPT", "10/15min"),
         # Sending a chat message, per signed-in user (chat.throttling).
         "message_send": os.getenv("THROTTLE_MESSAGE_SEND", "30/min"),
+        # Asking for alumni access. Each one costs a reviewer's attention, so
+        # the budget is small; the honeypot catches the naive bots.
+        "alumni_request": os.getenv("THROTTLE_ALUMNI_REQUEST", "3/15min"),
         # Reporting is intentionally bounded to prevent flooding moderators.
         "report_create": os.getenv("THROTTLE_REPORT_CREATE", "10/hour"),
     },
@@ -202,9 +234,13 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=REFRESH_TOKEN_LIFETIME_DAYS),
 }
 
-# EMAIL_BACKEND is set above from EMAIL_HOST: SMTP when configured, console
-# otherwise, so verification codes print to the runserver output in development.
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@packreferrals.ncsu.edu")
+# The address must be a sender verified in Brevo, or Brevo rejects the send.
+# It's the Gmail account that owns the Brevo account; the name is what inboxes
+# show as the sender.
+DEFAULT_FROM_EMAIL = (
+    os.getenv("DEFAULT_FROM_EMAIL", "").strip()
+    or "Pack Referrals <packreferrals.acm@gmail.com>"
+)
 
 # --- Logging --------------------------------------------------------------
 # Level for the request log (pack_referrals.middleware). WARNING hides the
@@ -233,6 +269,12 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+        # Failed verification-code sends (accounts.views) are logged as errors.
+        "accounts": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
     },
 }
 
@@ -245,6 +287,13 @@ if SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         release=COMMIT_HASH,
+        # Variable values and request bodies hold emails, verification codes
+        # and chat messages, and Sentry sends both by default even with
+        # send_default_pii off. Its scrubber only matches key names, so it
+        # misses an email inside another value's repr. The stack trace (files,
+        # functions, lines) and request URL are still sent.
+        include_local_variables=False,
+        max_request_body_size="never",
     )
 
 # OpenAPI schema and Swagger UI (served at /api/schema/ and /api/docs/).

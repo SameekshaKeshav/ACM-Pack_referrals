@@ -2,7 +2,7 @@
 
 Security status of the backend API and the staging deployment.
 
-- **Last verified:** 2026-10-24, `main` at `986a642` (also running on staging)
+- **Last full review:** 2026-10-24, `main` at `986a642`. The email and error-report rows were re-checked on 2026-10-28 (`c9477bf`).
 - **Staging:** https://acm-packreferrals-production.up.railway.app/
 
 ## Summary
@@ -12,11 +12,20 @@ Security status of the backend API and the staging deployment.
 | Access | Every endpoint returns only data the caller may see | **FAIL** | #22 |
 | Input | Server-controlled fields can't be set from the request body | **FAIL** | #26 |
 | Input | Every text field has a server-side length limit | **FAIL** | #27 |
-| Email | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **FAIL** | #34 |
+| Email | Signup code reaches an @ncsu.edu inbox (not spam) within 1 minute | **PASS** | #34 |
 | Config | `SECRET_KEY` from the environment, unique and random on staging | **PASS** | — |
 | Config | Email credentials from the environment | **PASS** | — |
 | Config | `DEBUG` off on staging | **PASS** | — |
 | Config | Throttles identify clients correctly behind Railway's proxy | **PASS** | #28 |
+| Config | Error reports (Sentry) leave out request bodies and variable values | **PASS** | — |
+
+## Open failures
+
+**Reports are open to every user (#22).** `ReportViewSet` is a plain `ModelViewSet` over all reports, so any logged-in user can list every report, edit or delete any of them, and change their `status`.
+
+**Server-controlled fields are writable (#26).** `ReportSerializer` uses `fields = "__all__"`, so `reporter` and `status` come from the request body, and a user can file a report in someone else's name. It's the last serializer using `"__all__"`.
+
+**Two text fields have no length limit (#27).** `Profile.bio` (written through `/api/accounts/me/`) and `Report.reason` are `TextField`s with no limit in the model or serializer. Every other text field is limited: connection request `message_text` 500, chat `body_text` 2000 (also a database constraint), names 150, other short fields 255.
 
 ## Access control
 
@@ -41,38 +50,17 @@ Every endpoint requires a JWT unless it is deliberately public (`IsAuthenticated
 
 The Django admin (`/admin/`) is staff-only and not covered.
 
-## Input validation
+## Notes on passing items
 
-**Server-controlled fields — report part fixed (#26).** `reports.ReportSerializer` lists its fields explicitly and `reporter` is read-only, so a report can no longer be filed in someone else's name and `status` no longer exists on it. Elsewhere, identity fields (`sender`, `user`, `author`) are set from the token and `account_status` is read-only. Re-check the new interview-experience and block serializers before marking this check PASS.
-
-**Length limits — FAIL (#27).** `Profile.bio` (written through `/api/accounts/me/`) is a `TextField` with no limit in the model or serializer. A report's `reason` is now a fixed set of choices and its `details` is limited to 1000. All other text fields are limited:
-
-| Field | Limit |
-|-------|-------|
-| Connection request `message_text` | 500 |
-| Chat message `body_text` | 2000 (also a database constraint) |
-| `first_name`, `last_name` | 150 |
-| `major`, `current_role`, `role_title`, company names | 255 |
-| Report `details` | 1000 |
-| `bio` | **none** |
-
-## Configuration
-
-**`SECRET_KEY` — PASS.** Read from the environment; settings refuse to start without it. The staging key was generated randomly on Railway and matches no key in the repo. Early commits (`31ffe48`, `4a26978`) contain development keys, which are public and must never be used.
-
-**Email credentials — PASS.** All `EMAIL_*` settings are read from the environment. None are in the code or git history.
-
-**`DEBUG` — PASS.** Defaults to `False`, and staging serves Django's plain "Not Found" page. Nothing in the code stops it from being turned on via Railway's variables.
-
-**Throttles behind the proxy — PASS (#28).** The signup, login and verify throttles key on the client IP. Staging sits behind two proxies (a CDN77 node and Railway), so `NUM_PROXIES=2` is set on Railway. The proxies also drop client-supplied `X-Forwarded-For` values, so the throttles hold today even without the setting.
-
-## Email on staging — FAIL (#34)
-
-A signup on staging doesn't deliver a code yet. Staging is on Railway's free plan, which [blocks outbound SMTP](https://docs.railway.com/networking/outbound-networking).
-
-The team decided to stay on the free plan and send mail through an email provider's HTTPS API with [`django-anymail`](https://anymail.dev/), on the free tier of Resend, SendGrid or Brevo. No provider has been picked. Most require a verified sending domain, and the current default sender, `no-reply@packreferrals.ncsu.edu`, is on a domain the team doesn't control.
+- **`SECRET_KEY`:** the app refuses to start without it. The staging key was generated on Railway and matches no key in the repo. Commits `31ffe48` and `4a26978` contain development keys, which are public and must never be used.
+- **Email:** sent through Brevo's HTTPS API with `django-anymail`, because Railway's free plan blocks outbound SMTP. `BREVO_API_KEY` is set only on Railway, and the app refuses to start if the Brevo backend is selected without it. On 2026-10-28 a staging login delivered a code to an @ncsu.edu inbox, not spam, within a minute. Signup sends through the same function (`_send_code`). If a send fails, signup returns `503` and login its usual `200`, so failures don't reveal which addresses are registered.
+- **`DEBUG`:** defaults to `False`. Nothing in the code stops it being turned on through Railway's variables.
+- **Throttles:** the auth throttles key on client IP. Staging sits behind two proxies (CDN77, then Railway), so `NUM_PROXIES=2`. The proxies also drop client-supplied `X-Forwarded-For` values.
+- **Sentry:** `include_local_variables=False` and `max_request_body_size="never"`. Before this, staging events included users' emails and verification codes. Sentry still gets stack traces and URLs. Events recorded before the fix should be deleted from Sentry.
 
 ## Known gaps outside the checklist
 
 - `python manage.py check --deploy` warns about `SECURE_HSTS_SECONDS`, `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE`.
 - `/api/accounts/past-roles/` lists roles of unverified and suspended users too, though without saying whose they are.
+- **Throttle counts are kept per worker.** No `CACHES` setting means each gunicorn worker counts requests in its own memory. Staging runs one worker, so the limits hold today. Raising `WEB_CONCURRENCY` would multiply every limit, including code requests and verify attempts, unless a shared cache is configured first. Found in the 2026-11-01 load test.
+- **Registered emails can be discovered. Accepted until after the showcase (PR #40).** Signup returns `409` for an address with a verified account, and login takes longer for a registered address because it waits for Brevo. Accepted because only @ncsu.edu addresses can be checked, code requests are throttled to 5 per 15 minutes per IP, every check of a real account emails its owner, and the directory already shows membership to logged-in users. Fixing it needs both changes together: signup always returns `201` (emailing an existing user instead of sending a code), and the email is sent after the response so timing doesn't differ. That would also remove signup's `503` on a failed send.

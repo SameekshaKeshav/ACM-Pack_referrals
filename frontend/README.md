@@ -16,7 +16,8 @@ npm run dev
 
 Open **http://localhost:5173/signup** for a new account, or `/login` for a returning
 user. Both use an emailed six-digit code, not a password. Django's default local
-email backend prints the code to the backend console. Real email requires SMTP.
+email backend prints the code to the backend console. Real email requires
+`EMAIL_BACKEND` and `BREVO_API_KEY` (see the root README).
 
 Verification signs in and opens `/chat`. Access/refresh credentials persist across
 reloads; protected requests attach Bearer auth and refresh once on 401. Log out
@@ -24,6 +25,26 @@ clears the session. Chat, profile, directory, company and `/chat-mock` require l
 
 Vite forwards `/api` to Django. To use a different development target, copy
 `.env.example` to `.env.local`, set `VITE_API_PROXY_TARGET`, and restart Vite.
+
+## Production build (served by Django)
+
+Staging doesn't run Vite: Django serves the built app from the same origin as the
+API (see Deployment in the root README). To try that setup locally:
+
+```bash
+cd frontend
+npm run build                      # writes dist/
+cd ..
+python manage.py runserver
+```
+
+Open **http://127.0.0.1:8000/**. With `DEBUG=True`, `runserver` serves `dist/`
+directly, so `collectstatic` isn't needed. Rebuild after frontend changes;
+there's no hot reload in this mode.
+
+Builds link their files under `/static/` (`base` in `vite.config.js`), where
+WhiteNoise serves them. `npm run dev` and `npm run preview` are unaffected and
+still open at `/`.
 
 ## Live chat
 
@@ -70,3 +91,9 @@ The frontend GitHub Actions workflow runs the build and both suites on Node 24.
 
 Detailed API shapes, backend dependencies, storage tradeoffs and acceptance steps:
 [chat-auth-integration.md](../docs/chat-auth-integration.md).
+
+## Referral requests (Week 7)
+
+Open `/referrals` after signing in, or use “Ask … for a referral” in an accepted
+chat. Create an ask, view incoming/outgoing asks, and page through older asks.
+See [the referral UI handoff](../docs/referral-ui.md) for setup and limitations.
