@@ -139,7 +139,8 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 - [ ] **MUST** Present demo readiness at Check-in #3.
 - [ ] **MUST · Nov 8** Write the end-to-end test: signup, verify, send request, accept, send message, fetch message, in one test. Include the referral fields (company, role title, job link) and check that a non-connection gets 403.
 - [ ] **SHOULD** Extend the Postman collection with the referral fields, and keep a bug log with priorities.
-- [ ] **MUST · Nov 10** Write `python manage.py reset_demo_data` and `python manage.py issue_demo_token <email>` (prints a login token, and only runs when `ALLOW_DEMO_TOOLS=1`). Run the reset once and confirm it works.
+- [x] **MUST · Nov 10** Write `python manage.py reset_demo_data` and `python manage.py issue_demo_token <email>` (prints a login token, and only runs when `ALLOW_DEMO_TOOLS=1`). See "Demo accounts for the showcase" in the README.
+- [ ] **MUST · Nov 10** Run `reset_demo_data --dry-run`, then the reset, on staging once, and sign in with `issue_demo_token demo.sam@ncsu.edu`. Confirm the demo starts as the README describes. Danny: confirm the exact Railway command for running it inside the service.
 - [ ] **MUST · Nov 13** Recruit 15 to 20 real ACM members to sign up on staging and fill out real profiles and company history. Start this week.
 - [ ] **MUST · Nov 13** Organize the full team demo rehearsal.
 - [ ] **MUST · before Nov 16** Record a backup screen recording of the full demo flow, saved offline.
