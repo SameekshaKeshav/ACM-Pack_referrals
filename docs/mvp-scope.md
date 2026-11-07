@@ -26,7 +26,7 @@ One flow the audience can follow in about five minutes:
 | 4 | Connection request, accept, decline | Done (#10, #16) | Components built; not retested end to end | Not visible |
 | 5 | Chat (send, history, polling, unread) | Done (#21) | Done (#30) | Not visible |
 | 6 | Referral request to a connection | Create, list and detail done (Wk 7); accept/decline and email are Wk 8 | Form and card are Wk 7 (FE2) | Not visible |
-| 7 | Safety: suspended users hidden, blocked users cannot use chat | Hidden and chat checks done; **block and unblock endpoints not built** | Report/block UI not built | Not visible |
+| 7 | Safety: suspended users hidden, blocked users cannot use chat | Done: hidden and chat checks, block and unblock endpoints, block check on connection requests, report endpoint | Report/block UI not built | Not visible |
 | 8 | Staging that works for the audience | Backend is up | **The frontend is not served from the staging URL yet** | Real email, persistent database, seeded demo data and a reset command |
 
 The two biggest MUST gaps today are not features, they are wiring: items 2 and 3 are finished on the backend but the screens are still a mock (profile) and placeholders (directory, company page), and nothing is deployed for the audience to use.
@@ -35,7 +35,7 @@ The two biggest MUST gaps today are not features, they are wiring: items 2 and 3
 
 - Anonymous interview experiences on company pages (new this week: BE2 builds the API in Wk 7, FE2 the UI in Wk 8). It is the largest new piece of scope and is not part of the demo story above, so it is the first thing to cut if the Week 9 dry-run shows trouble.
 - Accessibility checks in CI (`eslint-plugin-jsx-a11y` and axe scans) and the manual audits.
-- Report button and moderation in the admin (the Report API is still open, issue #22).
+- Report button and moderation in the admin (the Report API is create-only now: `POST /api/reports/`; reading reports is through the admin).
 
 ## CUT, in this order, if we are behind
 

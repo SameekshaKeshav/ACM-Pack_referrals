@@ -107,43 +107,6 @@ class ReferralRequest(models.Model):
         )
 
 
-class Report(models.Model):
-    class Status(models.TextChoices):
-        OPEN = "open", "Open"
-        REVIEWED = "reviewed", "Reviewed"
-        ACTIONED = "actioned", "Actioned"
-
-    reporter = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="reports_filed",
-    )
-    reported_user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="reports_received",
-    )
-    reported_message = models.ForeignKey(
-        "chat.Message",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="reports",
-    )
-    reason = models.TextField()
-    status = models.CharField(
-        max_length=20,
-        choices=Status.choices,
-        default=Status.OPEN,
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Report {self.pk} ({self.status})"
-
-
 class Block(models.Model):
     """One user has blocked another. SAMPLE VERSION so chat can honour blocks.
 

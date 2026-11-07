@@ -1,5 +1,4 @@
-from django.urls import include, path
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 
 from .views import (
     AcceptConnectionRequestView,
@@ -9,16 +8,18 @@ from .views import (
     DeclineConnectionRequestView,
     ReferralRequestDetailView,
     ReferralRequestListCreateView,
-    ReportViewSet,
+    UserBlockView,
 )
 
 app_name = "connections"
 
-router = DefaultRouter()
-router.register("reports", ReportViewSet, basename="report")
-
 urlpatterns = [
     path("health/", AppHealthView.as_view(), name="health"),
+    path(
+        "users/<int:user_id>/block/",
+        UserBlockView.as_view(),
+        name="user-block",
+    ),
     path(
         "",
         ConnectionRequestViewSet.as_view({"get": "list", "post": "create"}),
@@ -49,5 +50,4 @@ urlpatterns = [
         DeclineConnectionRequestView.as_view(),
         name="connection-request-decline",
     ),
-    path("", include(router.urls)),
 ]

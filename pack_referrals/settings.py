@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "companies",
     "connections",
     "chat",
+    "reports",
 ]
 
 MIDDLEWARE = [
@@ -203,6 +204,8 @@ REST_FRAMEWORK = {
         # Asking for alumni access. Each one costs a reviewer's attention, so
         # the budget is small; the honeypot catches the naive bots.
         "alumni_request": os.getenv("THROTTLE_ALUMNI_REQUEST", "3/15min"),
+        # Reporting is intentionally bounded to prevent flooding moderators.
+        "report_create": os.getenv("THROTTLE_REPORT_CREATE", "10/hour"),
     },
     # How many proxies sit in front of the app. Throttles use it to find the
     # client's IP in X-Forwarded-For. Unset, DRF keys on the whole header,

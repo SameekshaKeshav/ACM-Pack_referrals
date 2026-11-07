@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from companies.models import Company
 
-from .models import ConnectionRequest, ReferralRequest, Report
+from .models import ConnectionRequest, ReferralRequest
 from .referrals import company_ids_on_profile
 
 
@@ -181,9 +181,3 @@ class ReferralRequestSerializer(serializers.ModelSerializer):
                 {"company_id": "This company is not on the recipient's profile."}
             )
         return attrs
-
-
-class ReportSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Report
-        fields = "__all__"

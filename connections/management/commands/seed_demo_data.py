@@ -8,7 +8,8 @@ from rest_framework_simplejwt.tokens import AccessToken
 from accounts.models import AlumniAccessRequest, PastRole, Profile, VerificationCode
 from chat.models import Conversation
 from companies.models import Company
-from connections.models import ConnectionRequest, ReferralRequest, Report
+from connections.models import ConnectionRequest, ReferralRequest
+from reports.models import Report
 
 
 User = get_user_model()

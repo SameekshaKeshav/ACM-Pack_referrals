@@ -29,7 +29,7 @@ Security status of the backend API and the staging deployment.
 
 ## Access control
 
-Every endpoint requires a JWT unless it's deliberately public (`IsAuthenticated` is the default in `REST_FRAMEWORK`).
+Every endpoint requires a JWT unless it is deliberately public (`IsAuthenticated` is the default in `REST_FRAMEWORK`). Reports were the open problem (#22): the old `ReportViewSet` is gone, and `POST /api/reports/` can only create a report, with the reporter taken from the token. Re-audit the new block and interview-experience routes before marking this check PASS.
 
 | Endpoint | Who can use it | Status |
 |----------|----------------|--------|
@@ -46,7 +46,7 @@ Every endpoint requires a JWT unless it's deliberately public (`IsAuthenticated`
 | `/api/connections/<id>/accept/`, `decline/` | The recipient only; outsiders get 404, the sender 403 | PASS |
 | `/api/chat/conversations/` | The caller's conversations, minus blocked users | PASS |
 | `/api/chat/conversations/<id>/messages/`, `<id>/read/`, `/api/chat/messages/` | Participants who aren't blocked; unknown ids 404, others 403 | PASS |
-| `/api/connections/reports/` | Any logged-in user, for every report | **FAIL** (#22) |
+| `/api/reports/` | Any logged-in user can file a report; nobody can list, read, edit or delete reports through the API | PASS |
 
 The Django admin (`/admin/`) is staff-only and not covered.
 
