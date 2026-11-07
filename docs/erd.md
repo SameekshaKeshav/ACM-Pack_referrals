@@ -106,8 +106,8 @@ erDiagram
     REPORT {
         int id PK
         int reporter_id FK
-        string target_type "user | message"
-        int target_id "a user or message id, checked in the serializer"
+        string target_type "user | message | experience"
+        int target_id "a target id, checked in the serializer"
         string reason "fixed set of choices"
         string details "max 1000"
         datetime created_at

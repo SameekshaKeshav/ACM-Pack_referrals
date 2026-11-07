@@ -110,7 +110,7 @@ class ConnectionRequestViewSet(
             | Q(blocker=recipient, blocked=request.user)
         ).exists():
             return Response(
-                {"detail": "You cannot send a connection request to this user."},
+                {"detail": "This user is not open to connection requests."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 

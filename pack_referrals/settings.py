@@ -172,6 +172,8 @@ REST_FRAMEWORK = {
         "verify_attempt": os.getenv("THROTTLE_VERIFY_ATTEMPT", "10/15min"),
         # Sending a chat message, per signed-in user (chat.throttling).
         "message_send": os.getenv("THROTTLE_MESSAGE_SEND", "30/min"),
+        # Reporting is intentionally bounded to prevent flooding moderators.
+        "report_create": os.getenv("THROTTLE_REPORT_CREATE", "10/hour"),
     },
     # How many proxies sit in front of the app. Throttles use it to find the
     # client's IP in X-Forwarded-For. Unset, DRF keys on the whole header,

@@ -6,6 +6,7 @@ class Report(models.Model):
     class TargetType(models.TextChoices):
         USER = "user", "User"
         MESSAGE = "message", "Message"
+        EXPERIENCE = "experience", "Interview experience"
 
     class Reason(models.TextChoices):
         SPAM = "spam", "Spam"
@@ -29,6 +30,14 @@ class Report(models.Model):
     reason = models.CharField(max_length=30, choices=Reason.choices)
     details = models.CharField(max_length=1000, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["reporter", "target_type", "target_id"],
+                name="unique_report_per_reporter_target",
+            ),
+        ]
 
     def __str__(self):
         return f"Report {self.pk} ({self.target_type}:{self.target_id})"

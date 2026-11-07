@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from companies.models import InterviewExperience
 from chat.models import Message
 
 from .models import Report
@@ -21,7 +22,24 @@ class ReportSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         target_type = attrs["target_type"]
         target_id = attrs["target_id"]
-        target_model = User if target_type == Report.TargetType.USER else Message
-        if not target_model.objects.filter(pk=target_id).exists():
+        request = self.context["request"]
+        if target_type == Report.TargetType.USER:
+            target_exists = User.objects.filter(pk=target_id).exists()
+            is_self_report = target_id == request.user.pk
+        elif target_type == Report.TargetType.MESSAGE:
+            target_exists = Message.objects.filter(
+                pk=target_id,
+                conversation__conversation_participants__user=request.user,
+            ).exists()
+            is_self_report = False
+        else:
+            target_exists = InterviewExperience.objects.filter(pk=target_id).exists()
+            is_self_report = InterviewExperience.objects.filter(
+                pk=target_id, author=request.user
+            ).exists()
+
+        if not target_exists:
             raise serializers.ValidationError({"target_id": "The target does not exist."})
+        if is_self_report:
+            raise serializers.ValidationError({"target_id": "You cannot report yourself."})
         return attrs
