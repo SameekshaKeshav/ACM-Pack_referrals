@@ -26,7 +26,8 @@ from accounts.models import PastRole, Profile
 from chat.models import Conversation, Message
 from chat.services import create_conversation_from_request
 from companies.models import Company
-from connections.models import Block, ConnectionRequest, ReferralRequest, Report
+from connections.models import Block, ConnectionRequest, ReferralRequest
+from reports.models import Report
 
 User = get_user_model()
 
@@ -128,17 +129,32 @@ def demo_user_ids():
     return list(User.objects.filter(email__in=CAST_EMAILS).values_list("pk", flat=True))
 
 
+def _demo_targets(conversations, ids):
+    """Reports are filed against an id, not a foreign key, so say which targets are demo.
+
+    A user target is a demo account; a message target is a message in a demo
+    conversation (those messages are deleted with it, which would orphan the report).
+    """
+    return Q(target_type=Report.TargetType.USER, target_id__in=ids) | Q(
+        target_type=Report.TargetType.MESSAGE,
+        target_id__in=Message.objects.filter(conversation__in=conversations).values("pk"),
+    )
+
+
 def _scoped_rows(ids):
     """Every row that belongs to the demo accounts, by kind. Nothing else."""
+    conversations = Conversation.objects.filter(participants__in=ids).distinct()
     return {
-        "conversations": Conversation.objects.filter(participants__in=ids).distinct(),
+        "conversations": conversations,
         "connection requests": ConnectionRequest.objects.filter(
             Q(sender__in=ids) | Q(recipient__in=ids)
         ),
         "referral requests": ReferralRequest.objects.filter(
             Q(sender__in=ids) | Q(recipient__in=ids)
         ),
-        "reports": Report.objects.filter(Q(reporter__in=ids) | Q(reported_user__in=ids)),
+        "reports": Report.objects.filter(
+            Q(reporter__in=ids) | _demo_targets(conversations, ids)
+        ),
         "blocks": Block.objects.filter(Q(blocker__in=ids) | Q(blocked__in=ids)),
         "past roles": PastRole.objects.filter(user__in=ids),
     }
@@ -149,12 +165,18 @@ def _with_real_members(kind, queryset, ids):
     pairs = {
         "connection requests": ("sender__in", "recipient__in"),
         "referral requests": ("sender__in", "recipient__in"),
-        "reports": ("reporter__in", "reported_user__in"),
         "blocks": ("blocker__in", "blocked__in"),
     }
     if kind in pairs:
         one, two = pairs[kind]
         return queryset.exclude(**{one: ids, two: ids}).count()
+    if kind == "reports":
+        # Demo-only means a demo reporter and a demo target. A demo account's report
+        # about someone else's post or profile, or a real member's report about a
+        # demo account, is the kind of overlap worth showing.
+        conversations = _scoped_rows(ids)["conversations"]
+        demo_only = Q(reporter__in=ids) & _demo_targets(conversations, ids)
+        return queryset.exclude(demo_only).count()
     if kind == "conversations":
         wanted = set(ids)
         return sum(
@@ -178,10 +200,13 @@ def plan():
 
 def _clear(ids):
     rows = _scoped_rows(ids)
-    # Conversations first: they outlive a deleted connection request (SET_NULL),
+    # Reports first: one filed against a message is found through the conversation
+    # that holds it, so it has to be deleted while that conversation still exists.
+    rows["reports"].delete()
+    # Conversations next: they outlive a deleted connection request (SET_NULL),
     # so they have to go while the link to them still exists. Messages cascade.
     rows["conversations"].delete()
-    for kind in ("connection requests", "referral requests", "reports", "blocks", "past roles"):
+    for kind in ("connection requests", "referral requests", "blocks", "past roles"):
         rows[kind].delete()
 
 

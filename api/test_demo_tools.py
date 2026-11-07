@@ -14,7 +14,8 @@ from accounts.models import PastRole, Profile
 from api import demo
 from chat.models import Conversation, Message
 from companies.models import Company
-from connections.models import Block, ConnectionRequest, ReferralRequest, Report
+from connections.models import Block, ConnectionRequest, ReferralRequest
+from reports.models import Report
 
 User = get_user_model()
 ON = {demo.ENV_FLAG: "1"}
@@ -150,7 +151,19 @@ class ResetTests(TestCase):
             sender=sam, recipient=avery, role_title="SWE", message_text="hi"
         )
         Block.objects.create(blocker=sam, blocked=jordan)
-        Report.objects.create(reporter=sam, reported_user=jordan, reason="test")
+        Report.objects.create(
+            reporter=sam,
+            target_type=Report.TargetType.USER,
+            target_id=jordan.pk,
+            reason=Report.Reason.OTHER,
+        )
+        # A report on a message in a demo conversation: found through that conversation.
+        Report.objects.create(
+            reporter=maya,
+            target_type=Report.TargetType.MESSAGE,
+            target_id=Message.objects.filter(conversation=waiting.conversation).first().pk,
+            reason=Report.Reason.SPAM,
+        )
         PastRole.objects.create(
             user=sam, company=Company.objects.get(name="IBM"), role_title="Intern"
         )
@@ -200,7 +213,18 @@ class ResetTests(TestCase):
         talk = Conversation.objects.create(created_from_connection_request=between_them)
         talk.participants.add(ana, ben)
         Message.objects.create(conversation=talk, sender=ana, body_text="private")
-        Report.objects.create(reporter=ana, reported_user=ben, reason="r")
+        Report.objects.create(
+            reporter=ana,
+            target_type=Report.TargetType.USER,
+            target_id=ben.pk,
+            reason=Report.Reason.OTHER,
+        )
+        Report.objects.create(
+            reporter=ben,
+            target_type=Report.TargetType.MESSAGE,
+            target_id=Message.objects.get(conversation=talk).pk,
+            reason=Report.Reason.OTHER,
+        )
         Block.objects.create(blocker=ben, blocked=ana)
         ReferralRequest.objects.create(
             sender=ana, recipient=ben, role_title="SWE", message_text="x", company=acme
@@ -223,7 +247,7 @@ class ResetTests(TestCase):
             ),
         )
         self.assertTrue(ConnectionRequest.objects.filter(pk=between_them.pk).exists())
-        self.assertTrue(Report.objects.filter(reporter=ana).exists())
+        self.assertEqual(Report.objects.filter(reporter__in=[ana, ben]).count(), 2)
         self.assertTrue(Block.objects.filter(blocker=ben).exists())
         self.assertTrue(ReferralRequest.objects.filter(sender=ana).exists())
         self.assertTrue(PastRole.objects.filter(user=ana).exists())
@@ -250,6 +274,40 @@ class ResetTests(TestCase):
         self.assertFalse(Conversation.objects.filter(pk=talk.pk).exists())
         self.assertTrue(User.objects.filter(pk=ana.pk).exists())
         self.assertTrue(Profile.objects.filter(user=ana).exists())
+
+    def test_reports_about_demo_people_and_demo_messages_are_cleared_and_counted(self):
+        run("reset_demo_data", yes=True)
+        ana = real_member("ana@ncsu.edu")
+        other = real_member("other@ncsu.edu")
+        avery = User.objects.get(email=demo.AVERY.email)
+        demo_message = Message.objects.filter(conversation__participants=avery).first()
+        about_demo_user = Report.objects.create(
+            reporter=ana,
+            target_type=Report.TargetType.USER,
+            target_id=avery.pk,
+            reason=Report.Reason.SPAM,
+        )
+        about_demo_message = Report.objects.create(
+            reporter=ana,
+            target_type=Report.TargetType.MESSAGE,
+            target_id=demo_message.pk,
+            reason=Report.Reason.SPAM,
+        )
+        # Same numbers as the demo ids, but about real people: must survive.
+        about_real_user = Report.objects.create(
+            reporter=ana,
+            target_type=Report.TargetType.USER,
+            target_id=other.pk,
+            reason=Report.Reason.SPAM,
+        )
+
+        report = run("reset_demo_data", dry_run=True)
+        self.assertRegex(report, r"2\s+reports\s+\(2 with a real member\)")
+
+        run("reset_demo_data", yes=True)
+        self.assertFalse(Report.objects.filter(pk=about_demo_user.pk).exists())
+        self.assertFalse(Report.objects.filter(pk=about_demo_message.pk).exists())
+        self.assertTrue(Report.objects.filter(pk=about_real_user.pk).exists())
 
     def test_dry_run_changes_nothing_and_reports_the_counts(self):
         self.assertIn("Dry run: nothing was changed", run("reset_demo_data", dry_run=True))
