@@ -149,16 +149,17 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
           </div>
 
           <h3>Add a Role</h3>
-          <div className="role-add-grid" onKeyDown={handleRoleKeyDown}>
+          <div className="role-add-grid">
             <label>
               Company
-              <input value={newRole.company} onChange={(e) => handleRoleField('company', e.target.value)} />
+              <input value={newRole.company} onChange={(e) => handleRoleField('company', e.target.value)} onKeyDown={handleRoleKeyDown} />
             </label>
             <label>
               Role title
               <input
                 value={newRole.role_title}
                 onChange={(e) => handleRoleField('role_title', e.target.value)}
+                onKeyDown={handleRoleKeyDown}
               />
             </label>
             <label>
@@ -167,6 +168,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
                 type="date"
                 value={newRole.start_date}
                 onChange={(e) => handleRoleField('start_date', e.target.value)}
+                onKeyDown={handleRoleKeyDown}
               />
             </label>
             <label>
@@ -175,6 +177,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
                 type="date"
                 value={newRole.end_date}
                 onChange={(e) => handleRoleField('end_date', e.target.value)}
+                onKeyDown={handleRoleKeyDown}
               />
             </label>
             <button type="button" className="button-secondary" disabled={busy} onClick={handleAddRole}>
