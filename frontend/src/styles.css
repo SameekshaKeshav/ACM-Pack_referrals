@@ -188,7 +188,7 @@ label { display: block; font-size: 11px; font-weight: 650; margin: 13px 0 6px; }
 .profile-roles h2 { margin-bottom: 12px; }
 .role-list { display: flex; flex-direction: column; gap: 8px; }
 .role-row { display: flex; align-items: baseline; gap: 16px; min-width: 0; padding: 12px 16px; background: #fff; border: 1px solid #e2e3dd; border-radius: 8px; font-size: 14px; }
-.role-company { font-weight: 700; }
+.role-company { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
 .role-title { min-width: 0; overflow-wrap: anywhere; }
 .role-dates { margin-left: auto; white-space: nowrap; color: var(--color-text-muted); font-size: 13px; }
 .empty-note { color: var(--color-text-muted); font-size: 13px; }

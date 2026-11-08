@@ -102,8 +102,8 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 ## Rawan (FE1: profile and directory)
 
 - [ ] **MUST · Nov 6** Fix the double-click bug on Add role and Remove role: add a busy flag that disables the buttons while a request is in flight, and treat a 404 on remove as success.
-- [ ] **MUST · Nov 6** Add `verified_via` to `fromServer()` in `src/api/profile.js` (one line, item 3 in [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md)). It fails silently if missing, because that function is an allowlist.
-- [ ] **MUST · Nov 6** Wireframe styling PR for the profile page, matching `docs/wireframes/profile-directory-profile-view.png` and `profile-directory-profile-edit.png`:
+- [x] **MUST · Nov 6** Add `verified_via` to `fromServer()` in `src/api/profile.js` (one line, item 3 in [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md)). It fails silently if missing, because that function is an allowlist.
+- [x] **MUST · Nov 6** Wireframe styling PR for the profile page, matching `docs/wireframes/profile-directory-profile-view.png` and `profile-directory-profile-edit.png`:
   - Two-column layout, with the avatar, Edit button and toggle on the left.
   - An initials avatar in the circle (no photo upload, because the backend has no image field).
   - "Open to connect" as a toggle.

@@ -363,3 +363,22 @@ test('Open to connect shows its state in view and is a switch in the editor', as
   await user.click(toggle);
   assert.equal(toggle.checked, false);
 });
+
+test('with no name the heading falls back to the email', async () => {
+  stored.first_name = '';
+  stored.last_name = '';
+  render(createElement(Profile));
+  await screen.findByRole('button', { name: 'Edit Profile' });
+  const heading = screen.getByRole('heading', { level: 1 });
+  assert.equal(heading.textContent, stored.email);
+});
+
+test('with no name and no email the heading says Your profile', async () => {
+  stored.first_name = '';
+  stored.last_name = '';
+  stored.email = '';
+  render(createElement(Profile));
+  await screen.findByRole('button', { name: 'Edit Profile' });
+  const heading = screen.getByRole('heading', { level: 1 });
+  assert.equal(heading.textContent, 'Your profile');
+});
