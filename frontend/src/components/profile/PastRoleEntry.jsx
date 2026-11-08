@@ -8,42 +8,14 @@ function formatMonthYear(iso) {
   });
 }
 
-const PastRoleEntry = ({ role, editable = false, onChange, onRemove }) => {
-
-  if (!editable) {
-    return (
-      <div>
-        {role.company} · {role.role_title} ({formatMonthYear(role.start_date)} - {role.end_date ? formatMonthYear(role.end_date) : 'Present'})
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <input
-        value={role.company}
-        onChange={(e) => onChange('company', e.target.value)}
-        placeholder="Company"
-      />
-      <input
-        value={role.role_title}
-        onChange={(e) => onChange('role_title', e.target.value)}
-        placeholder="Position"
-      />
-      <input
-        type="month"
-        value={role.start_date}
-        onChange={(e) => onChange('start_date', e.target.value)}
-      />
-      <input
-        type="month"
-        value={role.end_date}
-        onChange={(e) => onChange('end_date', e.target.value)}
-      />
-      <button type="button" onClick={onRemove}>Remove</button>
-    </div>
-  );
-
-};
+const PastRoleEntry = ({ role }) => (
+  <div className="role-row">
+    <span className="role-company">{role.company}</span>
+    <span className="role-title">{role.role_title}</span>
+    <span className="role-dates">
+      {`${formatMonthYear(role.start_date)} - ${role.end_date ? formatMonthYear(role.end_date) : 'Present'}`}
+    </span>
+  </div>
+);
 
 export default PastRoleEntry;

@@ -22,7 +22,8 @@ function roleFromServer(role) {
 
 function fromServer(data) {
   return {
-    first_name: data.first_name ?? '',
+    first_name: data.first_name ?? '', 
+    email: data.email ?? '',
     last_name: data.last_name ?? '',
     major: data.major ?? '',
     grad_year: data.grad_year ?? '',

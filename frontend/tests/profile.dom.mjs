@@ -339,3 +339,27 @@ test('removing a role that is already gone on the server counts as success', asy
   await waitFor(() => assert.equal(screen.queryByText(/Google/), null));
   assert.equal(screen.queryByRole('alert'), null);
 });
+
+test('the avatar shows first and last initial and is hidden from screen readers', async () => {
+  render(createElement(Profile));
+  await screen.findByRole('heading', { name: 'Jane Doe' });
+  const avatar = document.querySelector('.profile-avatar');
+  assert.equal(avatar.textContent, 'JD');
+  assert.equal(avatar.getAttribute('aria-hidden'), 'true');
+});
+
+test('with no name the avatar falls back to the first letter of the email', async () => {
+  stored.first_name = '';
+  stored.last_name = '';
+  render(createElement(Profile));
+  await screen.findByRole('button', { name: 'Edit Profile' });
+  assert.equal(document.querySelector('.profile-avatar').textContent, 'J');
+});
+
+test('Open to connect shows its state in view and is a switch in the editor', async () => {
+  const user = await openEditor();
+  const toggle = screen.getByRole('switch', { name: 'Open to connect' });
+  assert.equal(toggle.checked, true);
+  await user.click(toggle);
+  assert.equal(toggle.checked, false);
+});
