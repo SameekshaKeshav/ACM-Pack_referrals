@@ -76,7 +76,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
   };
 
   return (
-    <main className="main-content profile-page">
+    <div className="main-content profile-page">
       <h1>Edit profile</h1>
       <form className="profile-form" onSubmit={handleSubmit}>
         <div className="profile-form-grid">
@@ -192,7 +192,7 @@ const ProfileEditForm = ({ profile, onSave, onCancel, onAddRole, onRemoveRole })
           <button type="submit" className="button-primary">Save</button>
         </div>
       </form>
-    </main>
+    </div>
   );
 };
 

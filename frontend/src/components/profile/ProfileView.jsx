@@ -17,7 +17,7 @@ const ProfileView = ({ profile, onEdit }) => {
   const job = [profile.current_role, profile.current_company].filter(Boolean).join(' at ');
 
   return (
-    <main className="main-content profile-page">
+    <div className="main-content profile-page">
       <div className="profile-layout">
         <aside className="profile-side">
           <div className="profile-avatar" aria-hidden="true">{initialsFor(profile)}</div>
@@ -55,7 +55,7 @@ const ProfileView = ({ profile, onEdit }) => {
           </section>
         </div>
       </div>
-    </main>
+    </div>
   );
 };
 
