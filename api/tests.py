@@ -51,7 +51,8 @@ class HealthCheckTests(TestCase):
         "/api/companies/",
         # /api/connections/connection-requests/ is intentionally absent: #10
         # replaced the generic list route, so it 404s rather than 401s.
-        "/api/connections/reports/",
+        # /api/reports/ is intentionally absent: it is POST-only (file a report),
+        # so a GET returns 405 rather than 200.
         "/api/chat/conversations/",
         # /api/chat/messages/ is intentionally absent: it is POST-only (send a
         # message), so a GET returns 405 rather than 200.
