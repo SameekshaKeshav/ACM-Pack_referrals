@@ -249,6 +249,25 @@ class LoginTests(APITestCase):
         )
         self.assertEqual(stale.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_suspended_account_cannot_login_or_verify(self):
+        user = User.objects.create_user(username=EMAIL, email=EMAIL, is_active=True)
+        Profile.objects.create(
+            user=user,
+            account_status=Profile.AccountStatus.SUSPENDED,
+        )
+        verification, code = VerificationCode.issue(user)
+
+        login = self.client.post(self.login_url, {"email": EMAIL}, format="json")
+        verify = self.client.post(
+            self.verify_url,
+            {"email": EMAIL, "code": code},
+            format="json",
+        )
+
+        self.assertEqual(login.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(verify.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(VerificationCode.objects.filter(pk=verification.pk).exists())
+
 
 class SendFailureTests(APITestCase):
     """The email provider being down (or out of quota) must not cause a 500,
