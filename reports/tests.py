@@ -302,4 +302,3 @@ class ReportAdminActionTests(TestCase):
         self.assertEqual(
             self.target.profile.account_status, Profile.AccountStatus.SUSPENDED
         )
-

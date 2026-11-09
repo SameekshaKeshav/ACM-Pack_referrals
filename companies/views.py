@@ -1,3 +1,5 @@
+from .services import affiliated_users
+
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -13,8 +15,6 @@ from .models import Company, InterviewExperience
 from .serializers import CompanyDetailSerializer, CompanySerializer, InterviewExperienceSerializer
 
 User = get_user_model()
-from .services import affiliated_users
-
 
 class AppHealthView(APIView):
     permission_classes = [AllowAny]
