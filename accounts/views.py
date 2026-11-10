@@ -209,6 +209,12 @@ class LoginView(APIView):
 
         user = User.objects.filter(email__iexact=email).first()
         if user is not None:
+            profile = getattr(user, "profile", None)
+            if profile and profile.account_status == Profile.AccountStatus.SUSPENDED:
+                return Response(
+                    {"detail": "This account has been suspended."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             _, code = VerificationCode.issue(user)
             # A failed send is logged inside _send_code. It must not change the
             # response, or a 503 here would reveal that the account exists.
@@ -240,6 +246,14 @@ class VerifyView(APIView):
 
         user = User.objects.filter(email__iexact=email).first()
         verification = user.verification_codes.first() if user else None
+
+        if user is not None:
+            profile = getattr(user, "profile", None)
+            if profile and profile.account_status == Profile.AccountStatus.SUSPENDED:
+                return Response(
+                    {"detail": "This account has been suspended."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
         if verification is None:
             # Spend the same time hashing as a real check would, so response

@@ -3,6 +3,10 @@ from django.db import models
 
 
 class Report(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        REVIEWED = "reviewed", "Reviewed"
+
     class TargetType(models.TextChoices):
         USER = "user", "User"
         MESSAGE = "message", "Message"
@@ -29,6 +33,11 @@ class Report(models.Model):
     target_id = models.PositiveBigIntegerField()
     reason = models.CharField(max_length=30, choices=Reason.choices)
     details = models.CharField(max_length=1000, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

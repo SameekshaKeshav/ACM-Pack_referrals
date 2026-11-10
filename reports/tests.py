@@ -1,16 +1,21 @@
 from unittest import mock
 
 from django.contrib.auth import get_user_model
+from django.contrib.admin.sites import AdminSite
+from django.contrib.messages import get_messages
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
 from companies.models import Company, InterviewExperience
 from chat.models import Conversation, ConversationParticipant, Message
+from accounts.models import Profile
 
 from .models import Report
+from .admin import ReportAdmin
 from .throttling import ReportThrottle
 
 
@@ -229,3 +234,89 @@ class ReportCreateTests(TestCase):
                 )
                 self.assertEqual(response.status_code, 400)
         self.assertEqual(Report.objects.count(), 0)
+
+
+class ReportAdminActionTests(TestCase):
+    def setUp(self):
+        self.admin = ReportAdmin(Report, AdminSite())
+        self.reporter = User.objects.create_user(username="reporter")
+        self.target = User.objects.create_user(username="target")
+        Profile.objects.create(user=self.target)
+
+    def _request(self):
+        request = RequestFactory().post("/admin/reports/report/")
+        request.session = {}
+        request._messages = FallbackStorage(request)
+        return request
+
+    def test_mark_reviewed_updates_selected_reports(self):
+        report = Report.objects.create(
+            reporter=self.reporter,
+            target_type=Report.TargetType.USER,
+            target_id=self.target.pk,
+            reason=Report.Reason.SPAM,
+        )
+
+        request = self._request()
+        self.admin.mark_reviewed(request, Report.objects.filter(pk=report.pk))
+
+        report.refresh_from_db()
+        self.assertEqual(report.status, Report.Status.REVIEWED)
+        self.assertEqual(
+            [str(message) for message in get_messages(request)],
+            ["Marked 1 report as reviewed."],
+        )
+
+    def test_suspend_user_action_handles_user_message_and_experience_targets(self):
+        company = Company.objects.create(name="Acme")
+        conversation = Conversation.objects.create()
+        ConversationParticipant.objects.create(
+            conversation=conversation, user=self.reporter
+        )
+        message = Message.objects.create(
+            conversation=conversation,
+            sender=self.reporter,
+            body_text="Reported",
+        )
+        experience = InterviewExperience.objects.create(
+            company=company,
+            author=self.target,
+            role_title="Engineer",
+            outcome="offer",
+            difficulty=3,
+            process_text="Process",
+        )
+        reports = Report.objects.bulk_create([
+            Report(
+                reporter=self.reporter,
+                target_type=Report.TargetType.USER,
+                target_id=self.target.pk,
+                reason=Report.Reason.SPAM,
+            ),
+            Report(
+                reporter=self.target,
+                target_type=Report.TargetType.MESSAGE,
+                target_id=message.pk,
+                reason=Report.Reason.HARASSMENT,
+            ),
+            Report(
+                reporter=self.reporter,
+                target_type=Report.TargetType.EXPERIENCE,
+                target_id=experience.pk,
+                reason=Report.Reason.SPAM,
+            ),
+        ])
+
+        request = self._request()
+        self.admin.suspend_user(
+            request, Report.objects.filter(pk__in=[report.pk for report in reports])
+        )
+
+        self.target.profile.refresh_from_db()
+        self.assertEqual(
+            self.target.profile.account_status, Profile.AccountStatus.SUSPENDED
+        )
+        self.assertEqual(
+            [str(message) for message in get_messages(request)],
+            ["Suspended 1 account."],
+        )
