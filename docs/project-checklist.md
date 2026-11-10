@@ -75,7 +75,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
   - Notification emails are **not** part of this. Do not build them.
   - Tell Sanjana as soon as it is on `main`, because her Accept and Decline UI depends on it.
 - [ ] **MUST · Nov 8** Freeze the auth code, with zero open P0 or P1 auth bugs. Cover the token-expiry edge case for a demo that runs long.
-- [ ] **SHOULD · Nov 6** Alumni follow-ups from the #45 review:
+- [x] **SHOULD · Nov 6** Alumni follow-ups from the #45 review:
   - Rejecting an approved request should also suspend the matching profile, or the admin action description must say you have to suspend it too. An existing access token keeps working after a reject.
   - Document that rejecting a resubmission does not revoke an earlier approval.
   - Update the "registered emails can be discovered" gap in the security checklist to include approved alumni addresses.
@@ -102,8 +102,8 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 ## Rawan (FE1: profile and directory)
 
 - [ ] **MUST · Nov 6** Fix the double-click bug on Add role and Remove role: add a busy flag that disables the buttons while a request is in flight, and treat a 404 on remove as success.
-- [ ] **MUST · Nov 6** Add `verified_via` to `fromServer()` in `src/api/profile.js` (one line, item 3 in [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md)). It fails silently if missing, because that function is an allowlist.
-- [ ] **MUST · Nov 6** Wireframe styling PR for the profile page, matching `docs/wireframes/profile-directory-profile-view.png` and `profile-directory-profile-edit.png`:
+- [x] **MUST · Nov 6** Add `verified_via` to `fromServer()` in `src/api/profile.js` (one line, item 3 in [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md)). It fails silently if missing, because that function is an allowlist.
+- [x] **MUST · Nov 6** Wireframe styling PR for the profile page, matching `docs/wireframes/profile-directory-profile-view.png` and `profile-directory-profile-edit.png`:
   - Two-column layout, with the avatar, Edit button and toggle on the left.
   - An initials avatar in the circle (no photo upload, because the backend has no image field).
   - "Open to connect" as a toggle.

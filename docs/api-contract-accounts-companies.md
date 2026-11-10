@@ -324,5 +324,26 @@ Use it if you want to badge admin-approved alumni. `account_status` is
 unchanged and still only ever `unverified` / `active` / `suspended` — there is
 no fourth value, so existing status checks keep working.
 
+### What happens after a rejection
+
+Rejecting withdraws eligibility, and also **suspends any account that request
+let in** — an admin-approved profile for that address becomes `suspended`, so
+they leave the directory and the company pages, and can no longer send or
+receive referral asks. Two cases are deliberately untouched:
+
+- An **@ncsu.edu account** is never suspended by a rejection. Its eligibility
+  comes from the domain, not from a request.
+- An address still covered by **another approved request** keeps its access.
+  Rejecting a resubmission therefore does not revoke an earlier approval: the
+  address stays eligible and the account stays active for as long as any
+  approved request for it remains.
+
+Suspension is not a sign-out, and does not close every surface. A token issued
+before the rejection keeps working until it expires, and `/auth/refresh/` will
+mint new access tokens from it for up to 7 days without a fresh login. A
+suspended user can also still send connection requests, and still read their
+own profile, the directory and their conversations. The security checklist
+lists each limit; do not build UI that assumes a rejection locks someone out.
+
 There is no endpoint to read, list or check the status of a request. That is
 intentional; approval is communicated out of band.

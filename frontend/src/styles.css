@@ -17,7 +17,7 @@
 .live-chat-page .chat-window { height: min(70vh, 680px); min-height: 420px; }
 .live-chat-page .conversation-extra { max-width: 95px; }
 .live-chat-page .conversation-extra .meta { white-space: normal; text-align: right; }
-.message-pending .message-bubble { opacity: .65; }
+.message-pending .message-bubble { opacity: 1; }
 .chat-header > div { min-width: 0; overflow-wrap: anywhere; }
 .message-failed .message-bubble { outline: 1px solid #b60000; }
 .message-failure { color: #a82822; font-size: 12px; max-width: 90%; margin-top: 7px; overflow-wrap: anywhere; }
@@ -165,3 +165,74 @@ label { display: block; font-size: 11px; font-weight: 650; margin: 13px 0 6px; }
 .referral-directions button[aria-pressed="true"] { background: #a00000; color: white; }
 .chat-thread-panel { min-width: 0; }
 @media (max-width: 760px) { .referral-layout { grid-template-columns: minmax(0, 1fr); } .referral-panel { padding: 16px; } }
+
+/* Profile page */
+.profile-page { max-width: 1000px; }
+.profile-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 40px; align-items: start; }
+.profile-side { display: flex; flex-direction: column; gap: 16px; }
+.profile-avatar { display: grid; place-items: center; width: 180px; height: 180px; align-self: center; border-radius: 50%; background: #eee9e2; color: #746653; font-size: 56px; font-weight: 700; }
+.profile-side .button-primary { width: 100%; padding: 11px 17px; font-size: 13px; }
+.connect-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: #fff; border: 1px solid #e2e3dd; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.connect-state { display: flex; align-items: center; gap: 8px; color: var(--color-text-muted); }
+.switch { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; border-radius: 11px; background: #6a6e65; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.switch-on { background: #a00000; }
+.switch-on::after { transform: translateX(16px); }
+.profile-main { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.profile-summary { margin-top: 8px; font-size: 16px; }
+.profile-job { color: var(--color-text-muted); font-size: 14px; }
+.profile-card { margin-top: 22px; padding: 22px; background: #fff; border: 1px solid #e2e3dd; border-radius: 12px; }
+.profile-card h2 { margin-bottom: 10px; }
+.profile-card p { font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.profile-roles { margin-top: 22px; }
+.profile-roles h2 { margin-bottom: 12px; }
+.role-list { display: flex; flex-direction: column; gap: 8px; }
+.role-row { display: flex; align-items: baseline; gap: 16px; min-width: 0; padding: 12px 16px; background: #fff; border: 1px solid #e2e3dd; border-radius: 8px; font-size: 14px; }
+.role-company { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.role-title { min-width: 0; overflow-wrap: anywhere; }
+.role-dates { margin-left: auto; white-space: nowrap; color: var(--color-text-muted); font-size: 13px; }
+.empty-note { color: var(--color-text-muted); font-size: 13px; }
+
+/* Profile edit form */
+.profile-form { display: grid; gap: 22px; margin-top: 24px; }
+.profile-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; }
+.profile-page label { display: flex; flex-direction: column; gap: 6px; margin: 0; font-size: 12px; font-weight: 700; color: #202327; }
+.profile-page input:not([role="switch"]), .profile-page textarea { min-width: 0; font-size: 14px; }
+.profile-page textarea { width: 100%; min-height: 130px; padding: 10px 12px; border: 1px solid #d8dcd1; border-radius: 6px; background: #fff; resize: vertical; }
+.profile-page .switch-field { flex-direction: row; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.profile-page input[role="switch"] { appearance: none; -webkit-appearance: none; position: relative; width: 38px; height: 22px; padding: 0; border: 0; border-radius: 11px; background: #6a6e65; flex-shrink: 0; cursor: pointer; }
+.profile-page input[role="switch"]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.profile-page input[role="switch"]:checked { background: #a00000; }
+.profile-page input[role="switch"]:checked::after { transform: translateX(16px); }
+.profile-section { display: grid; gap: 14px; padding: 22px; background: #fff; border: 1px solid #e2e3dd; border-radius: 12px; }
+.form-note { color: var(--color-text-muted); font-size: 12px; }
+.role-edit-row { display: flex; align-items: center; gap: 10px; }
+.role-edit-row .role-row { flex: 1; }
+.role-edit-row .button-secondary { padding: 8px 12px; }
+.role-add-grid { display: grid; grid-template-columns: 1.2fr 1.2fr 1fr 1fr auto; gap: 12px; align-items: end; }
+.role-add-grid .button-secondary { padding: 11px 16px; }
+.profile-page [role="alert"] { color: #a82822; font-size: 13px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.form-actions button { padding: 10px 22px; font-size: 13px; }
+
+@media (max-width: 800px) {
+  .profile-layout { grid-template-columns: 1fr; gap: 24px; }
+  .profile-avatar { width: 110px; height: 110px; font-size: 38px; align-self: center; }
+  .profile-form-grid { grid-template-columns: 1fr; }
+  .role-add-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 650px) {
+  .role-row { flex-wrap: wrap; gap: 4px 12px; }
+  .role-dates { margin-left: 0; flex-basis: 100%; }
+  .role-edit-row { flex-wrap: wrap; }
+  .role-add-grid { grid-template-columns: 1fr; }
+}
+/* Keep long names, notes and feedback inside Chat/Connect at narrow widths. */
+.conversation-sidebar, .chat-thread-panel, .chat-window { min-width: 0; }
+.message-bubble, .message-failure, .request-card, .conversation-item { overflow-wrap: anywhere; }
+.message-failure { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.thread:focus-visible { outline: 3px solid var(--color-primary, #b40000); outline-offset: -3px; }
+@media (max-width: 400px) {
+  .chat-composer { margin-inline: 12px; gap: 8px; }
+  .chat-composer .button-primary { padding-inline: 12px; }
+}

@@ -21,6 +21,8 @@ export default [
     settings: { 'jsx-a11y': { components: { Link: 'a', NavLink: 'a' } } },
     rules: {
       ...jsxA11y.flatConfigs.recommended.rules,
+      // Scrollable history needs a keyboard focus target.
+      'jsx-a11y/no-noninteractive-tabindex': ['error', { roles: ['tabpanel', 'region'] }],
       'jsx-a11y/anchor-is-valid': ['error', { components: ['Link', 'NavLink'], specialLink: ['to'] }],
     },
   },
