@@ -141,7 +141,7 @@ export default function Chat() {
     return true;
   }
 
-  return <main className="main-content live-chat-page">
+  return <main id="main-content" tabIndex={-1} className="main-content live-chat-page">
     <div className="section-heading"><div><h1>Messages</h1><p>Continue a conversation with an accepted connection.</p></div><button className="button-secondary" disabled={listLoading} onClick={() => setListVersion((value) => value + 1)}>Refresh conversations</button></div>
     {listError && <p role="alert" className="feedback feedback-error">{listError} <button className="button-secondary" onClick={() => setListVersion((value) => value + 1)}>Retry conversations</button></p>}
     <ConnectionRequests onAccepted={(id) => { setFocusConversation(id); setListVersion((value) => value + 1); navigate(`/chat/${id}`); }} />

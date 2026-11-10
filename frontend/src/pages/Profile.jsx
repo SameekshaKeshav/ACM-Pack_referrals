@@ -39,11 +39,11 @@ const Profile = () => {
     setProfile((prev) => ({ ...prev, past_roles: prev.past_roles.filter((r) => r.id !== id) }));
   };
 
-  if (error && !profile) return <main className="main-content"><p role="alert">{error}</p></main>;
-  if (!profile) return <main className="main-content"><p>Loading...</p></main>;
+  if (error && !profile) return <main id="main-content" tabIndex={-1} className="main-content"><h1>Your profile</h1><p role="alert">{error}</p></main>;
+  if (!profile) return <main id="main-content" tabIndex={-1} className="main-content"><h1>Your profile</h1><p role="status">Loading...</p></main>;
 
   return (
-    <main className="main-content">
+    <main id="main-content" tabIndex={-1} className="main-content">
       {error && <p role="alert">{error}</p>}
       {isEditing ? (
         <ProfileEditForm

@@ -47,6 +47,7 @@ function fakeApi({ companyStatus = 200, onCompanies } = {}) {
     // Connection state lookups (Connect buttons) are not what these tests are about: nobody is connected.
     if (url.pathname === '/api/connections/' || url.pathname === '/api/chat/conversations/') return json([]);
     requests.push(url);
+    if (/\/experiences\/$/.test(url.pathname)) return json([]);
     if (url.pathname === '/api/companies/') {
       const special = await onCompanies?.(url, requests.length);
       if (special) return special;
@@ -132,7 +133,8 @@ test('switching tabs by click and by arrow keys, with the right ARIA state', asy
   await user().click(interviews);
   assert.equal(interviews.getAttribute('aria-selected'), 'true');
   assert.equal(members.getAttribute('aria-selected'), 'false');
-  assert.match(screen.getByRole('tabpanel').textContent, /Interview experiences will appear here/);
+  await screen.findByText('No interview experiences yet. Be the first to share.');
+  assert.match(screen.getByRole('tabpanel').textContent, /Share an interview experience/);
   assert.ok(!screen.queryByText('Gina Gomez'));
 
   members.focus();
