@@ -62,6 +62,7 @@ Open `http://localhost:5173/chat-mock` for three incoming requests and a five-me
 | `SENTRY_DSN` | Yes | unset (Sentry disabled) | Where errors are sent (see [Error tracking](#error-tracking)). Leave it unset locally and in CI; some tests raise exceptions on purpose. |
 | `SENTRY_ENVIRONMENT` | Yes (`staging`) | unset | Environment name on Sentry events. If it's missing, Sentry labels them `production`. |
 | `RAILPACK_PACKAGES` | Yes (`node@24`) | not used | Build-time only: extra tools Railway's builder installs. Railpack detects a Python app and doesn't install Node unless asked, so without this the frontend build fails with `npm: not found` (see [Deployment](#deployment-railway)). |
+| `ALLOW_DEMO_TOOLS` | No (leave unset) | unset | Switches on `reset_demo_data` and `issue_demo_token` (see [Demo accounts](#demo-accounts-for-the-showcase)). Only the value `1` works. Set it for one command, not as a permanent Railway variable. |
 
 ## Running tests and lint
 
@@ -131,6 +132,44 @@ To undo a rollback, run the script again with the newer commit. It prints that c
 
 **After a rollback, `/api/health/` shows `"commit_hash": null`** (seen on 2026-11-05, even when rolling back to the original deployment of a commit). A rebuild of the same commit reported it again. Both health and Sentry's release tag read `RAILWAY_GIT_COMMIT_SHA`, which a deployment created by a Railway rollback apparently doesn't set, so Sentry events have no release until the next normal deploy. To see which commit is live, use `railway deployment list`. The script checks there too, and only uses `/api/health/` to check the app is answering.
 
+### Demo accounts for the showcase
+
+Eight accounts let the presenter run the demo from a known start. There are **two demo sets**, so the two judge panels each get a fresh demo without a reset in between: use set A for the first panel and set B for the second. Each set is three of the team's own `@ncsu.edu` accounts:
+
+| | Presenter (signs in) | Alum the presenter already chats with | Alum waiting in the presenter's inbox |
+|---|---|---|---|
+| **Set A** | `skeshav2@ncsu.edu` | `sshett24@ncsu.edu` (Red Hat) | `rtelgoha@ncsu.edu` (Google) |
+| **Set B** | `dbbakalo@ncsu.edu` | `kmpanick@ncsu.edu` (Red Hat) | `tlhart@ncsu.edu` (Google) |
+
+Both sets share two fictional members: `demo.jordan@ncsu.edu` (open to connect, so each presenter can send a fresh request live) and `demo.lee@ncsu.edu` (not open to connect). They do not receive mail.
+
+**These six accounts become demo accounts.** A reset overwrites their name, major, graduation year, bio and company with the demo profile, and removes their connection requests, conversations, referrals, reports, blocks and past roles. Do not use them for anything real until `reset_demo_data --remove` has been run after the showcase. A reset refuses to touch an account that is a staff or superuser account, so run the dry run first and check for that message.
+
+Two commands manage them. Both do nothing unless `ALLOW_DEMO_TOOLS=1` is set for that command.
+
+```bash
+# See what a reset would delete. Changes nothing.
+ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data --dry-run
+
+# Put the demo accounts back to the start (asks first; --yes skips the question).
+ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data
+
+# A login for a presenter (skeshav2@ncsu.edu for set A, dbbakalo@ncsu.edu for set B),
+# without waiting for an emailed code.
+ALLOW_DEMO_TOOLS=1 python manage.py issue_demo_token skeshav2@ncsu.edu
+
+# After the showcase: delete the demo accounts entirely.
+ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data --remove
+```
+
+**The starting state, for each set:** the presenter already chats with the Red Hat alum (3 messages, 1 unread) and can ask that alum for a referral. The Google alum's connection request is waiting in the presenter's inbox to accept. Jordan is open to connect but not yet connected, so the presenter can send a new request live. Lee is not open to connect. All eight appear in the directory. Playing one set does not change the other.
+
+**What it touches:** only these eight accounts and their requests, conversations, referrals, reports, blocks and past roles. No other member's profile or data is changed, and the command prints the counts first. A conversation or request between a demo account and a real member is removed too (counted separately as "with a real member"), because it cannot exist without the demo account.
+
+**`issue_demo_token`** only works for the eight demo addresses, never for any other member. It prints one line to paste into the browser's developer console: it saves the login where the app looks for it and opens `/chat`. The access token lasts about a day and the refresh token printed with it up to 7 days (`ACCESS_TOKEN_LIFETIME_HOURS`, `REFRESH_TOKEN_LIFETIME_DAYS`). It refuses a staff or superuser account, and so does `reset_demo_data`, including `--remove`. Anyone with shell access on the server can sign in as any of the eight, so treat the login like a password.
+
+**Running it on staging:** the database is on the Railway volume, so the command has to run inside the service, for example from a shell opened with `railway ssh`. `railway run` does not work: it runs on your laptop, where `/data` does not exist. Set the variable only for that command, as in the examples above.
+
 ## Logging
 
 `pack_referrals/middleware.py` logs one JSON line to stdout per request, which Railway shows in the service's logs. Each line has `method`, `path` (without the query string, so tokens or codes in the URL aren't logged), `status_code` and `duration_ms`:
@@ -184,7 +223,7 @@ STAGING=https://acm-packreferrals-production.up.railway.app
 
 **Note:** Migrations run on every deploy against the volume's database. Test migrations locally before merging so a bad migration doesn't break staging data.
 
-**Never run a seed command (such as `seed_demo_data`) on staging.** The database lives on the volume, so anything a seed writes stays there for good.
+**Never run a seed command (such as `seed_demo_data`) on staging.** The database lives on the volume, so anything a seed writes stays there for good. The one exception is `reset_demo_data`, which is built for staging: it only touches the eight [demo accounts](#demo-accounts-for-the-showcase), shows what it will delete first, and refuses to run unless `ALLOW_DEMO_TOOLS=1` is set.
 
 ## Stack
 

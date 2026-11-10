@@ -1,14 +1,37 @@
 # MVP scope: MUST / CUT list
 
-**Status:** DRAFT for Check-in #2. The team agrees it (or changes it) at the check-in, then this page is the reference.
+**Status:** Updated Nov 10, 2026 (code freeze was Nov 8). The table below shows where each row stands today. Open work and owners are in [project-checklist.md](project-checklist.md).
 
-**Showcase:** the week of Monday 11/16. The day within that week is not set yet, so plan for the earliest day (Monday 11/16) and treat the rest of that week as buffer, not build time.
+**Showcase:** Monday 11/16, 6:00 to 7:30 PM (team members arrive for dinner at 5:30 PM). The team rehearsal is Friday 11/13.
 
 **Definition of Done for every row:** merged to `main`, CI green, visible on staging.
 
+## Showcase day
+
+| Time | What |
+|---|---|
+| 5:30 to 6:00 PM | Dinner and networking for project members and industry (room 3001) |
+| 5:50 to 6:00 PM | Teams move to room 3211 and set up |
+| 6:00 to 6:20 PM | Introduction to ACM and Neurotech, opening remarks (room 3211) |
+| 6:20 to 7:00 PM | Judging |
+| 6:20 to 7:20 PM | Showcase |
+| 7:20 to 7:30 PM | Prizes and closing remarks |
+
+- **Judging:** two panels of judges each visit once between 6:20 and 7:00 PM. We get **10 minutes per panel, including their questions**, so the demo is about **7 minutes**. For the rest of the showcase we demo to other attendees.
+- **Two panels, two demo sets:** every judge sees the demo from the start, so the first panel uses demo set A and the second uses set B (see "Demo accounts for the showcase" in the README). Run `reset_demo_data` before 6:00 PM, not between panels.
+- **Scoring:** each judge scores 1 to 5 on each criterion below and the score is the sum. The winning team has the highest average across judges. Each member of the winning team gets a $50 Visa gift card.
+
+| Criterion | What to show or say |
+|---|---|
+| Technology | Django, DRF and JWT auth, email-code verification through Brevo, chat polling, rate limits and the security checklist, load tests on SQLite, a Postman collection that covers every endpoint, one-command rollback, accessibility checks in CI. |
+| Design | `@ncsu.edu` verification with a manual alumni path, empty, loading and error states, accessibility checks. |
+| Execution | What we cut and why (report and block UI, notification emails, the company endpoint), a backup recording, a staging reset. |
+| Teamwork | Every member can explain their own part: backend, profile and directory, chat and connect, infrastructure, and PM. |
+| Purpose | Students have no easy way to find alumni at a target company and ask for a referral. |
+
 ## The demo story
 
-One flow the audience can follow in about five minutes:
+One flow the audience can follow in about seven minutes, with three minutes left for the judges' questions:
 
 1. A new user signs up with an @ncsu.edu address, enters the emailed code and lands signed in.
 2. They fill in their profile (major, graduation year, past roles).
@@ -21,21 +44,21 @@ One flow the audience can follow in about five minutes:
 | # | What | Backend | Frontend | Staging |
 |---|------|---------|----------|---------|
 | 1 | Sign up, verify, login | Done | Done (#30) | Done (#34): codes arrive through Brevo |
-| 2 | Profile view and edit | Done (`/api/accounts/me/`, #31) | **Still on a mock** (`api/profile.js`) | Not visible |
-| 3 | Directory and company pages | Done (`/api/accounts/users/`, `/api/companies/?search=`, company detail, #18, #31) | **Not wired:** the directory shows placeholder cards and the company page is a stub | Not visible |
-| 4 | Connection request, accept, decline | Done (#10, #16) | Components built; not retested end to end | Not visible |
-| 5 | Chat (send, history, polling, unread) | Done (#21) | Done (#30) | Not visible |
-| 6 | Referral request to a connection | Create, list and detail done (Wk 7); accept/decline and email are Wk 8 | Form and card are Wk 7 (FE2) | Not visible |
-| 7 | Safety: suspended users hidden, blocked users cannot use chat | Done: hidden and chat checks, block and unblock endpoints, block check on connection requests, report endpoint | Report/block UI not built | Not visible |
-| 8 | Staging that works for the audience | Backend is up | **The frontend is not served from the staging URL yet** | Real email, persistent database, seeded demo data and a reset command |
+| 2 | Profile view and edit | Done (`/api/accounts/me/`, #31) | Done: wired to the API, current role and past roles, wireframe styling (#38, #46, #60, #61) | On staging |
+| 3 | Directory and company pages | Done (`/api/accounts/users/`, `/api/companies/?search=`, company detail, #18, #31) | Done: directory with filters (#36) and company page (`Directory.jsx`, `Company.jsx`). Interview posts on the company page are in review (#47) | On staging |
+| 4 | Connection request, accept, decline | Done (#10, #16) | Done: Connect button, request inbox and nav badge (#41), chat and connect polish (#64) | On staging |
+| 5 | Chat (send, history, polling, unread) | Done (#21) | Done (#30, #64) | On staging |
+| 6 | Referral request to a connection | Create, list and detail done. Accept and decline are in review (#57). The notification email is out of scope for the showcase | Form and card done (#43). Accept and Decline buttons are in review (#58) | On staging, except accept and decline until #57 and #58 merge |
+| 7 | Safety: suspended users hidden, blocked users cannot use chat | Done (#39): hidden and chat checks, block and unblock endpoints, block check on connection requests, report endpoint. Admin actions to mark a report reviewed and suspend a user are in review (#62) | Report and block UI is cut (the API and admin are the safety path for the demo) | On staging |
+| 8 | Staging that works for the audience | Backend is up, email through Brevo (#40), one-command rollback (#51) | The React app is served from the staging URL (#37) | Seeded demo data and a reset command (`reset_demo_data`, `issue_demo_token`) are in review (#55) |
 
-The two biggest MUST gaps today are not features, they are wiring: items 2 and 3 are finished on the backend but the screens are still a mock (profile) and placeholders (directory, company page), and nothing is deployed for the audience to use.
+What is left is merging the open pull requests (#47, #55, #57, #58, #62), putting real members' profiles on staging, and rehearsing. No new features are planned.
 
 ## SHOULD (build if on track, cut without breaking the demo)
 
-- Anonymous interview experiences on company pages (new this week: BE2 builds the API in Wk 7, FE2 the UI in Wk 8). It is the largest new piece of scope and is not part of the demo story above, so it is the first thing to cut if the Week 9 dry-run shows trouble.
+- Anonymous interview experiences on company pages. The API is on `main` (#39); the UI is in review (#47). It is not part of the demo story above, so it is the first thing to cut if the dry-run shows trouble.
 - Accessibility checks in CI (`eslint-plugin-jsx-a11y` and axe scans) and the manual audits.
-- Report button and moderation in the admin (the Report API is create-only now: `POST /api/reports/`; reading reports is through the admin).
+- Moderation in the admin (the Report API is create-only: `POST /api/reports/`; reports are read and actioned in the admin). The Report and Block buttons in the UI are cut.
 
 ## CUT, in this order, if we are behind
 
@@ -45,22 +68,23 @@ The two biggest MUST gaps today are not features, they are wiring: items 2 and 3
 4. Mobile polish
 5. Firefox testing
 
-## Known limits of referral requests (until Week 8)
+## Known limits of referral requests
 
-- One pending ask per person, company and role (case ignored). Accept and decline are Week 8, and nothing leaves pending before then, so a second ask for the same role gets a 409 and stays blocked. The form should show the 409 message, not a retry button.
+- One pending ask per person, company and role (case ignored). Until accept and decline (#57) are on `main`, nothing leaves pending, so a second ask for the same role gets a 409 and stays blocked. The form shows the 409 message, not a retry button.
+- The referral form offers every company. A company endpoint that limited it to the connection's own companies was cut (Nov 10); the backend rejects a company that is not on the recipient's profile with a 400.
 - The referral list is paged (`limit`/`offset`, like the directory). The conversation list is still unpaged (bounded by the user's own conversations).
 
-## Decisions the team needs to make at Check-in #2
+## Decisions
 
-- Ask the committee lead which day in the week of 11/16 the showcase is.
-- Agree this list, in particular that interview experiences are SHOULD and not MUST.
-- Agree who owns the staging deploy of the frontend and by when (suggest: BE3, before the Week 9 dry-run).
+- Interview experiences are SHOULD, not MUST. Referral notification emails and the company endpoint for the referral form are out of scope for the showcase.
+- Staging deploy of the frontend: BE3 (done, #37).
 - Email (decided): we send through Brevo's HTTPS API with `django-anymail`, since Railway's free plan blocks SMTP and Brevo needs no sending domain. The sender is `packreferrals.acm@gmail.com`. Confirmed on staging on 2026-10-28.
 
 ## Testing plan
 
 - `python manage.py test` runs the whole backend suite in CI on every PR.
 - `npm run test:dom` and `npm test` run the frontend suites in CI.
-- Week 8: one end-to-end test for signup, verify, connect, accept, chat and referral request.
-- Week 9: a full dry-run of the demo story on staging, with a keyboard-only pass.
-- Week 10: rehearsal with 15 or more real members' profiles on staging.
+- One end-to-end test for signup, verify, connect, accept, chat and referral request (#53, in review).
+- `postman/run_collection.sh` runs every endpoint against a throwaway database (see `postman/README.md`).
+- A full dry-run of the demo story on staging, with a keyboard-only pass.
+- Week 10: rehearsal on Friday 11/13 with 15 or more real members' profiles on staging.

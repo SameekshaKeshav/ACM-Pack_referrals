@@ -2,7 +2,7 @@
 
 **This file replaces the technical tracker spreadsheet from Nov 4, 2026.** It is the single list of what is left before the showcase (week of Nov 16). Do not use the spreadsheet any more.
 
-Last updated: Nov 4, 2026 by Sameeksha (PM).
+Last updated: Nov 10, 2026 by Sameeksha (PM).
 
 ## How to use this
 
@@ -24,7 +24,8 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 |---|---|
 | Nov 8 | End of Week 9: code frozen except for critical bugs, demo dry-run |
 | Nov 9 to 15 | Week 10: seeding real members, practice demo, rehearsal |
-| Nov 16 | Showcase week |
+| Nov 13 | Team rehearsal (Friday) |
+| Nov 16 | Showcase, 6:00 to 7:30 PM. Team members arrive for dinner at 5:30 PM, and teams set up in room 3211 from 5:50 PM. See [mvp-scope.md](mvp-scope.md) |
 
 **Links:** [Staging](https://acm-packreferrals-production.up.railway.app/) · [API routes](api-routes.md) · [Security checklist](security-checklist.md) · [Wireframes](wireframes/) · [Ownership](ownership.md)
 
@@ -41,7 +42,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 
 ## Open pull requests
 
-- [ ] **#39** (Thomas): report, block and interview experiences. Has a merge conflict with `main`. See Thomas's list.
+- [x] **#39** (Thomas): report, block and interview experiences. Merged.
 - [ ] **#47** (Sanjana): company interview posts and accessibility. Needs a review. Its interview posts list only works once #39's routes are on `main`.
 
 ## Thomas (BE2: moderation and safety)
@@ -82,6 +83,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
   - Add the signup 201-versus-400 behavior for approved addresses to the Known gaps, as agreed.
 - [ ] **MUST · Nov 13** Write `python manage.py seed_directory_data`: about 20 realistic companies with users of varied majors and grad years. Confirm by browsing the directory on staging.
 - [ ] **SHOULD** Add a length limit to `Profile.bio` (issue #27).
+- [ ] **SHOULD · Nov 15** Decide whether to raise `THROTTLE_ALUMNI_REQUEST` on staging for showcase day. It is 3 per 15 minutes per IP, so on shared venue wifi a fourth alum is blocked for 15 minutes. It is an environment variable, so no code change is needed.
 - [ ] **MUST · before Nov 16** Run `reset_demo_data` once yourself, so you can run it if the presenter is busy.
 - [ ] **MUST · Nov 16 week** On call during the demo to watch the login success rate in Sentry and the logs.
 
@@ -124,9 +126,9 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 - [ ] **SHOULD · Nov 8** Responsive checks on Chat and Connect at 375, 768 and 1440 px, with the input still usable at every width, and before and after screenshots.
 - [ ] **SHOULD · Nov 8** Accessibility pass on Chat, Connect and the auth screens: no serious or critical axe violations, a keyboard-only walkthrough (send a request, accept, send a message), and `aria-live` announcements for new messages and errors.
 - [ ] **MUST · after Karthik's referral accept/decline is on `main`** Accept and Decline buttons on incoming referral requests, with the card updating to the new status.
-- [ ] **SHOULD · after Sameeksha's company endpoint is on `main`** Referral form: offer only the companies on the selected connection's profile, instead of every company.
+- [x] **CUT · Nov 10** Referral form: offer only the companies on the selected connection's profile. Not built: the company endpoint was cut, so the form offers every company and the backend rejects a wrong one with a 400.
 - [ ] **CUT-FIRST** Report and block UI, once #39 is merged.
-- [ ] **MUST · Nov 13** Write a timed demo script under 3 minutes and reproduce it successfully twice in a row on staging.
+- [ ] **MUST · Nov 13** Write a timed demo script of about 7 minutes (judges get 10 minutes per panel, including questions, and there are two panels) and reproduce it successfully twice in a row on staging. Also write a 2-minute fallback for if something breaks.
 - [ ] **MUST · before Nov 16** Record a backup screen recording of the chat and connect part of the demo, saved locally.
 - [ ] **MUST · Nov 16 week** On call for Chat and Connect issues during the live run.
 
@@ -134,17 +136,19 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
 
 - [ ] **MUST · Nov 6** Make the scope-freeze decision and tell the team. In scope: alumni access (backend is merged, form is below), referral accept and decline (Karthik). Out of scope for the showcase: referral notification emails. Confirm or change this.
 - [x] **MUST · Nov 9** Alumni access, frontend. Build the request form on a new public route and a "Request alumni access" link on the signup page. See [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md) for the contract. Add tests.
-- [ ] **SHOULD · Nov 11** Company endpoint for the referral form: a way to get the current and past companies of a connection, so the form can offer only valid companies. The backend rejects any company that is not on the recipient's profile, with a 400.
+- [x] **CUT · Nov 10** Company endpoint for the referral form. Cut for the showcase, because the backend already rejects a company that is not on the recipient's profile with a 400.
 - [ ] **MUST · Nov 8** Run the full demo dry-run, with zero P0 bugs in the connect-to-chat flow. Triage and assign only critical bugs.
 - [ ] **MUST** Present demo readiness at Check-in #3.
 - [x] **MUST · Nov 8** Write the end-to-end test: signup, verify, send request, accept, send message, fetch message, in one test. Include the referral fields (company, role title, job link) and check that a non-connection gets 403.
-- [ ] **SHOULD** Extend the Postman collection with the referral fields, and keep a bug log with priorities.
-- [ ] **MUST · Nov 10** Write `python manage.py reset_demo_data` and `python manage.py issue_demo_token <email>` (prints a login token, and only runs when `ALLOW_DEMO_TOOLS=1`). Run the reset once and confirm it works.
+- [x] **SHOULD · Nov 10** Extend the Postman collection with the referral fields (done), and with reports, blocks and interview experiences once #39 merged (done in #55).
+- [ ] **SHOULD** Keep a bug log with priorities.
+- [x] **MUST · Nov 10** Write `python manage.py reset_demo_data` and `python manage.py issue_demo_token <email>` (prints a login token, and only runs when `ALLOW_DEMO_TOOLS=1`). See "Demo accounts for the showcase" in the README.
+- [ ] **MUST · Nov 10** Run `reset_demo_data --dry-run`, then the reset, on staging once, and sign in with `issue_demo_token skeshav2@ncsu.edu` (set A) and `issue_demo_token dbbakalo@ncsu.edu` (set B). Confirm the demo starts as the README describes. Danny: confirm the exact Railway command for running it inside the service.
 - [ ] **MUST · Nov 13** Recruit 15 to 20 real ACM members to sign up on staging and fill out real profiles and company history. Start this week.
 - [ ] **MUST · Nov 13** Organize the full team demo rehearsal.
 - [ ] **MUST · before Nov 16** Record a backup screen recording of the full demo flow, saved offline.
 - [ ] **SHOULD** Send the thank-you reply to Ms. Priest (NC State Alumni Engagement) if it has not gone out, and tell the team the alumni decision in writing.
-- [ ] **SHOULD** Update the stale docs: `docs/mvp-scope.md` (profile and directory are no longer "on a mock"), `docs/recent-updates.md`, and the alumni line in `docs/design.md`.
+- [x] **SHOULD · Nov 10** Update the stale docs: `docs/mvp-scope.md` is updated in #55. `docs/recent-updates.md` and `docs/design.md` are listed in `.gitignore` (not tracked), so they were updated in Sameeksha's local copy only.
 - [ ] **MUST · Nov 16 week** Lead the showcase presentation.
 
 ## Done so far

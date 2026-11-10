@@ -1,6 +1,6 @@
 """One test that walks the demo from a stranger's point of view, over HTTP only.
 
-Signup -> verify -> profile -> directory -> connect -> accept -> chat -> referral.
+Signup -> verify -> profile -> directory -> connect -> accept -> chat -> referral -> answer.
 The other tests in this repo check one rule at a time, so a break *between*
 steps (for example a verified account that the directory cannot see) shows up
 here first. Nothing is created through the ORM: every account, request and
@@ -12,8 +12,6 @@ import re
 from django.core import mail
 from django.core.cache import cache
 from rest_framework.test import APIClient, APITestCase
-
-from companies.models import Company
 
 REFERRAL_FIELDS = {
     "id", "sender", "recipient", "company", "role_title", "job_url",
@@ -48,7 +46,11 @@ class Member:
 
 class DemoJourneyTests(APITestCase):
     def setUp(self):
-        cache.clear()  # throttle history is process-wide; start each test with a full budget
+        # Throttle history is process-wide; start each test with a full budget. The budget is
+        # small: code requests are limited to 5 per 15 minutes per IP and this journey makes 3
+        # signups from one client, so a fourth member or a retry here would hit a 429, which
+        # shows up as a bare assertion inside Member.sign_in.
+        cache.clear()
         self.alice = Member("alice@ncsu.edu")  # a student who wants a referral
         self.bob = Member("bob@ncsu.edu")  # works at Acme
         self.carol = Member("carol@ncsu.edu")  # signs up, but never connects with Alice
@@ -72,7 +74,7 @@ class DemoJourneyTests(APITestCase):
         self.assertEqual(profile.status_code, 200, profile.content)
         self.assertEqual(profile.json()["current_company"]["name"], "Acme")
         self.assertEqual(profile.json()["account_status"], "active")
-        acme = Company.objects.get(name="Acme")
+        acme_id = profile.json()["current_company"]["id"]
         self.alice.client.patch(
             "/api/accounts/me/",
             {
@@ -83,7 +85,7 @@ class DemoJourneyTests(APITestCase):
         )
 
         # 3. Alice finds Bob in the directory by company, and cannot see herself first.
-        found = self.alice.client.get(f"/api/accounts/users/?company_id={acme.pk}")
+        found = self.alice.client.get(f"/api/accounts/users/?company_id={acme_id}")
         self.assertEqual(found.status_code, 200)
         people = found.json()["results"]
         self.assertEqual([p["user_id"] for p in people], [self.bob.user_id])
@@ -107,7 +109,7 @@ class DemoJourneyTests(APITestCase):
 
         # 5. Until Bob answers, nobody can chat and Alice cannot ask for a referral.
         self.assertEqual(self.alice.client.get("/api/chat/conversations/").json(), [])
-        early = self._ask_for_referral(self.alice, self.bob, acme)
+        early = self._ask_for_referral(self.alice, self.bob, acme_id)
         self.assertEqual(early.status_code, 403, early.content)
 
         # 6. Bob accepts, and a conversation exists for both of them.
@@ -149,7 +151,7 @@ class DemoJourneyTests(APITestCase):
         )
 
         # 8. Now a referral ask works. Every field the UI relies on comes back.
-        ask = self._ask_for_referral(self.alice, self.bob, acme)
+        ask = self._ask_for_referral(self.alice, self.bob, acme_id)
         self.assertEqual(ask.status_code, 201, ask.content)
         referral = ask.json()
         self.assertEqual(set(referral), REFERRAL_FIELDS)
@@ -169,11 +171,11 @@ class DemoJourneyTests(APITestCase):
         self.assertEqual([r["id"] for r in theirs["results"]], [referral["id"]])
         for row in mine["results"] + theirs["results"]:
             self.assertEqual(set(row), REFERRAL_FIELDS)
-        again = self._ask_for_referral(self.alice, self.bob, acme)
+        again = self._ask_for_referral(self.alice, self.bob, acme_id)
         self.assertEqual(again.status_code, 409, again.content)
 
         # 10. Carol is a verified member but not Alice's connection: no referral, no chat.
-        stranger = self._ask_for_referral(self.alice, self.carol, acme)
+        stranger = self._ask_for_referral(self.alice, self.carol, acme_id)
         self.assertEqual(stranger.status_code, 403, stranger.content)
         self.assertEqual(self.carol.client.get(thread_url).status_code, 403)
         spied = self.carol.client.post(
@@ -187,6 +189,21 @@ class DemoJourneyTests(APITestCase):
         self.assertEqual(carols_referrals.json()["results"], [])
         # Carol's attempt added nothing to the thread.
         self.assertEqual(len(self.bob.client.get(thread_url).json()), 2)
+
+        # 11. Only Bob can answer the ask: Carol cannot see it, Alice cannot answer her own.
+        answer_url = f"/api/connections/referrals/{referral['id']}/accept/"
+        self.assertEqual(self.carol.client.patch(answer_url).status_code, 404)
+        self.assertEqual(self.alice.client.patch(answer_url).status_code, 403)
+        accepted_ask = self.bob.client.patch(answer_url)
+        self.assertEqual(accepted_ask.status_code, 200, accepted_ask.content)
+        self.assertEqual(set(accepted_ask.json()), REFERRAL_FIELDS)
+        self.assertEqual(accepted_ask.json()["status"], "accepted")
+        self.assertIsNotNone(accepted_ask.json()["resolved_at"])
+        # Alice sees the answer, and a second answer is refused.
+        mine = self.alice.client.get("/api/connections/referrals/?type=outgoing").json()
+        self.assertEqual([r["status"] for r in mine["results"]], ["accepted"])
+        late = self.bob.client.patch(f"/api/connections/referrals/{referral['id']}/decline/")
+        self.assertEqual(late.status_code, 409, late.content)
 
     def test_a_visitor_with_no_token_is_turned_away_from_every_step(self):
         anonymous = APIClient()
@@ -203,12 +220,12 @@ class DemoJourneyTests(APITestCase):
             with self.subTest(method=method, url=url):
                 self.assertEqual(getattr(anonymous, method)(url).status_code, 401)
 
-    def _ask_for_referral(self, sender, recipient, company):
+    def _ask_for_referral(self, sender, recipient, company_id):
         return sender.client.post(
             "/api/connections/referrals/",
             {
                 "recipient_id": recipient.user_id,
-                "company_id": company.pk,
+                "company_id": company_id,
                 "role_title": "Software Engineer Intern",
                 "job_url": "https://acme.example/jobs/1",
                 "resume_url": "https://drive.example/resume",

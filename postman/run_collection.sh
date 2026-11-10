@@ -39,6 +39,7 @@ export THROTTLE_CODE_REQUEST=1000/min
 export THROTTLE_VERIFY_ATTEMPT=1000/min
 export THROTTLE_ALUMNI_REQUEST=1000/min
 export THROTTLE_MESSAGE_SEND=1000/min
+export THROTTLE_REPORT_CREATE=1000/hour
 
 echo "Migrating a throwaway database..."
 "$PYTHON" manage.py migrate --noinput > /dev/null
