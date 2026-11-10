@@ -4,6 +4,42 @@ from django.utils import timezone
 from .models import AlumniAccessRequest, PastRole, Profile
 
 
+def _suspend_revoked_alumni(emails):
+    """Suspend accounts whose only route in was a request that is now rejected.
+
+    Rejecting a request does not by itself take access away: nothing in the
+    login or verify path reads AlumniAccessRequest, so the account stays
+    reachable. Suspending the profile is what removes them from the directory
+    and the company pages, stops them sending or receiving referral asks, and
+    stops anyone sending them a connection request.
+
+    It does not close everything. POST /api/connections/ checks the
+    recipient's status but not the sender's, so a suspended user can still
+    send connection requests, and their own profile and the chat and company
+    reads stay open. Those are recorded in the security checklist.
+
+    Two addresses are deliberately left alone: one still covered by another
+    approved request, and an @ncsu.edu account, whose eligibility never came
+    from a request at all. Both are recognised by verified_via, which is set
+    once at signup from the address itself.
+
+    Returns the number of profiles changed.
+    """
+    count = 0
+    for email in emails:
+        if AlumniAccessRequest.is_approved_email(email):
+            continue  # another approved request still covers this address
+        count += (
+            Profile.objects.filter(
+                user__email__iexact=email,
+                verified_via=Profile.VerifiedVia.ADMIN_APPROVAL,
+            )
+            .exclude(account_status=Profile.AccountStatus.SUSPENDED)
+            .update(account_status=Profile.AccountStatus.SUSPENDED)
+        )
+    return count
+
+
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = (
@@ -64,6 +100,23 @@ class AlumniAccessRequestAdmin(admin.ModelAdmin):
     def approve_requests(self, request, queryset):
         self._review(request, queryset, AlumniAccessRequest.Status.APPROVED)
 
-    @admin.action(description="Reject these requests")
+    @admin.action(description="Reject: refuse these, and suspend any account they let in")
     def reject_requests(self, request, queryset):
+        # Collected before _review flips the status, so is_approved_email()
+        # below sees the post-rejection picture.
+        emails = set(
+            queryset.exclude(status=AlumniAccessRequest.Status.REJECTED).values_list(
+                "email", flat=True
+            )
+        )
         self._review(request, queryset, AlumniAccessRequest.Status.REJECTED)
+        suspended = _suspend_revoked_alumni(emails)
+        if suspended:
+            self.message_user(
+                request,
+                f"{suspended} profile(s) suspended, so they are hidden from "
+                "the directory and can no longer exchange referral asks. This "
+                "does not sign them out: a token they already hold keeps "
+                "working, and they can still send connection requests. See the "
+                "security checklist.",
+            )

@@ -75,7 +75,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
   - Notification emails are **not** part of this. Do not build them.
   - Tell Sanjana as soon as it is on `main`, because her Accept and Decline UI depends on it.
 - [ ] **MUST · Nov 8** Freeze the auth code, with zero open P0 or P1 auth bugs. Cover the token-expiry edge case for a demo that runs long.
-- [ ] **SHOULD · Nov 6** Alumni follow-ups from the #45 review:
+- [x] **SHOULD · Nov 6** Alumni follow-ups from the #45 review:
   - Rejecting an approved request should also suspend the matching profile, or the admin action description must say you have to suspend it too. An existing access token keeps working after a reject.
   - Document that rejecting a resubmission does not revoke an earlier approval.
   - Update the "registered emails can be discovered" gap in the security checklist to include approved alumni addresses.
