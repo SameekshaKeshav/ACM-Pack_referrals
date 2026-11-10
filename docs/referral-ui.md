@@ -1,5 +1,7 @@
 # Week 7 referral frontend handoff
 
+Follow-up: recipient Accept/Decline actions are described in [referral actions UI](referral-actions-ui.md). The original Week 7 scope below is historical.
+
 Based on main `ab3c07f` (includes the referral backend, authentication, company/profile
 integration and the connection inbox). This change adds frontend code and documentation;
 it does not change models, migrations or backend endpoint behaviour.
