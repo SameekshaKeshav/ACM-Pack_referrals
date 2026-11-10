@@ -433,7 +433,7 @@
                 }
               ],
               "cookie": [],
-              "body": "openapi: 3.0.3\ninfo:\n  title: Pack Referrals API\n  version: 0.1.0\n  description: 'Verified NC State referral network. Send `Authorization: Bearer <token>`.'\npaths:\n  /api/accounts/alumni-access-requests/:\n    post:\n      operationId: accounts_alumni_access_requests_create\n      description: |-\n        Public: submit a request to be let in as an alum.\n\n        Write-only and deliberately dull. It answers the same way whether the\n        request was stored, was a duplicate, or tripped the honeypot, so it cannot\n        be used to find out who has already applied.\n      tags:\n      - accounts\n      security:\n      - jwtAuth: []\n      - cookieAuth: []\n      - {}\n      responses:\n        '200':\n          description: No response body\n  /api/accounts/auth/login/:\n    post:\n      operationId: accounts_auth_login_create\n      description: Send a returning user a fresh code. There is no password to check.\n      tags:\n      - accounts\n      security:\n      - jwtAuth: []\n      - cookieAuth: []\n      - {}\n      responses:\n        '200':\n          description: No response body\n  /api/accounts/auth/refresh/:\n    post:\n      operationId: accounts_auth_refresh_create\n      description: |-\n        Takes a refresh type JSON web token and returns an access type JSON web\n        token if the refresh token is valid.\n      tags:\n      - accounts\n      requestBody:\n        content:\n          application/json:\n            schema:\n              $ref: '#/components/schemas/TokenRefresh'\n          appl\n\n... (cut by save_examples.py; 41754 characters in full)"
+              "body": "openapi: 3.0.3\ninfo:\n  title: Pack Referrals API\n  version: 0.1.0\n  description: 'Verified NC State referral network. Send `Authorization: Bearer <token>`.'\npaths:\n  /api/accounts/alumni-access-requests/:\n    post:\n      operationId: accounts_alumni_access_requests_create\n      description: |-\n        Public: submit a request to be let in as an alum.\n\n        Write-only and deliberately dull. It answers the same way whether the\n        request was stored, was a duplicate, or tripped the honeypot, so it cannot\n        be used to find out who has already applied.\n      tags:\n      - accounts\n      security:\n      - jwtAuth: []\n      - cookieAuth: []\n      - {}\n      responses:\n        '200':\n          description: No response body\n  /api/accounts/auth/login/:\n    post:\n      operationId: accounts_auth_login_create\n      description: Send a returning user a fresh code. There is no password to check.\n      tags:\n      - accounts\n      security:\n      - jwtAuth: []\n      - cookieAuth: []\n      - {}\n      responses:\n        '200':\n          description: No response body\n  /api/accounts/auth/refresh/:\n    post:\n      operationId: accounts_auth_refresh_create\n      description: |-\n        Takes a refresh type JSON web token and returns an access type JSON web\n        token if the refresh token is valid.\n      tags:\n      - accounts\n      requestBody:\n        content:\n          application/json:\n            schema:\n              $ref: '#/components/schemas/TokenRefresh'\n          appl\n\n... (cut by save_examples.py; 40855 characters in full)"
             }
           ]
         },
@@ -2895,7 +2895,7 @@
                 }
               ],
               "cookie": [],
-              "body": "[\n  {\n    \"id\": 1,\n    \"recipient\": {\n      \"id\": 2,\n      \"name\": \"Recipient User\",\n      \"company\": \"Acme\"\n    },\n    \"message_text\": \"Hi! Could we talk about your internship?\",\n    \"status\": \"pending\",\n    \"created_at\": \"2026-11-05T03:39:08.463933Z\"\n  }\n]"
+              "body": "[\n  {\n    \"id\": 1,\n    \"recipient\": {\n      \"id\": 2,\n      \"name\": \"Recipient User\",\n      \"company\": \"Acme\"\n    },\n    \"message_text\": \"Hi! Could we talk about your internship?\",\n    \"status\": \"pending\",\n    \"created_at\": \"2026-11-10T17:58:11.107324Z\"\n  }\n]"
             }
           ]
         },
@@ -2989,7 +2989,7 @@
                 }
               ],
               "cookie": [],
-              "body": "[\n  {\n    \"id\": 1,\n    \"sender\": {\n      \"id\": 1,\n      \"name\": \"Sender User\",\n      \"company\": \"Acme\"\n    },\n    \"message_text\": \"Hi! Could we talk about your internship?\",\n    \"status\": \"pending\",\n    \"created_at\": \"2026-11-05T03:39:08.463933Z\"\n  }\n]"
+              "body": "[\n  {\n    \"id\": 1,\n    \"sender\": {\n      \"id\": 1,\n      \"name\": \"Sender User\",\n      \"company\": \"Acme\"\n    },\n    \"message_text\": \"Hi! Could we talk about your internship?\",\n    \"status\": \"pending\",\n    \"created_at\": \"2026-11-10T17:58:11.107324Z\"\n  }\n]"
             }
           ]
         },
@@ -3053,7 +3053,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"message_text\": \"Hi! Could we talk about your internship?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-05T03:39:08.463933Z\",\n  \"resolved_at\": null,\n  \"conversation_id\": null\n}"
+              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"message_text\": \"Hi! Could we talk about your internship?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-10T17:58:11.107324Z\",\n  \"resolved_at\": null,\n  \"conversation_id\": null\n}"
             }
           ]
         },
@@ -3670,7 +3670,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"company\": {\n    \"id\": 1,\n    \"name\": \"Acme\"\n  },\n  \"role_title\": \"Software Engineering Intern\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-05T03:39:08.612850Z\",\n  \"resolved_at\": null\n}"
+              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"company\": {\n    \"id\": 1,\n    \"name\": \"Acme\"\n  },\n  \"role_title\": \"Software Engineering Intern\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n  \"resolved_at\": null\n}"
             }
           ]
         },
@@ -3965,7 +3965,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"count\": 1,\n  \"next\": null,\n  \"previous\": null,\n  \"results\": [\n    {\n      \"id\": 1,\n      \"sender\": {\n        \"id\": 1,\n        \"name\": \"Sender User\",\n        \"company\": \"Acme\"\n      },\n      \"recipient\": {\n        \"id\": 2,\n        \"name\": \"Recipient User\",\n        \"company\": \"Acme\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"name\": \"Acme\"\n      },\n      \"role_title\": \"Software Engineering Intern\",\n      \"job_url\": \"https://careers.example.com/jobs/123\",\n      \"resume_url\": \"https://drive.example.com/resume.pdf\",\n      \"message_text\": \"Would you be willing to refer me for this role?\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-05T03:39:08.612850Z\",\n      \"resolved_at\": null\n    }\n  ]\n}"
+              "body": "{\n  \"count\": 1,\n  \"next\": null,\n  \"previous\": null,\n  \"results\": [\n    {\n      \"id\": 1,\n      \"sender\": {\n        \"id\": 1,\n        \"name\": \"Sender User\",\n        \"company\": \"Acme\"\n      },\n      \"recipient\": {\n        \"id\": 2,\n        \"name\": \"Recipient User\",\n        \"company\": \"Acme\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"name\": \"Acme\"\n      },\n      \"role_title\": \"Software Engineering Intern\",\n      \"job_url\": \"https://careers.example.com/jobs/123\",\n      \"resume_url\": \"https://drive.example.com/resume.pdf\",\n      \"message_text\": \"Would you be willing to refer me for this role?\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n      \"resolved_at\": null\n    }\n  ]\n}"
             }
           ]
         },
@@ -4069,7 +4069,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"count\": 1,\n  \"next\": null,\n  \"previous\": null,\n  \"results\": [\n    {\n      \"id\": 1,\n      \"sender\": {\n        \"id\": 1,\n        \"name\": \"Sender User\",\n        \"company\": \"Acme\"\n      },\n      \"recipient\": {\n        \"id\": 2,\n        \"name\": \"Recipient User\",\n        \"company\": \"Acme\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"name\": \"Acme\"\n      },\n      \"role_title\": \"Software Engineering Intern\",\n      \"job_url\": \"https://careers.example.com/jobs/123\",\n      \"resume_url\": \"https://drive.example.com/resume.pdf\",\n      \"message_text\": \"Would you be willing to refer me for this role?\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-05T03:39:08.612850Z\",\n      \"resolved_at\": null\n    }\n  ]\n}"
+              "body": "{\n  \"count\": 1,\n  \"next\": null,\n  \"previous\": null,\n  \"results\": [\n    {\n      \"id\": 1,\n      \"sender\": {\n        \"id\": 1,\n        \"name\": \"Sender User\",\n        \"company\": \"Acme\"\n      },\n      \"recipient\": {\n        \"id\": 2,\n        \"name\": \"Recipient User\",\n        \"company\": \"Acme\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"name\": \"Acme\"\n      },\n      \"role_title\": \"Software Engineering Intern\",\n      \"job_url\": \"https://careers.example.com/jobs/123\",\n      \"resume_url\": \"https://drive.example.com/resume.pdf\",\n      \"message_text\": \"Would you be willing to refer me for this role?\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n      \"resolved_at\": null\n    }\n  ]\n}"
             }
           ]
         },
@@ -4135,7 +4135,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"company\": {\n    \"id\": 1,\n    \"name\": \"Acme\"\n  },\n  \"role_title\": \"Software Engineering Intern\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-05T03:39:08.612850Z\",\n  \"resolved_at\": null\n}"
+              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"company\": {\n    \"id\": 1,\n    \"name\": \"Acme\"\n  },\n  \"role_title\": \"Software Engineering Intern\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n  \"resolved_at\": null\n}"
             }
           ]
         },
@@ -4540,7 +4540,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"conversation_id\": 1,\n  \"sender_id\": 1,\n  \"body_text\": \"Thanks for connecting!\",\n  \"created_at\": \"2026-11-05T03:39:08.752674Z\",\n  \"read_status\": false\n}"
+              "body": "{\n  \"id\": 1,\n  \"conversation_id\": 1,\n  \"sender_id\": 1,\n  \"body_text\": \"Thanks for connecting!\",\n  \"created_at\": \"2026-11-10T17:58:11.360629Z\",\n  \"read_status\": false\n}"
             }
           ]
         },
@@ -4633,7 +4633,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 2,\n  \"conversation_id\": 1,\n  \"sender_id\": 1,\n  \"body_text\": \"Thanks for your help! <b>plain text</b> & more\",\n  \"created_at\": \"2026-11-05T03:39:08.767916Z\",\n  \"read_status\": false\n}"
+              "body": "{\n  \"id\": 2,\n  \"conversation_id\": 1,\n  \"sender_id\": 1,\n  \"body_text\": \"Thanks for your help! <b>plain text</b> & more\",\n  \"created_at\": \"2026-11-10T17:58:11.373209Z\",\n  \"read_status\": false\n}"
             }
           ]
         },
@@ -4733,7 +4733,7 @@
                 }
               ],
               "cookie": [],
-              "body": "[\n  {\n    \"id\": 1,\n    \"conversation_id\": 1,\n    \"sender_id\": 1,\n    \"body_text\": \"Thanks for connecting!\",\n    \"created_at\": \"2026-11-05T03:39:08.752674Z\",\n    \"read_status\": false\n  },\n  {\n    \"id\": 2,\n    \"conversation_id\": 1,\n    \"sender_id\": 1,\n    \"body_text\": \"Thanks for your help! <b>plain text</b> & more\",\n    \"created_at\": \"2026-11-05T03:39:08.767916Z\",\n    \"read_status\": false\n  }\n]"
+              "body": "[\n  {\n    \"id\": 1,\n    \"conversation_id\": 1,\n    \"sender_id\": 1,\n    \"body_text\": \"Thanks for connecting!\",\n    \"created_at\": \"2026-11-10T17:58:11.360629Z\",\n    \"read_status\": false\n  },\n  {\n    \"id\": 2,\n    \"conversation_id\": 1,\n    \"sender_id\": 1,\n    \"body_text\": \"Thanks for your help! <b>plain text</b> & more\",\n    \"created_at\": \"2026-11-10T17:58:11.373209Z\",\n    \"read_status\": false\n  }\n]"
             }
           ]
         },
@@ -4833,7 +4833,7 @@
                 }
               ],
               "cookie": [],
-              "body": "[\n  {\n    \"id\": 2,\n    \"conversation_id\": 1,\n    \"sender_id\": 1,\n    \"body_text\": \"Thanks for your help! <b>plain text</b> & more\",\n    \"created_at\": \"2026-11-05T03:39:08.767916Z\",\n    \"read_status\": false\n  }\n]"
+              "body": "[\n  {\n    \"id\": 2,\n    \"conversation_id\": 1,\n    \"sender_id\": 1,\n    \"body_text\": \"Thanks for your help! <b>plain text</b> & more\",\n    \"created_at\": \"2026-11-10T17:58:11.373209Z\",\n    \"read_status\": false\n  }\n]"
             }
           ]
         },
@@ -5023,7 +5023,7 @@
                 }
               ],
               "cookie": [],
-              "body": "[\n  {\n    \"id\": 1,\n    \"other_user\": {\n      \"id\": 1,\n      \"name\": \"Sender User\",\n      \"company\": \"Acme\"\n    },\n    \"last_message\": {\n      \"id\": 2,\n      \"sender_id\": 1,\n      \"body_text\": \"Thanks for your help! <b>plain text</b> & more\",\n      \"created_at\": \"2026-11-05T03:39:08.767916Z\"\n    },\n    \"updated_at\": \"2026-11-05T03:39:08.767916Z\",\n    \"unread_count\": 2\n  }\n]"
+              "body": "[\n  {\n    \"id\": 1,\n    \"other_user\": {\n      \"id\": 1,\n      \"name\": \"Sender User\",\n      \"company\": \"Acme\"\n    },\n    \"last_message\": {\n      \"id\": 2,\n      \"sender_id\": 1,\n      \"body_text\": \"Thanks for your help! <b>plain text</b> & more\",\n      \"created_at\": \"2026-11-10T17:58:11.373209Z\"\n    },\n    \"updated_at\": \"2026-11-10T17:58:11.373209Z\",\n    \"unread_count\": 2\n  }\n]"
             }
           ]
         },
@@ -5460,13 +5460,13 @@
       ]
     },
     {
-      "id": "c47a99fd-4b76-5674-ac6a-b369079e4dd1",
-      "name": "Reports (open, to be replaced)",
-      "description": "The current open ModelViewSet: any signed-in user can read and change every report, and `reporter` is taken from the body. Thomas's #39 replaces this (reporter from the token, staff-only reads); update this folder when it merges.",
+      "id": "dafb0f23-c788-5179-a396-a4cc5338d6da",
+      "name": "Reports",
+      "description": "POST /api/reports/ (from #39). Create-only: the reporter comes from the token, a report can target a user, a message in your own conversation, or an interview experience, and nothing can list or edit reports (use the admin).",
       "item": [
         {
-          "id": "afd2d428-3e88-5a54-8011-0cda24e67538",
-          "name": "File a report",
+          "id": "79893259-55f1-5342-83fa-8742a66a882a",
+          "name": "Recipient reports the sender (a user)",
           "event": [
             {
               "listen": "test",
@@ -5474,7 +5474,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
-                  "pm.test('has the report fields', function () { pm.expect(pm.response.json()).to.have.all.keys('id', 'reporter', 'reported_user', 'reported_message', 'reason', 'status', 'created_at'); });",
+                  "pm.test('the reporter comes from the token', function () { pm.expect(pm.response.json().reporter).to.eql(Number(pm.variables.get('recipient_id'))); });",
                   "pm.collectionVariables.set('report_id', pm.response.json().id);"
                 ]
               }
@@ -5489,20 +5489,1545 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/connections/reports/",
+              "raw": "{{base_url}}/api/reports/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "connections",
                 "reports",
                 ""
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reporter\": {{sender_id}},\n  \"reported_user\": {{outsider_id}},\n  \"reason\": \"Spam messages\"\n}",
+              "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{sender_id}},\n  \"reason\": \"spam\",\n  \"details\": \"Sent the same note to everyone.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{recipient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{sender_id}},\n  \"reason\": \"spam\",\n  \"details\": \"Sent the same note to everyone.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{recipient_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 1,\n  \"reporter\": 2,\n  \"target_type\": \"user\",\n  \"target_id\": 1,\n  \"reason\": \"spam\",\n  \"details\": \"Sent the same note to everyone.\",\n  \"created_at\": \"2026-11-10T17:58:11.490508Z\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "a76f34d1-6d17-5dff-923f-7f56c893d4ad",
+          "name": "Reporting the same user again changes nothing -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('same report', function () { pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('report_id'))); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{sender_id}},\n  \"reason\": \"spam\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{recipient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{sender_id}},\n  \"reason\": \"spam\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{recipient_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 1,\n  \"reporter\": 2,\n  \"target_type\": \"user\",\n  \"target_id\": 1,\n  \"reason\": \"spam\",\n  \"details\": \"Sent the same note to everyone.\",\n  \"created_at\": \"2026-11-10T17:58:11.490508Z\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "6eeb68b7-67e3-5571-a7d2-98bf5693f1d7",
+          "name": "Reporting yourself -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{sender_id}},\n  \"reason\": \"spam\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sender_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{sender_id}},\n  \"reason\": \"spam\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{sender_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"target_id\": [\n    \"You cannot report yourself.\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "id": "ce3515e7-b60c-50ef-b366-3dec24178549",
+          "name": "Reporting a message in your conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"message\",\n  \"target_id\": {{message_id}},\n  \"reason\": \"harassment\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{recipient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"message\",\n  \"target_id\": {{message_id}},\n  \"reason\": \"harassment\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{recipient_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 2,\n  \"reporter\": 2,\n  \"target_type\": \"message\",\n  \"target_id\": 2,\n  \"reason\": \"harassment\",\n  \"details\": \"\",\n  \"created_at\": \"2026-11-10T17:58:11.525742Z\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "6f54dc21-e2ec-54c6-ae6f-c8669d47ff64",
+          "name": "An outsider reporting that message gets the same answer as a missing one -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('does not reveal that the message exists', function () { pm.expect(pm.response.json().target_id[0]).to.eql('The target does not exist.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"message\",\n  \"target_id\": {{message_id}},\n  \"reason\": \"harassment\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{outsider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"message\",\n  \"target_id\": {{message_id}},\n  \"reason\": \"harassment\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{outsider_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"target_id\": [\n    \"The target does not exist.\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "id": "67734a49-76de-58a5-a16a-23f1afd3aa33",
+          "name": "Reporting a message that does not exist -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('same message as above', function () { pm.expect(pm.response.json().target_id[0]).to.eql('The target does not exist.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"message\",\n  \"target_id\": 999999,\n  \"reason\": \"harassment\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{outsider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"message\",\n  \"target_id\": 999999,\n  \"reason\": \"harassment\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{outsider_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"target_id\": [\n    \"The target does not exist.\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "id": "96fb330a-2b9b-570c-9814-ccd3162edf33",
+          "name": "A report with an unknown reason -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{outsider_id}},\n  \"reason\": \"not_a_reason\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sender_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{outsider_id}},\n  \"reason\": \"not_a_reason\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{sender_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"reason\": [\n    \"\\\"not_a_reason\\\" is not a valid choice.\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "id": "80795a36-5d65-55bf-90e0-2abb6825aa86",
+          "name": "Reports cannot be listed through the API -> 405",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 405', function () { pm.response.to.have.status(405); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "405 Method Not Allowed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                }
+              },
+              "status": "Method Not Allowed",
+              "code": 405,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Method \\\"GET\\\" not allowed.\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "571a5f62-9ac5-5cdb-9504-ed2ad353a4d1",
+          "name": "Reporting without a token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{sender_id}},\n  \"reason\": \"spam\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"user\",\n  \"target_id\": {{sender_id}},\n  \"reason\": \"spam\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Authentication credentials were not provided.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a23895f7-7cfa-5c41-bbce-2ab6173d5358",
+      "name": "Blocks",
+      "description": "Block and unblock a user. A block works in both directions and never deletes messages.",
+      "item": [
+        {
+          "id": "a2ab86cb-5b71-5705-a449-ba7a7fc35ad8",
+          "name": "Sender blocks the outsider",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/connections/users/{{outsider_id}}/block/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "connections",
+                "users",
+                "{{outsider_id}}",
+                "block",
+                ""
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/connections/users/{{outsider_id}}/block/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "connections",
+                    "users",
+                    "{{outsider_id}}",
+                    "block",
+                    ""
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"User blocked.\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "6dc58df4-b98f-535a-9647-133e73503c94",
+          "name": "Blocking again -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/connections/users/{{outsider_id}}/block/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "connections",
+                "users",
+                "{{outsider_id}}",
+                "block",
+                ""
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/connections/users/{{outsider_id}}/block/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "connections",
+                    "users",
+                    "{{outsider_id}}",
+                    "block",
+                    ""
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"User blocked.\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "0058434e-b489-5b90-93a5-b65b76f2c41c",
+          "name": "Blocking yourself -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/connections/users/{{sender_id}}/block/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "connections",
+                "users",
+                "{{sender_id}}",
+                "block",
+                ""
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/connections/users/{{sender_id}}/block/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "connections",
+                    "users",
+                    "{{sender_id}}",
+                    "block",
+                    ""
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"You cannot block yourself.\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "213f0d62-c498-59c6-832f-0ef4521b52cb",
+          "name": "Blocking a user that does not exist -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 404', function () { pm.response.to.have.status(404); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/connections/users/999999/block/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "connections",
+                "users",
+                "999999",
+                "block",
+                ""
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/connections/users/999999/block/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "connections",
+                    "users",
+                    "999999",
+                    "block",
+                    ""
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"User not found.\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "bebb659b-b1f8-51f3-8a52-957cf35e1333",
+          "name": "A blocked user cannot send the blocker a request -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', function () { pm.response.to.have.status(403); });",
+                  "pm.test('same answer as a member who is not open to connect', function () { pm.expect(pm.response.json().detail).to.eql('This user is not open to connection requests.'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/connections/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "connections",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recipient_id\": {{sender_id}},\n  \"message_text\": \"Hello again\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{outsider_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "403 Forbidden",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/connections/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "connections",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recipient_id\": {{sender_id}},\n  \"message_text\": \"Hello again\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{outsider_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"This user is not open to connection requests.\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "063a1159-cd4c-58e0-8cbf-fbeef5fdc430",
+          "name": "Sender unblocks the outsider",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', function () { pm.response.to.have.status(204); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/connections/users/{{outsider_id}}/block/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "connections",
+                "users",
+                "{{outsider_id}}",
+                "block",
+                ""
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "204 No Content",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/connections/users/{{outsider_id}}/block/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "connections",
+                    "users",
+                    "{{outsider_id}}",
+                    "block",
+                    ""
+                  ]
+                }
+              },
+              "status": "No Content",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": ""
+                }
+              ],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "id": "9cd3cff1-e975-5f09-b6e5-89d89268d107",
+          "name": "Blocking without a token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/connections/users/{{outsider_id}}/block/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "connections",
+                "users",
+                "{{outsider_id}}",
+                "block",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/connections/users/{{outsider_id}}/block/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "connections",
+                    "users",
+                    "{{outsider_id}}",
+                    "block",
+                    ""
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Authentication credentials were not provided.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7bf0a18f-46ed-5315-a302-d6538891ad0c",
+      "name": "Interview experiences",
+      "description": "Anonymous posts on a company page (from #39). The author is never in the response; is_mine says whether a post is yours.",
+      "item": [
+        {
+          "id": "649f2c26-0f44-5ebf-a903-cfea063b312d",
+          "name": "Sender lists the company's interview experiences",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('a list', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "companies",
+                "{{company_id}}",
+                "experiences",
+                ""
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "companies",
+                    "{{company_id}}",
+                    "experiences",
+                    ""
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "[]"
+            }
+          ]
+        },
+        {
+          "id": "96a4a670-6915-5ad3-a77e-5960294f94f9",
+          "name": "Sender posts an interview experience",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });",
+                  "const body = pm.response.json();",
+                  "pm.test('anonymous: no author in the body', function () { pm.expect(Object.keys(body).sort()).to.eql(['difficulty', 'id', 'is_mine', 'month', 'outcome', 'process_text', 'role_title', 'year']); });",
+                  "pm.test('is_mine is true for the author', function () { pm.expect(body.is_mine).to.eql(true); });",
+                  "pm.collectionVariables.set('experience_id', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "companies",
+                "{{company_id}}",
+                "experiences",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role_title\": \"Software Engineering Intern\",\n  \"outcome\": \"offer\",\n  \"difficulty\": 3,\n  \"process_text\": \"Online assessment, then two technical rounds.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5522,20 +7047,21 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/connections/reports/",
+                  "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "api",
-                    "connections",
-                    "reports",
+                    "companies",
+                    "{{company_id}}",
+                    "experiences",
                     ""
                   ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reporter\": {{sender_id}},\n  \"reported_user\": {{outsider_id}},\n  \"reason\": \"Spam messages\"\n}",
+                  "raw": "{\n  \"role_title\": \"Software Engineering Intern\",\n  \"outcome\": \"offer\",\n  \"difficulty\": 3,\n  \"process_text\": \"Online assessment, then two technical rounds.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5553,13 +7079,13 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"reason\": \"Spam messages\",\n  \"status\": \"open\",\n  \"created_at\": \"2026-11-05T03:39:08.910607Z\",\n  \"reporter\": 1,\n  \"reported_user\": 3,\n  \"reported_message\": null\n}"
+              "body": "{\n  \"id\": 1,\n  \"role_title\": \"Software Engineering Intern\",\n  \"outcome\": \"offer\",\n  \"difficulty\": 3,\n  \"process_text\": \"Online assessment, then two technical rounds.\",\n  \"is_mine\": true,\n  \"month\": 11,\n  \"year\": 2026\n}"
             }
           ]
         },
         {
-          "id": "1497bdff-1feb-5ff7-a279-ba83d4af5fb7",
-          "name": "List reports",
+          "id": "cfb1af08-97ec-5437-95a2-6d3aed4076b5",
+          "name": "Recipient sees it, but not as theirs",
           "event": [
             {
               "listen": "test",
@@ -5567,7 +7093,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('includes the report', function () { pm.expect(pm.response.json().map(function (r) { return r.id; })).to.include(Number(pm.collectionVariables.get('report_id'))); });"
+                  "const mine = pm.response.json().find(function (e) { return e.id === Number(pm.collectionVariables.get('experience_id')); });",
+                  "pm.test('the post is listed, is_mine is false', function () { pm.expect(mine).to.be.an('object'); pm.expect(mine.is_mine).to.eql(false); });"
                 ]
               }
             }
@@ -5576,15 +7103,26 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/connections/reports/",
+              "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "connections",
-                "reports",
+                "companies",
+                "{{company_id}}",
+                "experiences",
                 ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{recipient_token}}",
+                  "type": "string"
+                }
               ]
             }
           },
@@ -5595,15 +7133,26 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/connections/reports/",
+                  "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "api",
-                    "connections",
-                    "reports",
+                    "companies",
+                    "{{company_id}}",
+                    "experiences",
                     ""
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{recipient_token}}",
+                      "type": "string"
+                    }
                   ]
                 }
               },
@@ -5617,64 +7166,303 @@
                 }
               ],
               "cookie": [],
-              "body": "[\n  {\n    \"id\": 1,\n    \"reason\": \"Spam messages\",\n    \"status\": \"open\",\n    \"created_at\": \"2026-11-05T03:39:08.910607Z\",\n    \"reporter\": 1,\n    \"reported_user\": 3,\n    \"reported_message\": null\n  }\n]"
+              "body": "[\n  {\n    \"id\": 1,\n    \"role_title\": \"Software Engineering Intern\",\n    \"outcome\": \"offer\",\n    \"difficulty\": 3,\n    \"process_text\": \"Online assessment, then two technical rounds.\",\n    \"is_mine\": false,\n    \"month\": 11,\n    \"year\": 2026\n  }\n]"
             }
           ]
         },
         {
-          "id": "49f10d0a-2aa4-53d2-b6b3-25a019b4b226",
-          "name": "Get one report",
+          "id": "f68f6d83-949c-516f-aeea-fb5a8758ee3b",
+          "name": "Recipient reports the post",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('is that report', function () { pm.expect(pm.response.json().reason).to.eql('Spam messages'); });"
+                  "pm.test('status is 201', function () { pm.response.to.have.status(201); });"
                 ]
               }
             }
           ],
           "request": {
-            "method": "GET",
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"experience\",\n  \"target_id\": {{experience_id}},\n  \"reason\": \"misinformation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{recipient_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"experience\",\n  \"target_id\": {{experience_id}},\n  \"reason\": \"misinformation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{recipient_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": 3,\n  \"reporter\": 2,\n  \"target_type\": \"experience\",\n  \"target_id\": 1,\n  \"reason\": \"misinformation\",\n  \"details\": \"\",\n  \"created_at\": \"2026-11-10T17:58:11.710503Z\"\n}"
+            }
+          ]
+        },
+        {
+          "id": "33b0a9a3-2c1a-5ceb-a100-cb0bc4fbeddf",
+          "name": "The author cannot report their own post -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/reports/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "reports",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_type\": \"experience\",\n  \"target_id\": {{experience_id}},\n  \"reason\": \"misinformation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{sender_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/reports/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "reports",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"target_type\": \"experience\",\n  \"target_id\": {{experience_id}},\n  \"reason\": \"misinformation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{sender_token}}",
+                      "type": "string"
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"target_id\": [\n    \"You cannot report yourself.\"\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "id": "8c970f6c-80ba-5d27-a683-fc45971c46ae",
+          "name": "Recipient deletes the sender's post -> 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 403', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/connections/reports/{{report_id}}/",
+              "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/{{experience_id}}/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "connections",
-                "reports",
-                "{{report_id}}",
+                "companies",
+                "{{company_id}}",
+                "experiences",
+                "{{experience_id}}",
                 ""
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{recipient_token}}",
+                  "type": "string"
+                }
               ]
             }
           },
           "response": [
             {
-              "name": "200 OK",
+              "name": "403 Forbidden",
               "originalRequest": {
-                "method": "GET",
+                "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/connections/reports/{{report_id}}/",
+                  "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/{{experience_id}}/",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "api",
-                    "connections",
-                    "reports",
-                    "{{report_id}}",
+                    "companies",
+                    "{{company_id}}",
+                    "experiences",
+                    "{{experience_id}}",
                     ""
+                  ]
+                },
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{recipient_token}}",
+                      "type": "string"
+                    }
                   ]
                 }
               },
-              "status": "OK",
-              "code": 200,
+              "status": "Forbidden",
+              "code": 403,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -5683,27 +7471,26 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"reason\": \"Spam messages\",\n  \"status\": \"open\",\n  \"created_at\": \"2026-11-05T03:39:08.910607Z\",\n  \"reporter\": 1,\n  \"reported_user\": 3,\n  \"reported_message\": null\n}"
+              "body": "{\n  \"detail\": \"You can only delete your own interview experiences.\"\n}"
             }
           ]
         },
         {
-          "id": "3ed0664a-51ab-5c38-a1fe-e7e9ce49e1b2",
-          "name": "Replace a report (PUT)",
+          "id": "82ea63cb-a1a0-5d8a-b158-7b286f0bec01",
+          "name": "A post with no role title -> 400",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('updated', function () { pm.expect(pm.response.json().reason).to.eql('Spam and harassment'); });"
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
                 ]
               }
             }
           ],
           "request": {
-            "method": "PUT",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -5711,21 +7498,21 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/connections/reports/{{report_id}}/",
+              "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "connections",
-                "reports",
-                "{{report_id}}",
+                "companies",
+                "{{company_id}}",
+                "experiences",
                 ""
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reporter\": {{sender_id}},\n  \"reported_user\": {{outsider_id}},\n  \"reason\": \"Spam and harassment\",\n  \"status\": \"open\"\n}",
+              "raw": "{\n  \"outcome\": \"offer\",\n  \"difficulty\": 3,\n  \"process_text\": \"x\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5735,9 +7522,9 @@
           },
           "response": [
             {
-              "name": "200 OK",
+              "name": "400 Bad Request",
               "originalRequest": {
-                "method": "PUT",
+                "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
@@ -5745,21 +7532,21 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/connections/reports/{{report_id}}/",
+                  "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "api",
-                    "connections",
-                    "reports",
-                    "{{report_id}}",
+                    "companies",
+                    "{{company_id}}",
+                    "experiences",
                     ""
                   ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"reporter\": {{sender_id}},\n  \"reported_user\": {{outsider_id}},\n  \"reason\": \"Spam and harassment\",\n  \"status\": \"open\"\n}",
+                  "raw": "{\n  \"outcome\": \"offer\",\n  \"difficulty\": 3,\n  \"process_text\": \"x\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5767,8 +7554,8 @@
                   }
                 }
               },
-              "status": "OK",
-              "code": 200,
+              "status": "Bad Request",
+              "code": 400,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -5777,27 +7564,26 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"reason\": \"Spam and harassment\",\n  \"status\": \"open\",\n  \"created_at\": \"2026-11-05T03:39:08.910607Z\",\n  \"reporter\": 1,\n  \"reported_user\": 3,\n  \"reported_message\": null\n}"
+              "body": "{\n  \"role_title\": [\n    \"This field is required.\"\n  ]\n}"
             }
           ]
         },
         {
-          "id": "fabf4534-0cce-57b8-99d5-e43e3e95cf30",
-          "name": "Edit a report (PATCH)",
+          "id": "f5b7aab8-9965-5cc6-9545-59f38dd94123",
+          "name": "A difficulty of 9 -> 400",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('updated', function () { pm.expect(pm.response.json().status).to.eql('reviewed'); });"
+                  "pm.test('status is 400', function () { pm.response.to.have.status(400); });"
                 ]
               }
             }
           ],
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
@@ -5805,21 +7591,21 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/api/connections/reports/{{report_id}}/",
+              "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "connections",
-                "reports",
-                "{{report_id}}",
+                "companies",
+                "{{company_id}}",
+                "experiences",
                 ""
               ]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"reviewed\"\n}",
+              "raw": "{\n  \"role_title\": \"Software Engineering Intern\",\n  \"outcome\": \"offer\",\n  \"difficulty\": 9,\n  \"process_text\": \"Online assessment, then two technical rounds.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5829,9 +7615,9 @@
           },
           "response": [
             {
-              "name": "200 OK",
+              "name": "400 Bad Request",
               "originalRequest": {
-                "method": "PATCH",
+                "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
@@ -5839,21 +7625,21 @@
                   }
                 ],
                 "url": {
-                  "raw": "{{base_url}}/api/connections/reports/{{report_id}}/",
+                  "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "api",
-                    "connections",
-                    "reports",
-                    "{{report_id}}",
+                    "companies",
+                    "{{company_id}}",
+                    "experiences",
                     ""
                   ]
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"reviewed\"\n}",
+                  "raw": "{\n  \"role_title\": \"Software Engineering Intern\",\n  \"outcome\": \"offer\",\n  \"difficulty\": 9,\n  \"process_text\": \"Online assessment, then two technical rounds.\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -5861,8 +7647,8 @@
                   }
                 }
               },
-              "status": "OK",
-              "code": 200,
+              "status": "Bad Request",
+              "code": 400,
               "_postman_previewlanguage": "json",
               "header": [
                 {
@@ -5871,13 +7657,13 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"reason\": \"Spam and harassment\",\n  \"status\": \"reviewed\",\n  \"created_at\": \"2026-11-05T03:39:08.910607Z\",\n  \"reporter\": 1,\n  \"reported_user\": 3,\n  \"reported_message\": null\n}"
+              "body": "{\n  \"difficulty\": [\n    \"Ensure this value is less than or equal to 5.\"\n  ]\n}"
             }
           ]
         },
         {
-          "id": "01aa2ecd-9475-5c6a-a7f5-fed00ba02a8f",
-          "name": "Delete a report",
+          "id": "fcf83962-8492-51ec-ba34-91b07ced89cd",
+          "name": "Sender deletes their own post",
           "event": [
             {
               "listen": "test",
@@ -5893,15 +7679,16 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/connections/reports/{{report_id}}/",
+              "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/{{experience_id}}/",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
-                "connections",
-                "reports",
-                "{{report_id}}",
+                "companies",
+                "{{company_id}}",
+                "experiences",
+                "{{experience_id}}",
                 ""
               ]
             }
@@ -5913,15 +7700,16 @@
                 "method": "DELETE",
                 "header": [],
                 "url": {
-                  "raw": "{{base_url}}/api/connections/reports/{{report_id}}/",
+                  "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/{{experience_id}}/",
                   "host": [
                     "{{base_url}}"
                   ],
                   "path": [
                     "api",
-                    "connections",
-                    "reports",
-                    "{{report_id}}",
+                    "companies",
+                    "{{company_id}}",
+                    "experiences",
+                    "{{experience_id}}",
                     ""
                   ]
                 }
@@ -5937,6 +7725,77 @@
               ],
               "cookie": [],
               "body": ""
+            }
+          ]
+        },
+        {
+          "id": "6206595d-b54b-57aa-9d78-7858362464e6",
+          "name": "Interview experiences without a token -> 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "companies",
+                "{{company_id}}",
+                "experiences",
+                ""
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/companies/{{company_id}}/experiences/",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "companies",
+                    "{{company_id}}",
+                    "experiences",
+                    ""
+                  ]
+                },
+                "auth": {
+                  "type": "noauth"
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"detail\": \"Authentication credentials were not provided.\"\n}"
             }
           ]
         }
@@ -6034,6 +7893,10 @@
     },
     {
       "key": "report_id",
+      "value": ""
+    },
+    {
+      "key": "experience_id",
       "value": ""
     }
   ]

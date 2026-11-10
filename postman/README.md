@@ -1,6 +1,6 @@
 # Postman collection
 
-`pack-referrals.postman_collection.json` covers every endpoint on main (41 method and path pairs, 68 requests including the error cases). Each request has tests and one saved example, taken from a real local run.
+`pack-referrals.postman_collection.json` covers every endpoint on main (42 method and path pairs, 88 requests including the error cases). Each request has tests and one saved example, taken from a real local run.
 
 **Local only.** It creates and deletes data, and `seed_demo_data` refuses to run without `DEBUG`. Never point it at staging.
 
@@ -39,7 +39,6 @@ Requests act as the sender unless their Authorization tab names `recipient_token
 
 ## Not covered yet (not on main)
 
-- Block and unblock, and the reports changes (#39).
 - Referral accept and decline: `PATCH /api/connections/referrals/<id>/accept|decline/`.
 
-The Reports folder covers today's open `ModelViewSet`. Update it when #39 merges.
+The Reports, Blocks and Interview experiences folders cover #39. When #57 merges, add the accept and decline requests and move them out of this list.
