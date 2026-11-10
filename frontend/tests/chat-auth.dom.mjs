@@ -243,10 +243,10 @@ test('failed optimistic send remains visible with explicit retry; markup renders
   mount('/chat/5'); await screen.findByRole('list', { name: 'Messages', exact: true }); const u = user();
   await u.type(screen.getByLabelText('Chat message'), '<b>Hello</b>');
   await u.click(screen.getByRole('button', { name: 'Send', exact: true }));
-  const retry = await screen.findByRole('button', { name: 'Retry message' });
+  const retry = await screen.findByRole('button', { name: 'Failed to send - tap to retry' });
   assert.equal(document.querySelector('.message-bubble b'), null);
   await u.click(retry);
-  await waitFor(() => assert.ok(!screen.queryByRole('button', { name: 'Retry message' })));
+  await waitFor(() => assert.ok(!screen.queryByRole('button', { name: 'Failed to send - tap to retry' })));
   assert.equal(screen.getAllByRole('listitem').length, 4); assert.equal(attempts, 2);
 });
 
@@ -314,4 +314,144 @@ test('leaving verification while its request is pending cannot sign in the aband
   await screen.findByRole('heading', { name: 'Welcome back' });
   await act(async () => { release.resolve(); await release.promise; });
   assert.equal(session.getSession(), null);
+});
+
+test('polling drains multiple cursor batches and rejects a cursor that cannot advance', async () => {
+  const { pollMessages } = await vite.ssrLoadModule('/src/api/chat.js');
+  session.signIn(credentials);
+  const calls = [];
+  globalThis.fetch = async (path) => {
+    calls.push(path);
+    return json(calls.length === 1 ? Array.from({ length: 100 }, (_, index) => message(index + 4, `Reply ${index}`)) : [message(104, 'Last reply')]);
+  };
+  assert.equal((await pollMessages(5, 3)).length, 101);
+  assert.match(calls[1], /after=103$/);
+  globalThis.fetch = async () => json(Array.from({ length: 100 }, () => message(3, 'Old')));
+  await assert.rejects(pollMessages(5, 3), /does not match/);
+  globalThis.fetch = async () => json([message(7, 'Wrong scope', 0, 6)]);
+  await assert.rejects(pollMessages(5, 3), /does not match/);
+});
+
+function resumePolling() {
+  Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+  window.dispatchEvent(new dom.window.Event('focus'));
+}
+
+test('incoming replies update and announce once; a later own acknowledgement cannot skip an earlier reply', async () => {
+  session.signIn(credentials);
+  const pending = gate(); let polls = 0;
+  chatFetch(async (path) => {
+    if (path === '/api/chat/messages/') { await pending.promise; return json({ ...message(5, 'Own reply', 5), sender_id: 7 }, 201); }
+    if (path.includes('after=')) { polls += 1; return json([message(4, 'Incoming reply', 4), { ...message(5, 'Own reply', 5), sender_id: 7 }]); }
+  });
+  mount('/chat/5'); await screen.findByRole('list', { name: 'Messages', exact: true });
+  const region = screen.getByRole('region', { name: 'Conversation with Avery Chen' });
+  const live = region.querySelector('[aria-live="polite"]');
+  assert.equal(live.textContent, '');
+  const u = user(); await u.type(screen.getByLabelText('Chat message'), 'Own reply');
+  await u.click(screen.getByRole('button', { name: 'Send', exact: true }));
+  await act(async () => resumePolling());
+  await waitFor(() => assert.equal(polls, 1));
+  await screen.findByText('Incoming reply');
+  assert.equal(within(region).getAllByRole('listitem').length, 5);
+  assert.match(live.textContent, /New message from Avery Chen: Incoming reply/);
+  await act(async () => { pending.resolve(); await pending.promise; });
+  await waitFor(() => assert.equal(screen.queryByText('Sending…'), null));
+  await act(async () => resumePolling());
+  await waitFor(() => assert.equal(polls, 2));
+  assert.equal(within(region).getAllByRole('listitem').length, 5);
+  assert.equal(within(region).getAllByText('Own reply').length, 1);
+});
+
+test('poll errors keep history and draft; retry updates recovers without a duplicate', async () => {
+  session.signIn(credentials); let fail = true;
+  chatFetch((path) => path.includes('after=') ? fail ? json({ detail: 'Offline' }, 503) : json([message(4, 'Recovered reply', 4)]) : null);
+  mount('/chat/5'); await screen.findByRole('list', { name: 'Messages', exact: true });
+  await user().type(screen.getByLabelText('Chat message'), 'Keep my draft');
+  await act(async () => resumePolling());
+  await screen.findByRole('button', { name: 'Retry updates' });
+  assert.equal(screen.getByLabelText('Chat message').value, 'Keep my draft');
+  assert.equal(screen.getAllByRole('listitem').length, 3);
+  fail = false; await user().click(screen.getByRole('button', { name: 'Retry updates' }));
+  await within(screen.getByRole('list', { name: 'Messages', exact: true })).findByText('Recovered reply');
+  assert.equal(screen.queryByRole('button', { name: 'Retry updates' }), null);
+  assert.equal(screen.getByLabelText('Chat message').value, 'Keep my draft');
+});
+
+test('leaving a thread aborts an old poll and ignores its late response', async () => {
+  session.signIn(credentials); const release = gate(); let signal;
+  chatFetch(async (path, options) => {
+    if (path.includes('/5/messages/') && path.includes('after=')) { signal = options.signal; await release.promise; return json([message(4, 'Abandoned reply', 4)]); }
+  });
+  mount('/chat/5'); await screen.findByRole('list', { name: 'Messages', exact: true });
+  await act(async () => resumePolling());
+  await waitFor(() => assert.ok(signal));
+  await user().click(screen.getByRole('button', { name: /Sam Wilson/ }));
+  await screen.findByText('No messages yet. Say hello!');
+  assert.equal(signal.aborted, true);
+  await act(async () => { release.resolve(); await release.promise; });
+  assert.equal(screen.queryByText('Abandoned reply'), null);
+});
+
+test('conversation and request fetches distinguish loading, failure, retry and empty data', async () => {
+  session.signIn(credentials); const release = gate(); let fail = true;
+  chatFetch(async (path) => {
+    if (path === '/api/chat/conversations/' || path.startsWith('/api/connections/?type=')) {
+      await release.promise;
+      return fail ? json({ detail: 'Temporarily unavailable' }, 503) : json([]);
+    }
+  });
+  mount('/chat');
+  assert.ok(screen.getByText('Loading conversations…'));
+  assert.ok(screen.getByText('Loading requests…'));
+  assert.equal(screen.queryByText(/No conversations yet/), null);
+  await act(async () => { release.resolve(); await release.promise; });
+  await screen.findByRole('button', { name: 'Retry conversations' });
+  await screen.findByRole('button', { name: 'Retry requests' });
+  fail = false;
+  await user().click(screen.getByRole('button', { name: 'Retry conversations' }));
+  await user().click(screen.getByRole('button', { name: 'Retry requests' }));
+  await screen.findByText('No conversations yet. An accepted connection starts a conversation.');
+  assert.equal(screen.queryByRole('button', { name: 'Retry requests' }), null);
+});
+
+test('the scheduled poll runs without a focus event and does not overlap requests', async () => {
+  session.signIn(credentials); const release = gate(); let polls = 0;
+  Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+  chatFetch(async (path) => {
+    if (path.includes('after=')) { polls += 1; await release.promise; return json([message(4, 'Automatic incoming', 4)]); }
+  });
+  mount('/chat/5'); await screen.findByRole('list', { name: 'Messages', exact: true });
+  await waitFor(() => assert.equal(polls, 1), { timeout: 4500 });
+  await act(async () => { resumePolling(); resumePolling(); });
+  assert.equal(polls, 1);
+  await act(async () => { release.resolve(); await release.promise; });
+  await within(screen.getByRole('list', { name: 'Messages', exact: true })).findByText('Automatic incoming');
+});
+
+test('an acknowledged own message does not advance the incoming cursor past an unseen reply', async () => {
+  session.signIn(credentials); let cursor;
+  chatFetch((path) => {
+    if (path === '/api/chat/messages/') return json({ ...message(5, 'Own first', 5), sender_id: 7 }, 201);
+    if (path.includes('after=')) { cursor = new URL(path, window.location.origin).searchParams.get('after'); return json([message(4, 'Earlier incoming', 4), { ...message(5, 'Own first', 5), sender_id: 7 }]); }
+  });
+  mount('/chat/5'); await screen.findByRole('list', { name: 'Messages', exact: true });
+  const u = user(); await u.type(screen.getByLabelText('Chat message'), 'Own first'); await u.click(screen.getByRole('button', { name: 'Send', exact: true }));
+  await waitFor(() => assert.equal(screen.queryByText('Sending…'), null));
+  await act(async () => resumePolling());
+  await within(screen.getByRole('list', { name: 'Messages', exact: true })).findByText('Earlier incoming');
+  assert.equal(cursor, '3'); assert.equal(screen.getAllByRole('listitem').length, 5);
+});
+
+test('accepting a connection opens its history and moves keyboard focus to the composer', async () => {
+  session.signIn(credentials); let accepted = false;
+  chatFetch((path) => {
+    if (path.startsWith('/api/connections/?type=incoming')) return json(accepted ? [] : [{ id: 11, sender: { id: 41, name: 'Avery Chen' }, status: 'pending', message_text: 'Connect?', created_at: '2026-10-20T12:00:00Z' }]);
+    if (path === '/api/connections/11/accept/') { accepted = true; return json({ id: 11, status: 'accepted', conversation_id: 5 }); }
+    if (path === '/api/chat/conversations/') return json(accepted ? conversations : []);
+  });
+  mount('/chat');
+  await user().click(await screen.findByRole('button', { name: 'Accept Avery Chen' }));
+  await screen.findByRole('list', { name: 'Messages', exact: true });
+  await waitFor(() => assert.equal(document.activeElement, screen.getByLabelText('Chat message')));
 });

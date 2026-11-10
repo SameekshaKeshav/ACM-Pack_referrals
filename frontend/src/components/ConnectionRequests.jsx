@@ -68,10 +68,10 @@ export default function ConnectionRequests({ onAccepted }) {
 
   const onKeyDown = (event) => {
     const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-    if (!step) return;
+    if (!step && event.key !== 'Home' && event.key !== 'End') return;
     event.preventDefault();
     const index = TABS.findIndex((item) => item.id === tab);
-    const next = TABS[(index + step + TABS.length) % TABS.length].id;
+    const next = TABS[event.key === 'Home' ? 0 : event.key === 'End' ? TABS.length - 1 : (index + step + TABS.length) % TABS.length].id;
     setTab(next);
     tabRefs.current[next]?.focus();
   };

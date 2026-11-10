@@ -23,6 +23,7 @@ function roleFromServer(role) {
 function fromServer(data) {
   return {
     first_name: data.first_name ?? '',
+    email: data.email ?? '',
     last_name: data.last_name ?? '',
     major: data.major ?? '',
     grad_year: data.grad_year ?? '',
@@ -30,6 +31,7 @@ function fromServer(data) {
     current_role: data.current_role ?? '',
     current_company: data.current_company?.name ?? '',
     open_to_connect: Boolean(data.open_to_connect),
+    verified_via: data.verified_via ?? '',
     past_roles: (data.past_roles ?? []).map(roleFromServer),
   };
 }
