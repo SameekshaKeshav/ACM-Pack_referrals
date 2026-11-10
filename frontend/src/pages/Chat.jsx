@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import ChatWindow from '../components/ChatWindow';
 import ConnectionRequests from '../components/ConnectionRequests';
 import ConversationListItem from '../components/ConversationListItem';
+import { BlockButton, ReportButton } from '../components/SafetyActions';
 
 export function mergeHistory(history, current = []) {
   const rows = new Map(history.map((row) => [row.id, row]));
@@ -25,6 +26,7 @@ export default function Chat() {
   const [threadVersion, setThreadVersion] = useState(0);
   const [pollVersion, setPollVersion] = useState(0);
   const [focusConversation, setFocusConversation] = useState(null);
+  const [blockedName, setBlockedName] = useState('');
   const threadSnapshot = useRef(threads);
   threadSnapshot.current = threads;
   const mounted = useRef(false);
@@ -144,6 +146,7 @@ export default function Chat() {
   return <main id="main-content" tabIndex={-1} className="main-content live-chat-page">
     <div className="section-heading"><div><h1>Messages</h1><p>Continue a conversation with an accepted connection.</p></div><button className="button-secondary" disabled={listLoading} onClick={() => setListVersion((value) => value + 1)}>Refresh conversations</button></div>
     {listError && <p role="alert" className="feedback feedback-error">{listError} <button className="button-secondary" onClick={() => setListVersion((value) => value + 1)}>Retry conversations</button></p>}
+    {blockedName && <p role="status" className="feedback">You blocked {blockedName}. Their conversation is hidden.</p>}
     <ConnectionRequests onAccepted={(id) => { setFocusConversation(id); setListVersion((value) => value + 1); navigate(`/chat/${id}`); }} />
     <div className="chat-layout">
       <aside className="conversation-sidebar" aria-label="Conversation list"><div className="sidebar-heading">Messages <span>{conversations.length}</span></div>
@@ -152,6 +155,15 @@ export default function Chat() {
         {conversations.map((row) => <ConversationListItem key={row.id} conversation={row} selected={row.id === selectedId} onSelect={(id) => navigate(`/chat/${id}`)} />)}
       </aside>
       <div className="chat-thread-panel">{active && <p><Link to={`/referrals?recipient=${active.other_user.id}`}>Ask {active.other_user.name} for a referral</Link></p>}
+      {active && <div className="safety-actions" key={`safety-${active.id}`}>
+        <ReportButton targetType="user" targetId={active.other_user.id} subject={active.other_user.name} />
+        <BlockButton userId={active.other_user.id} name={active.other_user.name} onBlocked={() => {
+          setBlockedName(active.other_user.name);
+          setConversations((rows) => rows.filter((row) => row.id !== active.id));
+          navigate('/chat');
+          setListVersion((value) => value + 1);
+        }} />
+      </div>}
       {active ? <ChatWindow key={active.id} conversation={active} messages={threads[selectedId]?.messages || []} currentUser={{ id: user.id, name: 'You' }}
         onSend={compose} focusOnReady={focusConversation === active.id} onFocused={() => setFocusConversation(null)} loading={!!threads[selectedId]?.loading || !threads[selectedId]} error={threads[selectedId]?.error}
         pollError={threads[selectedId]?.pollError} onPollRetry={() => setPollVersion((value) => value + 1)}

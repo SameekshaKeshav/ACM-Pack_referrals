@@ -25,7 +25,7 @@
 |---|---|
 | Technology | Django, DRF and JWT auth, email-code verification through Brevo, chat polling, rate limits and the security checklist, load tests on SQLite, a Postman collection that covers every endpoint, one-command rollback, accessibility checks in CI. |
 | Design | `@ncsu.edu` verification with a manual alumni path, empty, loading and error states, accessibility checks. |
-| Execution | What we cut and why (report and block UI, notification emails, the company endpoint), a backup recording, a staging reset. |
+| Execution | What we cut and why (notification emails, the company endpoint, unblock in the UI), a backup recording, a staging reset. |
 | Teamwork | Every member can explain their own part: backend, profile and directory, chat and connect, infrastructure, and PM. |
 | Purpose | Students have no easy way to find alumni at a target company and ask for a referral. |
 
@@ -49,16 +49,16 @@ One flow the audience can follow in about seven minutes, with three minutes left
 | 4 | Connection request, accept, decline | Done (#10, #16) | Done: Connect button, request inbox and nav badge (#41), chat and connect polish (#64) | On staging |
 | 5 | Chat (send, history, polling, unread) | Done (#21) | Done (#30, #64) | On staging |
 | 6 | Referral request to a connection | Create, list and detail done. Accept and decline are in review (#57). The notification email is out of scope for the showcase | Form and card done (#43). Accept and Decline buttons are in review (#58) | On staging, except accept and decline until #57 and #58 merge |
-| 7 | Safety: suspended users hidden, blocked users cannot use chat | Done (#39): hidden and chat checks, block and unblock endpoints, block check on connection requests, report endpoint. Admin actions to mark a report reviewed and suspend a user are in review (#62) | Report and block UI is cut (the API and admin are the safety path for the demo) | On staging |
+| 7 | Safety: suspended users hidden, blocked users cannot use chat | Done (#39): hidden and chat checks, block and unblock endpoints, block check on connection requests, report endpoint. Admin actions to mark a report reviewed and suspend a user (#62). Report and Block buttons on a chat and Report on another member's interview experience (this PR) | Unblock has no button; a reset restores a blocked demo chat | On staging after this PR deploys |
 | 8 | Staging that works for the audience | Backend is up, email through Brevo (#40), one-command rollback (#51) | The React app is served from the staging URL (#37) | Seeded demo data and a reset command (`reset_demo_data`, `issue_demo_token`) are in review (#55) |
 
 What is left is merging the open pull requests (#47, #55, #57, #58, #62), putting real members' profiles on staging, and rehearsing. No new features are planned.
 
 ## SHOULD (build if on track, cut without breaking the demo)
 
-- Anonymous interview experiences on company pages. The API is on `main` (#39); the UI is in review (#47). It is not part of the demo story above, so it is the first thing to cut if the dry-run shows trouble.
+- Anonymous interview experiences on company pages. The API (#39) and the UI (#47) are on `main`. It is not part of the demo story above, so it is the first thing to cut if the dry-run shows trouble.
 - Accessibility checks in CI (`eslint-plugin-jsx-a11y` and axe scans) and the manual audits.
-- Moderation in the admin (the Report API is create-only: `POST /api/reports/`; reports are read and actioned in the admin). The Report and Block buttons in the UI are cut.
+- Moderation in the admin (the Report API is create-only: `POST /api/reports/`; reports are read and actioned in the admin). The Report and Block buttons are in the chat, and Report is on other members' interview experiences. There is no unblock button and no Report button in the directory or on messages.
 
 ## CUT, in this order, if we are behind
 

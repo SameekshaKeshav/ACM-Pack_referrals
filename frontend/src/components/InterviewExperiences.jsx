@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createExperience, deleteExperience, EXPERIENCE_OUTCOMES, listExperiences } from '../api/experiences';
+import { ReportButton } from './SafetyActions';
 
 const initialFields = { role: '', outcome: '', difficulty: '', process: '' };
 const count = (value) => Array.from(value).length;
@@ -107,6 +108,7 @@ export default function InterviewExperiences({ companyId }) {
           <p className="meta">Anonymous member{row.is_mine ? ' · Your post' : ''} · <time dateTime={`${String(row.year).padStart(4, '0')}-${String(row.month).padStart(2, '0')}`}>{new Date(Date.UTC(row.year, row.month - 1)).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })}</time></p>
           <dl className="experience-details"><div><dt>Outcome</dt><dd>{EXPERIENCE_OUTCOMES[row.outcome]}</dd></div><div><dt>Difficulty</dt><dd>{row.difficulty} out of 5</dd></div></dl>
           <p className="experience-process">{row.process_text}</p>
+          {!row.is_mine && <ReportButton targetType="experience" targetId={row.id} subject={`the ${row.role_title} experience`} />}
           {row.is_mine && (confirmation === row.id ? <div className="experience-confirmation" role="group" aria-label={`Delete your ${row.role_title} experience?`}>
             <p>Delete this experience? This cannot be undone.</p><button className="button-secondary" disabled={removing !== null} onClick={() => { restoreDeleteFocus.current = row.id; setConfirmation(null); }}>Keep experience</button>
             <button className="button-primary" disabled={removing !== null} onClick={() => remove(row)}>{removing === row.id ? 'Deleting…' : 'Confirm delete'}</button>
