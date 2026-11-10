@@ -1,5 +1,6 @@
 import json
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -26,11 +27,14 @@ class Command(BaseCommand):
         demo.require_demo_tools()
         email = email.strip().lower()
         if email not in demo.CAST_EMAILS:
-            # A token is a login. This tool must never mint one for a real member.
+            # A token is a login. This only ever mints one for an address in the demo cast
+            # (which includes some team members' real accounts), never for any other member
+            # or an admin. Anyone with shell access on the server can still sign in as the cast.
             raise CommandError(
                 "Only the demo accounts can be signed in this way: " + ", ".join(demo.CAST_EMAILS)
             )
         user = User.objects.filter(email__iexact=email, is_active=True).first()
+        demo.refuse_staff(user, "sign in as it")
         profile = getattr(user, "profile", None)
         if profile is None or profile.account_status != Profile.AccountStatus.ACTIVE:
             raise CommandError(
@@ -46,7 +50,9 @@ class Command(BaseCommand):
         }
         self.stdout.write(
             f"Signed in as {user.get_full_name()} <{user.email}>. "
-            "This login is valid for about a day."
+            f"The access token is valid for about {settings.ACCESS_TOKEN_LIFETIME_HOURS} hours, "
+            "and the refresh token printed with it for up to "
+            f"{settings.REFRESH_TOKEN_LIFETIME_DAYS} days."
         )
         self.stdout.write("Treat it like a password: do not paste it in chat or commit it.")
         self.stdout.write("")

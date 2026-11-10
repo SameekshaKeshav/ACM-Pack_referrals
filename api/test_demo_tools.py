@@ -393,6 +393,20 @@ class ResetTests(TestCase):
         self.assertTrue(User.objects.get(email=demo.SAM.email).is_superuser)
         self.assertEqual(User.objects.count(), 1, "nothing else was created either")
 
+    def test_remove_refuses_a_cast_account_that_became_staff_and_deletes_nothing(self):
+        run("reset_demo_data", yes=True)
+        User.objects.filter(email=demo.SAM.email).update(is_superuser=True, is_staff=True)
+        before = (User.objects.count(), ConnectionRequest.objects.count(), Message.objects.count())
+
+        with self.assertRaisesRegex(CommandError, "staff account"):
+            run("reset_demo_data", yes=True, remove=True)
+
+        self.assertTrue(User.objects.get(email=demo.SAM.email).is_superuser)
+        self.assertEqual(
+            before,
+            (User.objects.count(), ConnectionRequest.objects.count(), Message.objects.count()),
+        )
+
     def test_a_failure_part_way_leaves_nothing_half_done(self):
         run("reset_demo_data", yes=True)
         before = (User.objects.count(), ConnectionRequest.objects.count(), Message.objects.count())
@@ -470,6 +484,16 @@ class IssueTokenTests(TestCase):
         )
         with self.assertRaisesRegex(CommandError, "does not exist yet"):
             run("issue_demo_token", demo.SAM.email)
+
+    def test_it_refuses_a_cast_account_that_became_staff(self):
+        User.objects.filter(email=demo.SAM.email).update(is_staff=True)
+        with self.assertRaisesRegex(CommandError, "staff account"):
+            run("issue_demo_token", demo.SAM.email)
+
+    def test_the_output_gives_the_access_and_the_refresh_lifetimes(self):
+        output = run("issue_demo_token", demo.SAM.email)
+        self.assertIn("access token is valid for about 24 hours", output)
+        self.assertIn("refresh token printed with it for up to 7 days", output)
 
     def test_the_output_warns_that_the_login_is_a_password(self):
         output = run("issue_demo_token", demo.SAM.email)

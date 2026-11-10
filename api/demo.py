@@ -262,13 +262,17 @@ def _company(name):
     return company
 
 
+def refuse_staff(user, action):
+    """Demo tools never touch a staff or superuser account, whatever they were asked to do."""
+    if user is not None and (user.is_staff or user.is_superuser):
+        raise CommandError(
+            f"{user.email} belongs to a staff account. Refusing to {action}."
+        )
+
+
 def _ensure_member(member):
     existing = User.objects.filter(email__iexact=member.email).first()
-    if existing is not None and (existing.is_staff or existing.is_superuser):
-        raise CommandError(
-            f"{member.email} already belongs to a staff account. "
-            "Refusing to turn it into a demo account."
-        )
+    refuse_staff(existing, "turn it into a demo account")
     user = existing or User(username=member.email, email=member.email)
     if existing is None:
         user.set_unusable_password()  # sign-in is by emailed code, or issue_demo_token
@@ -371,7 +375,12 @@ def reset():
 def remove():
     """Delete the demo accounts and everything of theirs, e.g. after the showcase."""
     with transaction.atomic():
-        ids = demo_user_ids()
+        cast = list(User.objects.filter(email__in=CAST_EMAILS))
+        # The same guard reset() has, checked before anything is deleted: an admin login
+        # that was added to the cast, or promoted after a reset, must survive the cleanup.
+        for user in cast:
+            refuse_staff(user, "delete it")
+        ids = [user.pk for user in cast]
         _clear(ids)
         deleted, _ = User.objects.filter(pk__in=ids).delete()
     return deleted

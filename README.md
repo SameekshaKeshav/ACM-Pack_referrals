@@ -166,7 +166,7 @@ ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data --remove
 
 **What it touches:** only these eight accounts and their requests, conversations, referrals, reports, blocks and past roles. No other member's profile or data is changed, and the command prints the counts first. A conversation or request between a demo account and a real member is removed too (counted separately as "with a real member"), because it cannot exist without the demo account.
 
-**`issue_demo_token`** only works for the eight demo addresses, never for any other member or an admin. It prints one line to paste into the browser's developer console: it saves the login where the app looks for it and opens `/chat`. The login lasts about a day. Treat it like a password.
+**`issue_demo_token`** only works for the eight demo addresses, never for any other member. It prints one line to paste into the browser's developer console: it saves the login where the app looks for it and opens `/chat`. The access token lasts about a day and the refresh token printed with it up to 7 days (`ACCESS_TOKEN_LIFETIME_HOURS`, `REFRESH_TOKEN_LIFETIME_DAYS`). It refuses a staff or superuser account, and so does `reset_demo_data`, including `--remove`. Anyone with shell access on the server can sign in as any of the eight, so treat the login like a password.
 
 **Running it on staging:** the database is on the Railway volume, so the command has to run inside the service, for example from a shell opened with `railway ssh`. `railway run` does not work: it runs on your laptop, where `/data` does not exist. Set the variable only for that command, as in the examples above.
 
