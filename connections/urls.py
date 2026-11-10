@@ -2,10 +2,12 @@ from django.urls import path
 
 from .views import (
     AcceptConnectionRequestView,
+    AcceptReferralRequestView,
     AppHealthView,
     ConnectionRequestDetailView,
     ConnectionRequestViewSet,
     DeclineConnectionRequestView,
+    DeclineReferralRequestView,
     ReferralRequestDetailView,
     ReferralRequestListCreateView,
     UserBlockView,
@@ -34,6 +36,16 @@ urlpatterns = [
         "referrals/<int:referral_id>/",
         ReferralRequestDetailView.as_view(),
         name="referral-request-detail",
+    ),
+    path(
+        "referrals/<int:referral_id>/accept/",
+        AcceptReferralRequestView.as_view(),
+        name="referral-request-accept",
+    ),
+    path(
+        "referrals/<int:referral_id>/decline/",
+        DeclineReferralRequestView.as_view(),
+        name="referral-request-decline",
     ),
     path(
         "<int:connection_id>/",

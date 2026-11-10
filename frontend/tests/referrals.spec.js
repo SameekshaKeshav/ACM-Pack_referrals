@@ -49,3 +49,67 @@ test('mobile conflict keeps note and form stays within viewport', async ({ page 
   await expect(page.getByRole('button', { name: 'Send referral request' })).toBeDisabled();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+async function incomingFixture(page, { conflict = false, failure = false } = {}) {
+  let inbound = { ...row, sender: person(12, 'Maya'), recipient: person(7, 'Me') };
+  const patches = [];
+  await page.addInitScript(() => localStorage.setItem('pack-referrals.session.v1', JSON.stringify({ access: 'access', refresh: 'refresh', user: { id: 7, email: 'me@ncsu.edu' } })));
+  await page.route((url) => url.pathname.startsWith('/api/'), async (route) => {
+    const request = route.request(); const url = new URL(request.url());
+    if (url.pathname === '/api/chat/conversations/' || url.pathname === '/api/companies/' || url.pathname === '/api/connections/') return json(route, []);
+    if (request.method() === 'PATCH') {
+      patches.push(request);
+      expect(request.postData()).toBeNull();
+      expect(request.headers().authorization).toBe('Bearer access');
+      if (failure) return json(route, { detail: 'Could not answer. Try again.' }, 500);
+      inbound = { ...inbound, status: conflict || url.pathname.endsWith('/decline/') ? 'declined' : 'accepted', resolved_at: '2026-11-07T12:00:00Z' };
+      return conflict ? json(route, { detail: 'Already answered.' }, 409) : json(route, inbound);
+    }
+    if (url.pathname === '/api/connections/referrals/') return json(route, { count: 1, results: [url.searchParams.get('type') === 'incoming' ? inbound : { ...row, status: 'accepted' }] });
+    return json(route, {}, 404);
+  });
+  await page.goto('/referrals');
+  await page.getByRole('button', { name: 'Incoming', exact: true }).click();
+  await expect(page.getByRole('article', { name: 'Referral from Maya' })).toBeVisible();
+  return patches;
+}
+
+for (const action of ['accept', 'decline']) {
+  test(`recipient can ${action} using keyboard; status persists after reload`, async ({ page }) => {
+    const patches = await incomingFixture(page);
+    const button = page.getByRole('button', { name: `${action === 'accept' ? 'Accept' : 'Decline'} referral for Engineer from Maya` });
+    await button.focus(); await page.keyboard.press('Enter');
+    const status = action === 'accept' ? 'accepted' : 'declined';
+    await expect(page.getByText(`Status: ${status}`, { exact: true })).toBeFocused();
+    await expect(page.getByRole('button', { name: /^(Accept|Decline) referral/ })).toHaveCount(0);
+    expect(patches).toHaveLength(1);
+    expect(new URL(patches[0].url()).pathname).toBe(`/api/connections/referrals/1/${action}/`);
+    await page.reload(); await page.getByRole('button', { name: 'Incoming', exact: true }).click();
+    await expect(page.getByText(`Status: ${status}`, { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Outgoing', exact: true }).click();
+    await expect(page.getByRole('article', { name: 'Referral to Maya' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^(Accept|Decline) referral/ })).toHaveCount(0);
+  });
+}
+
+test('conflict displays the server answer rather than accepting locally', async ({ page }) => {
+  await incomingFixture(page, { conflict: true });
+  await page.getByRole('button', { name: 'Accept referral for Engineer from Maya' }).click();
+  await expect(page.getByText('Status: declined', { exact: true })).toBeVisible();
+  await expect(page.getByText('Status: accepted', { exact: true })).toHaveCount(0);
+});
+
+test('referral action controls, errors and resolved status pass axe', async ({ page }) => {
+  const { default: AxeBuilder } = await import('@axe-core/playwright');
+  await incomingFixture(page, { failure: true });
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.getByRole('button', { name: 'Accept referral for Engineer from Maya' }).click();
+  await expect(page.getByRole('alert')).toContainText('Could not answer.');
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await page.route((url) => url.pathname === '/api/connections/referrals/1/accept/', (route) => json(route, {
+    ...row, sender: person(12, 'Maya'), recipient: person(7, 'Me'), status: 'accepted', resolved_at: '2026-11-07T12:00:00Z',
+  }));
+  await page.getByRole('button', { name: 'Accept referral for Engineer from Maya' }).click();
+  await expect(page.getByText('Status: accepted', { exact: true })).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

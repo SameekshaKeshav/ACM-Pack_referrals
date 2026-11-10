@@ -8,12 +8,11 @@ NC State has no alumni-verification API — Alumni Engagement confirmed the
 directory ended with their CRM change. So signup stays `@ncsu.edu` only and
 alumni get in by **manual admin approval**.
 
-> **Pending Sameeksha's confirmation.** This was raised as must-have vs cut for
-> the Thursday meeting. Don't build against it until she has signed off; scope
-> could still change.
-
-**The endpoint is unreachable until someone builds a form.** Nothing below is
-assigned yet.
+> **Confirmed in scope** by Sameeksha (see `docs/project-checklist.md`).
+>
+> **Status:** items 1 and 2 below are built (`src/pages/AlumniRequest.jsx`,
+> `src/api/alumni.js`, the link in `src/pages/Auth.jsx`, route `/alumni-access`).
+> **Item 3 (`verified_via` in `fromServer()`) is still Rawan's.**
 
 ## Who does what
 
@@ -23,14 +22,9 @@ this is all Sanjana's.
 
 | # | What | Where | Size | Owner |
 |---|---|---|---|---|
-| 1 | The request form, on a new public route | new component + `src/App.jsx` | most of the work | **unclaimed** |
-| 2 | A "Request alumni access" link on the signup page | `src/pages/Auth.jsx` | small | **unclaimed** |
+| 1 | The request form, on a new public route | new component + `src/App.jsx` | most of the work | **Sameeksha, done** |
+| 2 | A "Request alumni access" link on the signup page | `src/pages/Auth.jsx` | small | **Sameeksha, done** |
 | 3 | Add `verified_via` to `fromServer()` | `src/api/profile.js` | one line | **Rawan** |
-
-**Items 1 and 2 need owners.** `src/pages/Auth.jsx` sits in neither FE column of
-the tracker and `git log` shows it last touched by Codex, so it belongs to nobody
-right now. Sanjana is the likelier fit, being adjacent to the auth integration in
-#30 — but say so if that is wrong rather than assuming the other person has it.
 
 Item 3 is the one that fails quietly: `fromServer()` is an explicit allowlist, so
 a missing line drops the field with no error anywhere.
@@ -95,9 +89,10 @@ That is currently a dead end, and the form is unreachable without a link.
 link near the email field, and ideally that 400 should surface it inline rather
 than only showing the raw message.
 
-**`Auth.jsx` has no clear owner** — see the table at the top. Without this link
-the form is unreachable however well it is built, so it is not an optional
-polish item.
+This is built: the signup page always shows the link, and a rejected address
+shows it inside the error too. The login page does not, because an alum with an
+approved request signs up first. Without this link the form is unreachable, so
+keep it if you restyle that page.
 
 ## 3. After approval, nothing new
 

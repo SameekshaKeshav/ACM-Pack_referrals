@@ -69,7 +69,7 @@ Last updated: Nov 10, 2026 by Sameeksha (PM).
 
 ## Karthik (BE1: auth and data)
 
-- [ ] **MUST · Nov 9** Referral accept and decline, backend. Today `/api/connections/referrals/` can only list and create, so incoming referral requests stay "pending" forever. Add `PATCH /api/connections/referrals/<id>/accept/` and `decline/`:
+- [x] **MUST · Nov 9** Referral accept and decline, backend. Today `/api/connections/referrals/` can only list and create, so incoming referral requests stay "pending" forever. Add `PATCH /api/connections/referrals/<id>/accept/` and `decline/`:
   - Only the recipient can answer. Anyone else gets 404, and the sender gets 403, the same as connection accept and decline.
   - Answering twice returns 409, and two simultaneous answers must not both succeed.
   - Add tests, and update `docs/api-routes.md` and `docs/security-checklist.md`.
@@ -134,11 +134,11 @@ Last updated: Nov 10, 2026 by Sameeksha (PM).
 ## Sameeksha (PM)
 
 - [ ] **MUST · Nov 6** Make the scope-freeze decision and tell the team. In scope: alumni access (backend is merged, form is below), referral accept and decline (Karthik). Out of scope for the showcase: referral notification emails. Confirm or change this.
-- [ ] **MUST · Nov 9** Alumni access, frontend. Build the request form on a new public route and a "Request alumni access" link on the signup page. See [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md) for the contract. Add tests.
+- [x] **MUST · Nov 9** Alumni access, frontend. Build the request form on a new public route and a "Request alumni access" link on the signup page. See [alumni-access-frontend-handoff.md](alumni-access-frontend-handoff.md) for the contract. Add tests.
 - [x] **CUT · Nov 10** Company endpoint for the referral form. Cut for the showcase, because the backend already rejects a company that is not on the recipient's profile with a 400.
 - [ ] **MUST · Nov 8** Run the full demo dry-run, with zero P0 bugs in the connect-to-chat flow. Triage and assign only critical bugs.
 - [ ] **MUST** Present demo readiness at Check-in #3.
-- [ ] **MUST · Nov 8** Write the end-to-end test: signup, verify, send request, accept, send message, fetch message, in one test. Include the referral fields (company, role title, job link) and check that a non-connection gets 403.
+- [x] **MUST · Nov 8** Write the end-to-end test: signup, verify, send request, accept, send message, fetch message, in one test. Include the referral fields (company, role title, job link) and check that a non-connection gets 403.
 - [x] **SHOULD · Nov 10** Extend the Postman collection with the referral fields (done), and with reports, blocks and interview experiences once #39 merged (done in #55).
 - [ ] **SHOULD** Keep a bug log with priorities.
 - [x] **MUST · Nov 10** Write `python manage.py reset_demo_data` and `python manage.py issue_demo_token <email>` (prints a login token, and only runs when `ALLOW_DEMO_TOOLS=1`). See "Demo accounts for the showcase" in the README.

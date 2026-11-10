@@ -39,3 +39,13 @@ export async function createReferral(fields, { signal } = {}) {
   if (fields.resumeUrl.trim()) body.resume_url = fields.resumeUrl.trim();
   return normalizeReferral(await apiRequest(REFERRALS_ROUTE, { method: 'POST', body, signal }));
 }
+
+
+// PR #57 returns the full persisted referral, not a connection/conversation id.
+export async function respondToReferral(id, action, { signal } = {}) {
+  if (!validId(id) || !['accept', 'decline'].includes(action)) throw new TypeError('Invalid referral action.');
+  const row = normalizeReferral(await apiRequest(`${REFERRALS_ROUTE}${id}/${action}/`, { method: 'PATCH', signal }));
+  const expected = action === 'accept' ? 'accepted' : 'declined';
+  if (row.id !== id || row.status !== expected || !Number.isFinite(Date.parse(row.resolved_at))) throw mismatch();
+  return row;
+}

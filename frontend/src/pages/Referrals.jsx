@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listConversations } from '../api/chat';
 import { searchCompanies } from '../api/companies';
-import { createReferral, listReferrals, REFERRAL_PAGE_SIZE, safeReferralUrl } from '../api/referrals';
+import { createReferral, listReferrals, respondToReferral, REFERRAL_PAGE_SIZE, safeReferralUrl } from '../api/referrals';
 
 const emptyFields = { recipientId: '', companyId: '', role: '', jobUrl: '', resumeUrl: '', message: '' };
 const length = (text) => Array.from(text).length;
@@ -100,37 +100,96 @@ function ReferralForm({ initialRecipient, onCreated }) {
   </section>;
 }
 
-function ReferralList({ direction, version }) {
+export function ReferralList({ direction, version }) {
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState({ count: 0, results: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reload, setReload] = useState(0);
+  const [busy, setBusy] = useState(null);
+  const [actionErrors, setActionErrors] = useState({});
+  const [notice, setNotice] = useState('');
+  const actionFlight = useRef(null);
+  const confirmed = useRef(new Map());
+  const statusRefs = useRef({});
+  const focusStatus = useRef(null);
+  const recovering = useRef(false);
+  useEffect(() => () => actionFlight.current?.abort(), []);
+  useEffect(() => {
+    if (focusStatus.current !== null) {
+      statusRefs.current[focusStatus.current]?.focus();
+      focusStatus.current = null;
+    }
+  }, [page]);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true); setError('');
     listReferrals(direction, { offset, signal: controller.signal }).then((data) => {
       if (!controller.signal.aborted) {
         if (offset > 0 && offset >= data.count) setOffset(0);
-        else setPage(data);
+        else {
+          setPage({ ...data, results: data.results.map((row) => confirmed.current.get(row.id) || row) });
+          if (recovering.current) {
+            recovering.current = false;
+            setNotice('Referral list refreshed. Review the latest status.');
+            const pendingIds = new Set(data.results.filter((row) => row.status === 'pending').map((row) => row.id));
+            setActionErrors((current) => Object.fromEntries(Object.entries(current).filter(([id]) => pendingIds.has(Number(id)))));
+          }
+        }
       }
     }).catch((failure) => { if (!controller.signal.aborted) setError(failure.message); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [direction, offset, version, reload]);
+  async function answer(row, action) {
+    if (actionFlight.current || direction !== 'incoming' || row.status !== 'pending') return;
+    const controller = new AbortController();
+    actionFlight.current = controller;
+    setBusy({ id: row.id, action });
+    setActionErrors((current) => ({ ...current, [row.id]: '' }));
+    setNotice('Updating referral request…');
+    try {
+      const saved = await respondToReferral(row.id, action, { signal: controller.signal });
+      if (controller.signal.aborted) return;
+      confirmed.current.set(saved.id, saved);
+      focusStatus.current = saved.id;
+      setPage((current) => ({ ...current, results: current.results.map((item) => item.id === saved.id ? saved : item) }));
+      setNotice(`Referral request for ${saved.role_title} from ${saved.sender.name} ${saved.status}.`);
+    } catch (failure) {
+      if (controller.signal.aborted) return;
+      setNotice('');
+      setActionErrors((current) => ({ ...current, [row.id]: failure.status === 409
+        ? 'This referral was already answered. Refreshing its latest status.'
+        : failure.status === 404
+          ? 'This referral is unavailable, or referral actions are not deployed yet. Refreshing the list.'
+          : failure.message || 'Could not answer this referral. Please try again.' }));
+      // Another tab may have answered it, or a block/deletion removed access.
+      // Re-read rather than fabricating an accepted/declined status.
+      if (failure.status === 409 || failure.status === 404) { recovering.current = true; setReload((value) => value + 1); }
+    } finally {
+      actionFlight.current = null;
+      if (!controller.signal.aborted) setBusy(null);
+    }
+  }
   const incoming = direction === 'incoming';
   return <section className="referral-panel" aria-label={incoming ? 'Incoming referral requests' : 'Outgoing referral requests'}>
-    <div className="section-heading"><h2>{incoming ? 'Incoming asks' : 'Outgoing asks'}</h2><button className="button-secondary" disabled={loading} onClick={() => setReload((value) => value + 1)}>Refresh asks</button></div>
+    <div className="section-heading"><h2>{incoming ? 'Incoming asks' : 'Outgoing asks'}</h2><button className="button-secondary" disabled={loading || busy !== null} onClick={() => setReload((value) => value + 1)}>Refresh asks</button></div>
+    <p className="local-notice" role="status" aria-live="polite">{notice}</p>
     {loading ? <p role="status">Loading referral requests…</p> : error ? <p role="alert" className="feedback feedback-error">{error} <button onClick={() => setReload((value) => value + 1)}>Retry loading asks</button></p> : <>
       {!page.results.length && <p className="empty-state">No {direction} referral requests yet.</p>}
       {page.results.map((row) => <article className="referral-card" key={row.id} aria-label={`Referral ${incoming ? 'from' : 'to'} ${(incoming ? row.sender : row.recipient).name}`}>
         <h3>{row.role_title}</h3><p>{incoming ? 'From' : 'To'}: {(incoming ? row.sender : row.recipient).name}</p>
-        {row.company && <p>Company: {row.company.name}</p>}<p>Status: <strong>{row.status}</strong></p>
+        {row.company && <p>Company: {row.company.name}</p>}<p tabIndex={-1} ref={(node) => { statusRefs.current[row.id] = node; }}>Status: <strong>{row.status}</strong></p>
         <p className="referral-note">{row.message_text}</p>
         <div className="referral-links">{row.job_url && <a href={row.job_url} target="_blank" rel="noopener noreferrer">View job</a>}{row.resume_url && <a href={row.resume_url} target="_blank" rel="noopener noreferrer">View résumé</a>}</div>
         <p className="meta"><time dateTime={row.created_at}>{new Date(row.created_at).toLocaleString()}</time></p>
+        {actionErrors[row.id] && <p role="alert" className="feedback feedback-error">{actionErrors[row.id]}</p>}
+        {incoming && row.status === 'pending' && <div className="referral-links">
+          <button type="button" className="button-secondary" disabled={busy !== null} aria-label={`Decline referral for ${row.role_title} from ${row.sender.name}`} onClick={() => answer(row, 'decline')}>{busy?.id === row.id && busy.action === 'decline' ? 'Declining…' : 'Decline'}</button>
+          <button type="button" className="button-primary" disabled={busy !== null} aria-label={`Accept referral for ${row.role_title} from ${row.sender.name}`} onClick={() => answer(row, 'accept')}>{busy?.id === row.id && busy.action === 'accept' ? 'Accepting…' : 'Accept'}</button>
+        </div>}
       </article>)}
-      {page.count > 0 && <nav className="referral-pagination" aria-label="Referral pages"><button disabled={offset === 0} onClick={() => setOffset((value) => Math.max(0, value - REFERRAL_PAGE_SIZE))}>Previous</button><span>{offset + 1}–{Math.min(offset + page.results.length, page.count)} of {page.count}</span><button disabled={offset + REFERRAL_PAGE_SIZE >= page.count} onClick={() => setOffset((value) => value + REFERRAL_PAGE_SIZE)}>Next</button></nav>}
+      {page.count > 0 && <nav className="referral-pagination" aria-label="Referral pages"><button disabled={busy !== null || offset === 0} onClick={() => setOffset((value) => Math.max(0, value - REFERRAL_PAGE_SIZE))}>Previous</button><span>{offset + 1}–{Math.min(offset + page.results.length, page.count)} of {page.count}</span><button disabled={busy !== null || offset + REFERRAL_PAGE_SIZE >= page.count} onClick={() => setOffset((value) => value + REFERRAL_PAGE_SIZE)}>Next</button></nav>}
     </>}
   </section>;
 }
