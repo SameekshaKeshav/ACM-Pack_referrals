@@ -18,7 +18,10 @@ git -C "$repo" worktree add --detach "$baseline" "$base"
 mkdir -p "$baseline/frontend/tests/fixtures"
 cp "$repo/frontend/tests/chat-connect-polish.spec.js" "$baseline/frontend/tests/"
 cp "$repo/frontend/tests/fixtures/chat-connect.js" "$baseline/frontend/tests/fixtures/"
-npm ci --prefix "$baseline/frontend"
+(
+  cd "$baseline/frontend"
+  npm ci
+)
 (
   cd "$baseline/frontend"
   SCREENSHOT_PHASE=before EVIDENCE_DIR="$evidence" npm test -- tests/chat-connect-polish.spec.js --grep 'responsive capture' --workers=1
