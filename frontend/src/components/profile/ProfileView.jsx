@@ -9,6 +9,11 @@ function initialsFor(profile) {
 }
 
 const ProfileView = ({ profile, onEdit }) => {
+  const displayName =
+  [profile.first_name, profile.last_name].filter(Boolean).join(' ') ||
+  profile.email ||
+  'Your profile';
+
   const summary = [
     profile.major,
     profile.grad_year ? `Class ${profile.grad_year}` : '',
@@ -32,7 +37,7 @@ const ProfileView = ({ profile, onEdit }) => {
         </aside>
 
         <div className="profile-main">
-          <h1>{profile.first_name} {profile.last_name}</h1>
+          <h1>{displayName}</h1>
           {summary && <p className="profile-summary">{summary}</p>}
           {job && <p className="profile-job">{job}</p>}
 
