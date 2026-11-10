@@ -1,6 +1,7 @@
 import { Link, Navigate, NavLink, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { RequireAuth, useAuth } from './auth/AuthProvider';
 import { EmailPage, EnterCodePage } from './pages/Auth';
+import AlumniRequestPage from './pages/AlumniRequest';
 import Chat from './pages/Chat';
 import Referrals from './pages/Referrals';
 import ChatMockPage from './ChatMockPage';
@@ -23,6 +24,7 @@ export default function App() {
     <Route path="/signup" element={<EmailPage key="signup" mode="signup" />} />
     <Route path="/login" element={<EmailPage key="login" mode="login" />} />
     <Route path="/enter-code" element={<EnterCodePage />} />
+    <Route path="/alumni-access" element={<AlumniRequestPage />} />
     <Route element={<RequireAuth />}>
       <Route element={<AppLayout />}>
         <Route path="/chat" element={<Chat />} /><Route path="/chat/:conversationId" element={<Chat />} />

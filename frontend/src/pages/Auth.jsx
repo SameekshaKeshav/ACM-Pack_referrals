@@ -12,8 +12,8 @@ function readPending() {
   } catch { return null; }
 }
 function rememberPending(value) { try { sessionStorage.setItem(PENDING, JSON.stringify(value)); } catch { /* Navigation state remains usable. */ } }
-function AuthShell({ title, children }) {
-  return <main className="auth-shell"><Link className="brand" to="/login"><span className="brand-mark">PR</span>Pack Referrals</Link><section className="auth-card"><h1>{title}</h1>{children}</section></main>;
+export function AuthShell({ title, children, headingRef }) {
+  return <main className="auth-shell"><Link className="brand" to="/login"><span className="brand-mark">PR</span>Pack Referrals</Link><section className="auth-card"><h1 ref={headingRef} tabIndex={headingRef ? -1 : undefined}>{title}</h1>{children}</section></main>;
 }
 
 export function EmailPage({ mode }) {
@@ -22,6 +22,7 @@ export function EmailPage({ mode }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [errorStatus, setErrorStatus] = useState(0);
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
   const request = useRef(null);
@@ -32,7 +33,7 @@ export function EmailPage({ mode }) {
   async function submit(event) {
     event.preventDefault();
     if (busy.current) return;
-    busy.current = true; setPending(true); setError('');
+    busy.current = true; setPending(true); setError(''); setErrorStatus(0);
     const normalized = email.trim().toLowerCase();
     const controller = new AbortController(); request.current = controller;
     try {
@@ -41,7 +42,7 @@ export function EmailPage({ mode }) {
       const next = { email: normalized, mode, from: destination };
       rememberPending(next);
       navigate('/enter-code', { state: next });
-    } catch (err) { if (!controller.signal.aborted) setError(err.message); }
+    } catch (err) { if (!controller.signal.aborted) { setError(err.message); setErrorStatus(err.status); } }
     finally { busy.current = false; setPending(false); }
   }
 
@@ -51,9 +52,10 @@ export function EmailPage({ mode }) {
     <form onSubmit={submit}>
       <label htmlFor="auth-email">University email</label>
       <input id="auth-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={pending} placeholder="you@ncsu.edu" />
-      {error && <p role="alert" className="feedback feedback-error">{error}</p>}
+      {error && <p role="alert" className="feedback feedback-error">{error}{signup && errorStatus === 400 && <> Not a current student? <Link to="/alumni-access">Request alumni access</Link>.</>}</p>}
       <button className="button-primary" disabled={pending}>{pending ? 'Sending code…' : signup ? 'Sign up' : 'Send login code'}</button>
     </form>
+    {signup && <p>Not a current student? <Link to="/alumni-access">Request alumni access</Link></p>}
     <p>{signup ? 'Already have an account?' : 'New to Pack Referrals?'} <Link to={signup ? '/login' : '/signup'} state={{ from: destination }}>{signup ? 'Log in' : 'Sign up'}</Link></p>
   </AuthShell>;
 }
