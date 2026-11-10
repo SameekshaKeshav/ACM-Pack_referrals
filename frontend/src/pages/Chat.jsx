@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { listConversations, listMessages, orderMessages, sendMessage } from '../api/chat';
+import { listConversations, listMessages, orderMessages, pollMessages, sendMessage } from '../api/chat';
 import { useAuth } from '../auth/AuthProvider';
 import ChatWindow from '../components/ChatWindow';
 import ConnectionRequests from '../components/ConnectionRequests';
@@ -23,6 +23,10 @@ export default function Chat() {
   const [listVersion, setListVersion] = useState(0);
   const [threads, setThreads] = useState({});
   const [threadVersion, setThreadVersion] = useState(0);
+  const [pollVersion, setPollVersion] = useState(0);
+  const [focusConversation, setFocusConversation] = useState(null);
+  const threadSnapshot = useRef(threads);
+  threadSnapshot.current = threads;
   const mounted = useRef(false);
   const sending = useRef(new Set());
   const active = conversations.find((row) => row.id === selectedId);
@@ -48,12 +52,60 @@ export default function Chat() {
     const controller = new AbortController();
     setThreads((current) => ({ ...current, [id]: { ...current[id], loading: true, error: '' } }));
     listMessages(id, { signal: controller.signal }).then((messages) => {
-      if (!controller.signal.aborted) setThreads((current) => ({ ...current, [id]: { messages: mergeHistory(messages, current[id]?.messages), loading: false, error: '' } }));
+      if (!controller.signal.aborted) setThreads((current) => ({ ...current, [id]: { messages: mergeHistory(messages, current[id]?.messages), cursor: messages.reduce((max, row) => Math.max(max, row.id), 0), loading: false, error: '', pollError: '' } }));
     }).catch((error) => {
       if (!controller.signal.aborted) setThreads((current) => ({ ...current, [id]: { ...current[id], loading: false, error: error.message } }));
     });
     return () => controller.abort();
   }, [active?.id, threadVersion]);
+
+  const historyReady = !!active && !!threads[selectedId] && !threads[selectedId].loading && !threads[selectedId].error;
+  useEffect(() => {
+    if (!historyReady) return;
+    const id = active.id;
+    const controller = new AbortController();
+    let timer;
+    let running = false;
+    let failures = 0;
+    async function poll() {
+      if (running || controller.signal.aborted) return;
+      clearTimeout(timer);
+      if (document.visibilityState === 'hidden') { timer = setTimeout(poll, 3000); return; }
+      running = true;
+      try {
+        const cursor = threadSnapshot.current[id]?.cursor || 0;
+        const incoming = await pollMessages(id, cursor, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setThreads((current) => {
+          const thread = current[id];
+          const known = new Set(thread.messages.map((row) => row.id));
+          // GET can see a sent message before its POST acknowledgement arrives.
+          const waiting = thread.messages.some((row) => row.delivery === 'pending');
+          const deferred = incoming.filter((row) => waiting && row.sender_id === user.id && !known.has(row.id));
+          const deferredIds = new Set(deferred.map((row) => row.id));
+          const safe = incoming.filter((row) => !deferredIds.has(row.id));
+          const last = incoming.reduce((max, row) => Math.max(max, row.id), cursor);
+          return { ...current, [id]: { ...thread, messages: mergeHistory(safe, thread.messages),
+            cursor: deferred.length ? deferred.reduce((min, row) => Math.min(min, row.id), Infinity) - 1 : last, pollError: '' } };
+        });
+        if (incoming.length) preview(id, incoming[incoming.length - 1]);
+        failures = 0;
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          failures += 1;
+          setThreads((current) => ({ ...current, [id]: { ...current[id], pollError: error.message } }));
+        }
+      } finally {
+        running = false;
+        if (!controller.signal.aborted) timer = setTimeout(poll, Math.min(30000, 3000 * 2 ** failures));
+      }
+    }
+    function resume() { if (document.visibilityState !== 'hidden') poll(); }
+    if (pollVersion) poll(); else timer = setTimeout(poll, 3000);
+    window.addEventListener('focus', resume);
+    document.addEventListener('visibilitychange', resume);
+    return () => { controller.abort(); clearTimeout(timer); window.removeEventListener('focus', resume); document.removeEventListener('visibilitychange', resume); };
+  }, [active?.id, historyReady, pollVersion, user.id]);
 
   function preview(id, message) {
     setConversations((rows) => rows.map((row) => row.id === id && (Date.parse(message.created_at) || 0) >= (Date.parse(row.updated_at) || 0) ? { ...row, last_message: message.body_text, updated_at: message.created_at } : row)
@@ -92,7 +144,7 @@ export default function Chat() {
   return <main className="main-content live-chat-page">
     <div className="section-heading"><div><h1>Messages</h1><p>Continue a conversation with an accepted connection.</p></div><button className="button-secondary" disabled={listLoading} onClick={() => setListVersion((value) => value + 1)}>Refresh conversations</button></div>
     {listError && <p role="alert" className="feedback feedback-error">{listError} <button className="button-secondary" onClick={() => setListVersion((value) => value + 1)}>Retry conversations</button></p>}
-    <ConnectionRequests onAccepted={(id) => { setListVersion((value) => value + 1); navigate(`/chat/${id}`); }} />
+    <ConnectionRequests onAccepted={(id) => { setFocusConversation(id); setListVersion((value) => value + 1); navigate(`/chat/${id}`); }} />
     <div className="chat-layout">
       <aside className="conversation-sidebar" aria-label="Conversation list"><div className="sidebar-heading">Messages <span>{conversations.length}</span></div>
         {listLoading && <p role="status" className="empty-state">Loading conversations…</p>}
@@ -101,7 +153,8 @@ export default function Chat() {
       </aside>
       <div className="chat-thread-panel">{active && <p><Link to={`/referrals?recipient=${active.other_user.id}`}>Ask {active.other_user.name} for a referral</Link></p>}
       {active ? <ChatWindow key={active.id} conversation={active} messages={threads[selectedId]?.messages || []} currentUser={{ id: user.id, name: 'You' }}
-        onSend={compose} loading={!!threads[selectedId]?.loading || !threads[selectedId]} error={threads[selectedId]?.error}
+        onSend={compose} focusOnReady={focusConversation === active.id} onFocused={() => setFocusConversation(null)} loading={!!threads[selectedId]?.loading || !threads[selectedId]} error={threads[selectedId]?.error}
+        pollError={threads[selectedId]?.pollError} onPollRetry={() => setPollVersion((value) => value + 1)}
         onReload={() => setThreadVersion((value) => value + 1)} onRetry={(message) => submit(active.id, message)} />
         : <section className="chat-window empty-state" aria-label="Conversation"><p>{listLoading ? 'Loading…' : selectedId && !listError ? 'This conversation is unavailable.' : 'Select a conversation to see its messages.'}</p></section>}
       </div>

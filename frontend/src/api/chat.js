@@ -74,3 +74,21 @@ export async function sendMessage(conversationId, bodyText) {
   const row = await apiRequest('/api/chat/messages/', { method: 'POST', body: { conversation_id: conversationId, body_text: bodyText } });
   return normalizeMessage(row, conversationId);
 }
+
+// The backend's after cursor is an ID, independent of message timestamps.
+export async function pollMessages(conversationId, afterId, { signal } = {}) {
+  if (!validId(conversationId) || !Number.isSafeInteger(afterId) || afterId < 0) throw mismatch();
+  const rows = new Map();
+  let cursor = afterId;
+  while (true) {
+    const data = await apiRequest(`/api/chat/conversations/${conversationId}/messages/?limit=100&after=${cursor}`, { signal });
+    if (!Array.isArray(data) || data.length > 100) throw mismatch();
+    const batch = data.map((row) => normalizeMessage(row, conversationId));
+    for (const row of batch) if (row.id > afterId) rows.set(row.id, row);
+    const next = Math.max(cursor, ...batch.map((row) => row.id));
+    if (batch.length < 100) break;
+    if (next <= cursor) throw mismatch();
+    cursor = next;
+  }
+  return orderMessages([...rows.values()]);
+}

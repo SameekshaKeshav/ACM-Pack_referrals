@@ -107,8 +107,8 @@ test('failed optimistic send stays visible and retries explicitly', async ({ pag
   await expect(page.getByRole('listitem')).toHaveCount(2);
   await page.getByLabel('Chat message').fill('Please retry');
   await page.getByRole('button', { name: 'Send', exact: true }).click();
-  await page.getByRole('button', { name: 'Retry message' }).click();
-  await expect(page.getByRole('button', { name: 'Retry message' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Failed to send - tap to retry' }).click();
+  await expect(page.getByRole('button', { name: 'Failed to send - tap to retry' })).toHaveCount(0);
   await expect(page.getByRole('listitem')).toHaveCount(3);
   expect(attempts).toBe(2);
 });
