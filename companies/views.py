@@ -1,5 +1,3 @@
-from .services import affiliated_users
-
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -7,14 +5,11 @@ from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db import transaction
-from django.contrib.auth import get_user_model
 
 from accounts.models import Profile
 from .models import Company, InterviewExperience
 from .serializers import CompanyDetailSerializer, CompanySerializer, InterviewExperienceSerializer
-
-User = get_user_model()
+from .services import affiliated_users
 
 
 class AppHealthView(APIView):
@@ -97,23 +92,22 @@ class InterviewExperienceView(APIView):
 
     def post(self, request, company_id):
         company = self.get_company(company_id)
+        today = timezone.localdate()
+        if InterviewExperience.objects.filter(
+            author=request.user,
+            created_at__date=today,
+        ).count() >= 5:
+            return Response(
+                {"detail": "You have reached the daily interview experience limit."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
         serializer = InterviewExperienceSerializer(
             data=request.data,
             context={"request": request},
         )
         serializer.is_valid(raise_exception=True)
-        with transaction.atomic():
-            User.objects.select_for_update().get(pk=request.user.pk)
-            today = timezone.localdate()
-            if InterviewExperience.objects.filter(
-                author=request.user,
-                created_at__date=today,
-            ).count() >= 5:
-                return Response(
-                    {"detail": "You have reached the daily interview experience limit."},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS,
-                )
-            experience = serializer.save(company=company, author=request.user)
+        experience = serializer.save(company=company, author=request.user)
         return Response(
             InterviewExperienceSerializer(
                 experience,

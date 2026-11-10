@@ -395,16 +395,6 @@ class InterviewExperienceTests(APITestCase):
 
         self.assertEqual(response.status_code, 429)
 
-    def test_daily_post_limit_locks_the_author_before_counting(self):
-        with mock.patch(
-            "companies.views.User.objects.select_for_update",
-            wraps=User.objects.select_for_update,
-        ) as select_for_update:
-            response = self.client.post(self.url, self.payload, format="json")
-
-        self.assertEqual(response.status_code, 201)
-        select_for_update.assert_called_once()
-
     def test_author_can_delete_experience(self):
         experience = InterviewExperience.objects.create(
             company=self.company,

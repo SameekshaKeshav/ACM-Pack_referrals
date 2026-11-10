@@ -80,13 +80,6 @@ def accept_connection_request(connection_id: int, user) -> tuple[ConnectionReque
     """
     connection_request = _get_request_for_recipient(connection_id, user)
     with transaction.atomic():
-        connection_request = ConnectionRequest.objects.select_for_update().get(
-            pk=connection_request.pk
-        )
-        if connection_request.status != ConnectionRequest.Status.PENDING:
-            raise RequestNotPendingError(
-                f"This request is already {connection_request.status}."
-            )
         _resolve(connection_request, ConnectionRequest.Status.ACCEPTED)
         try:
             conversation = create_conversation_from_request(connection_request)

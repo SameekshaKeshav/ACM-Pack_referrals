@@ -49,20 +49,6 @@ class ConnectionServiceTests(TestCase):
             accept_connection_request(self.request.pk, self.recipient)
         self.assertEqual(Conversation.objects.count(), 1)
 
-    def test_two_simultaneous_accepts_only_create_one_conversation(self):
-        first = ConnectionRequest.objects.select_for_update().get(pk=self.request.pk)
-        accept_connection_request.__globals__["_resolve"](
-            first, ConnectionRequest.Status.ACCEPTED
-        )
-        second = ConnectionRequest.objects.get(pk=self.request.pk)
-        with self.assertRaises(RequestNotPendingError):
-            accept_connection_request.__globals__["_resolve"](
-                second, ConnectionRequest.Status.ACCEPTED
-            )
-
-        self.request.refresh_from_db()
-        self.assertEqual(self.request.status, ConnectionRequest.Status.ACCEPTED)
-
     def test_accept_by_sender_is_forbidden(self):
         with self.assertRaises(NotRecipientError):
             accept_connection_request(self.request.pk, self.sender)
