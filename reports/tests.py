@@ -2,8 +2,10 @@ from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.admin.sites import AdminSite
+from django.contrib.messages import get_messages
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
@@ -241,6 +243,12 @@ class ReportAdminActionTests(TestCase):
         self.target = User.objects.create_user(username="target")
         Profile.objects.create(user=self.target)
 
+    def _request(self):
+        request = RequestFactory().post("/admin/reports/report/")
+        request.session = {}
+        request._messages = FallbackStorage(request)
+        return request
+
     def test_mark_reviewed_updates_selected_reports(self):
         report = Report.objects.create(
             reporter=self.reporter,
@@ -249,10 +257,15 @@ class ReportAdminActionTests(TestCase):
             reason=Report.Reason.SPAM,
         )
 
-        self.admin.mark_reviewed(None, Report.objects.filter(pk=report.pk))
+        request = self._request()
+        self.admin.mark_reviewed(request, Report.objects.filter(pk=report.pk))
 
         report.refresh_from_db()
         self.assertEqual(report.status, Report.Status.REVIEWED)
+        self.assertEqual(
+            [str(message) for message in get_messages(request)],
+            ["Marked 1 report as reviewed."],
+        )
 
     def test_suspend_user_action_handles_user_message_and_experience_targets(self):
         company = Company.objects.create(name="Acme")
@@ -294,11 +307,16 @@ class ReportAdminActionTests(TestCase):
             ),
         ])
 
+        request = self._request()
         self.admin.suspend_user(
-            None, Report.objects.filter(pk__in=[report.pk for report in reports])
+            request, Report.objects.filter(pk__in=[report.pk for report in reports])
         )
 
         self.target.profile.refresh_from_db()
         self.assertEqual(
             self.target.profile.account_status, Profile.AccountStatus.SUSPENDED
+        )
+        self.assertEqual(
+            [str(message) for message in get_messages(request)],
+            ["Suspended 1 account."],
         )

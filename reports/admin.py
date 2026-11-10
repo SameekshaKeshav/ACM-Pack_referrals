@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 
 from chat.models import Message
 from companies.models import InterviewExperience
@@ -15,7 +15,12 @@ class ReportAdmin(admin.ModelAdmin):
 
     @admin.action(description="Mark selected reports reviewed")
     def mark_reviewed(self, request, queryset):
-        queryset.update(status=Report.Status.REVIEWED)
+        count = queryset.update(status=Report.Status.REVIEWED)
+        self.message_user(
+            request,
+            f"Marked {count} report{'s' if count != 1 else ''} as reviewed.",
+            messages.SUCCESS,
+        )
 
     @admin.action(description="Suspend users named by selected reports")
     def suspend_user(self, request, queryset):
@@ -33,6 +38,11 @@ class ReportAdmin(admin.ModelAdmin):
                         "author_id", flat=True
                     )
                 )
-        Profile.objects.filter(user_id__in=user_ids).update(
+        count = Profile.objects.filter(user_id__in=user_ids).update(
             account_status=Profile.AccountStatus.SUSPENDED
+        )
+        self.message_user(
+            request,
+            f"Suspended {count} account{'s' if count != 1 else ''}.",
+            messages.SUCCESS if count else messages.WARNING,
         )

@@ -35,7 +35,7 @@ Every endpoint requires a JWT unless it is deliberately public (`IsAuthenticated
 |----------|----------------|--------|
 | `/api/health/`, `/api/<app>/health/` | Anyone; no user data | PASS |
 | `/api/accounts/auth/signup/`, `login/`, `verify/` | Anyone; throttled, tokens only for a valid code | PASS |
-| `/api/accounts/auth/login/` | Not suspended; suspended users get 403 | PASS
+| `/api/accounts/auth/login/` | Not suspended; suspended users get 403 | PASS |
 | `/api/accounts/auth/refresh/` | Anyone with a valid refresh token | PASS |
 | `/api/schema/`, `/api/docs/` | Anyone; route and field descriptions only | PASS |
 | `/api/accounts/` | Logged in; lists endpoint URLs only | PASS |
