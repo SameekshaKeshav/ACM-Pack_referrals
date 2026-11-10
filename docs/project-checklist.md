@@ -83,6 +83,7 @@ Last updated: Nov 10, 2026 by Sameeksha (PM).
   - Add the signup 201-versus-400 behavior for approved addresses to the Known gaps, as agreed.
 - [ ] **MUST · Nov 13** Write `python manage.py seed_directory_data`: about 20 realistic companies with users of varied majors and grad years. Confirm by browsing the directory on staging.
 - [ ] **SHOULD** Add a length limit to `Profile.bio` (issue #27).
+- [ ] **SHOULD · Nov 15** Decide whether to raise `THROTTLE_ALUMNI_REQUEST` on staging for showcase day. It is 3 per 15 minutes per IP, so on shared venue wifi a fourth alum is blocked for 15 minutes. It is an environment variable, so no code change is needed.
 - [ ] **MUST · before Nov 16** Run `reset_demo_data` once yourself, so you can run it if the presenter is busy.
 - [ ] **MUST · Nov 16 week** On call during the demo to watch the login success rate in Sentry and the logs.
 

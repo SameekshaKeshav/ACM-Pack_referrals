@@ -9,7 +9,18 @@ export class ApiError extends Error {
   }
 }
 
+// DRF's own throttle message ("Request was throttled. Expected available in 900 seconds.")
+// is not something to show a person. Other 429s carry their own detail (for example the
+// daily interview experience limit), and keep it.
+function throttleText(detail) {
+  const seconds = Number(/Expected available in (\d+) second/.exec(detail)?.[1]);
+  return Number.isFinite(seconds) && seconds > 0
+    ? `Too many attempts. Please wait about ${Math.ceil(seconds / 60)} minute${Math.ceil(seconds / 60) === 1 ? '' : 's'} before trying again.`
+    : 'Too many attempts. Please wait before trying again.';
+}
+
 function errorText(data, status) {
+  if (status === 429 && /^Request was throttled/.test(data?.detail ?? '')) return throttleText(data.detail);
   if (typeof data?.detail === 'string') return data.detail;
   if (data && typeof data === 'object') {
     const field = Object.entries(data).find(([, value]) => Array.isArray(value) && typeof value[0] === 'string');
