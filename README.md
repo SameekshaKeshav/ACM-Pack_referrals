@@ -184,7 +184,11 @@ STAGING=https://acm-packreferrals-production.up.railway.app
 
 **Note:** Migrations run on every deploy against the volume's database. Test migrations locally before merging so a bad migration doesn't break staging data.
 
-**Never run a seed command (such as `seed_demo_data`) on staging.** The database lives on the volume, so anything a seed writes stays there for good.
+**Be careful with seed commands on staging.** The database lives on the volume, so anything a seed writes stays there for good.
+
+- `seed_demo_data` — **local only.** It refuses to run unless `DEBUG` is on, and it creates accounts with real passwords for Postman.
+- `reset_demo_data`, `issue_demo_token` — staging, but only for the showcase. They rewrite and can delete the demo cast, which is the team's own accounts. Need `ALLOW_DEMO_TOOLS=1`.
+- `seed_directory_data` — **safe on staging**, and meant to be run there: the showcase needs a directory with people in it. Every account it writes is addressed `seed.…@ncsu.edu`, and it reads, changes and deletes nothing outside that prefix, so no real member's profile, roles or messages are touched. Running it twice leaves the same state as running it once, and `--remove` deletes the seeded people again (the companies stay, because a real member may since have said they work at one). `--dry-run` reports what would change. The fictional members have unusable passwords and no inbox, so nobody can sign in as one — and do not request a login code for one, because the email would bounce and spend part of the day's Brevo budget.
 
 ## Stack
 

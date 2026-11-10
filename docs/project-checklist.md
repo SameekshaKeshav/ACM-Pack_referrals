@@ -80,7 +80,7 @@ Last updated: Nov 4, 2026 by Sameeksha (PM).
   - Document that rejecting a resubmission does not revoke an earlier approval.
   - Update the "registered emails can be discovered" gap in the security checklist to include approved alumni addresses.
   - Add the signup 201-versus-400 behavior for approved addresses to the Known gaps, as agreed.
-- [ ] **MUST · Nov 13** Write `python manage.py seed_directory_data`: about 20 realistic companies with users of varied majors and grad years. Confirm by browsing the directory on staging.
+- [x] **MUST · Nov 13** Write `python manage.py seed_directory_data`: about 20 realistic companies with users of varied majors and grad years. Confirm by browsing the directory on staging.
 - [ ] **SHOULD** Add a length limit to `Profile.bio` (issue #27).
 - [ ] **MUST · before Nov 16** Run `reset_demo_data` once yourself, so you can run it if the presenter is busy.
 - [ ] **MUST · Nov 16 week** On call during the demo to watch the login success rate in Sentry and the logs.
