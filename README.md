@@ -190,6 +190,8 @@ STAGING=https://acm-packreferrals-production.up.railway.app
 - `reset_demo_data`, `issue_demo_token` — staging, but only for the showcase. They rewrite and can delete the demo cast, which is the team's own accounts. Need `ALLOW_DEMO_TOOLS=1`.
 - `seed_directory_data` — **safe on staging**, and meant to be run there: the showcase needs a directory with people in it. Every account it writes is addressed `seed.…@ncsu.edu`, and it reads, changes and deletes nothing outside that prefix, so no real member's profile, roles or messages are touched. Running it twice leaves the same state as running it once, and `--remove` deletes the seeded people again (the companies stay, because a real member may since have said they work at one). `--dry-run` reports what would change. The fictional members have unusable passwords and no inbox, so nobody can sign in as one — and do not request a login code for one, because the email would bounce and spend part of the day's Brevo budget.
 
+  **Run it inside the container**, not with `railway run`. `railway run` injects staging's environment but executes on your own machine, so `SQLITE_PATH=/data/db.sqlite3` points at a path that is not there: on macOS you get `unable to open database file`, and on a machine where `/data` is writable you would seed a throwaway local file and be told it worked while staging stayed empty. Use `railway ssh` and then `python manage.py seed_directory_data`. The command prints the database path it is about to write to as its first line, so check that it says `/data/db.sqlite3` before letting it run, and use `--dry-run` first.
+
 ## Stack
 
 - Django 5.2 + Django REST Framework

@@ -1,5 +1,6 @@
 import sys
 
+from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from accounts import directory_seed as seed
@@ -28,6 +29,12 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         found = seed.plan()
         existing = seed.seeded_users().count()
+
+        # Which database this is about to write to. On staging that must be the
+        # volume at /data: `railway run` injects the environment but executes on
+        # your own machine, so it would seed a local file and report success
+        # while staging stayed empty. Run it inside the container instead.
+        self.stdout.write(f"Database: {settings.DATABASES['default']['NAME']}")
 
         # Unlike reset_demo_data this needs no environment flag: that one rewrites
         # and can delete the team's own real accounts, while everything here is
