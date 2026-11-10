@@ -1,5 +1,5 @@
-"""A small fixed cast of demo accounts, and the code that puts them back in their
-starting state before a rehearsal or the showcase.
+"""A small fixed cast of demo accounts (two demo sets), and the code that puts them
+back in their starting state before a rehearsal or the showcase.
 
 Why this is careful: the commands built on this run against staging, where real
 ACM members have real data. So everything here is scoped to the people in CAST
@@ -61,29 +61,83 @@ class DemoMember:
         return f"{self.first_name} {self.last_name}"
 
 
-# The presenter signs in as Sam. Everyone else is someone Sam meets in the demo.
-# These addresses are on the allowed signup domain so the normal sign-in rules
-# accept them, but they do not receive mail: use issue_demo_token to sign in.
-SAM = DemoMember(
-    "demo.sam@ncsu.edu",
-    "Sam",
-    "Student",
-    "Computer Science",
-    2027,
-    "",
-    "",
-    "Junior interested in backend and infrastructure work.",
+# Two demo sets, so the two judge panels each start from a fresh demo without a
+# reset in between. Each set has a presenter, an alum the presenter already chats
+# with, and an alum whose connection request is waiting in the presenter's inbox.
+# They are the team's own @ncsu.edu accounts, so the usual sign-in works (a code by
+# email), and issue_demo_token signs in without waiting for the email. A reset
+# overwrites these accounts' profiles and removes their requests and chats.
+#
+# Jordan and Lee are fictional and shared by both sets: each presenter can send
+# Jordan a fresh request, and Lee is not open to connect. They do not receive mail.
+
+
+def _presenter(email, first_name, last_name):
+    return DemoMember(
+        email,
+        first_name,
+        last_name,
+        "Computer Science",
+        2027,
+        "",
+        "",
+        "Junior interested in backend and infrastructure work.",
+    )
+
+
+def _red_hat_alum(email, first_name, last_name):
+    return DemoMember(
+        email,
+        first_name,
+        last_name,
+        "Computer Engineering",
+        2024,
+        "Software Engineer",
+        "Red Hat",
+        "Works on platform tooling. Happy to talk about interviews.",
+    )
+
+
+def _sre_alum(email, first_name, last_name):
+    return DemoMember(
+        email,
+        first_name,
+        last_name,
+        "Computer Science",
+        2023,
+        "Site Reliability Engineer",
+        "Google",
+        "On-call veteran. Ask me about SRE internships.",
+    )
+
+
+@dataclass(frozen=True)
+class DemoSet:
+    label: str
+    presenter: DemoMember
+    alum: DemoMember  # already chats with the presenter; can be asked for a referral
+    waiting: DemoMember  # their connection request is waiting in the presenter's inbox
+
+    @property
+    def members(self):
+        return (self.presenter, self.alum, self.waiting)
+
+
+SET_A = DemoSet(
+    "A",
+    presenter=_presenter("skeshav2@ncsu.edu", "Sameeksha", "Keshav"),
+    alum=_red_hat_alum("sshett24@ncsu.edu", "Sanjana", "Shetty"),
+    waiting=_sre_alum("rtelgoha@ncsu.edu", "Rawan", "Telgoha"),
 )
-AVERY = DemoMember(
-    "demo.avery@ncsu.edu",
-    "Avery",
-    "Chen",
-    "Computer Engineering",
-    2024,
-    "Software Engineer",
-    "Red Hat",
-    "Works on platform tooling. Happy to talk about interviews.",
+SET_B = DemoSet(
+    "B",
+    presenter=_presenter("dbbakalo@ncsu.edu", "Danny", "Bakalov"),
+    alum=_red_hat_alum("kmpanick@ncsu.edu", "Karthik", "Panicker"),
+    waiting=_sre_alum("tlhart@ncsu.edu", "Thomas", "Hart"),
 )
+SETS = (SET_A, SET_B)
+
+SAM, AVERY, MAYA = SET_A.members  # set A, which the first panel uses
 JORDAN = DemoMember(
     "demo.jordan@ncsu.edu",
     "Jordan",
@@ -93,16 +147,6 @@ JORDAN = DemoMember(
     "Data Analyst",
     "IBM",
     "Analytics and experimentation.",
-)
-MAYA = DemoMember(
-    "demo.maya@ncsu.edu",
-    "Maya",
-    "Patel",
-    "Computer Science",
-    2023,
-    "Site Reliability Engineer",
-    "Google",
-    "On-call veteran. Ask me about SRE internships.",
 )
 LEE = DemoMember(
     "demo.lee@ncsu.edu",
@@ -115,7 +159,7 @@ LEE = DemoMember(
     "Not taking new connections right now.",
     open_to_connect=False,
 )
-CAST = (SAM, AVERY, JORDAN, MAYA, LEE)
+CAST = tuple(member for demo_set in SETS for member in demo_set.members) + (JORDAN, LEE)
 CAST_EMAILS = tuple(member.email for member in CAST)
 INDUSTRY = {
     "Red Hat": "Software",
@@ -253,16 +297,17 @@ def _stamp(model, pk, field, moment):
     model.objects.filter(pk=pk).update(**{field: moment})
 
 
-def _build_starting_state(users):
-    """The state the demo script begins from.
+def _build_starting_state(users, demo_set):
+    """The state the demo script begins from, for one set.
 
-    Sam already chats with Avery (so there is a conversation, an unread message
-    and a person to ask for a referral), and Maya is waiting in Sam's inbox
-    (so there is something to accept). Jordan is open but unconnected, so Sam
-    can send a fresh request live, and Lee is not open to connect.
+    The presenter already chats with the alum (so there is a conversation, an
+    unread message and a person to ask for a referral), and the other alum is
+    waiting in the presenter's inbox (so there is something to accept). Jordan is
+    open but unconnected, so the presenter can send a fresh request live, and Lee
+    is not open to connect.
     """
     now = timezone.now()
-    sam, avery, maya = users[SAM.email], users[AVERY.email], users[MAYA.email]
+    sam, avery, maya = (users[member.email] for member in demo_set.members)
 
     ibm = _company("IBM")
     PastRole.objects.create(
@@ -277,14 +322,16 @@ def _build_starting_state(users):
         sender=maya,
         recipient=sam,
         status=ConnectionRequest.Status.PENDING,
-        message_text="Hi Sam, I saw your profile. Happy to chat about SRE internships.",
+        message_text=(
+            f"Hi {sam.first_name}, I saw your profile. Happy to chat about SRE internships."
+        ),
     )
 
     accepted = ConnectionRequest.objects.create(
         sender=sam,
         recipient=avery,
         status=ConnectionRequest.Status.ACCEPTED,
-        message_text="Hi Avery, could we chat about Red Hat?",
+        message_text=f"Hi {avery.first_name}, could we chat about Red Hat?",
     )
     _stamp(ConnectionRequest, accepted.pk, "created_at", now - timedelta(days=3))
     _stamp(ConnectionRequest, accepted.pk, "resolved_at", now - timedelta(days=3, minutes=-30))
@@ -316,7 +363,8 @@ def reset():
     with transaction.atomic():
         _clear(demo_user_ids())
         users = {member.email: _ensure_member(member) for member in CAST}
-        _build_starting_state(users)
+        for demo_set in SETS:
+            _build_starting_state(users, demo_set)
     return users
 
 

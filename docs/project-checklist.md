@@ -24,7 +24,8 @@ Last updated: Nov 10, 2026 by Sameeksha (PM).
 |---|---|
 | Nov 8 | End of Week 9: code frozen except for critical bugs, demo dry-run |
 | Nov 9 to 15 | Week 10: seeding real members, practice demo, rehearsal |
-| Nov 16 | Showcase week |
+| Nov 13 | Team rehearsal (Friday) |
+| Nov 16 | Showcase, 6:00 to 7:30 PM. Team members arrive for dinner at 5:30 PM, and teams set up in room 3211 from 5:50 PM. See [mvp-scope.md](mvp-scope.md) |
 
 **Links:** [Staging](https://acm-packreferrals-production.up.railway.app/) · [API routes](api-routes.md) · [Security checklist](security-checklist.md) · [Wireframes](wireframes/) · [Ownership](ownership.md)
 
@@ -126,7 +127,7 @@ Last updated: Nov 10, 2026 by Sameeksha (PM).
 - [ ] **MUST · after Karthik's referral accept/decline is on `main`** Accept and Decline buttons on incoming referral requests, with the card updating to the new status.
 - [x] **CUT · Nov 10** Referral form: offer only the companies on the selected connection's profile. Not built: the company endpoint was cut, so the form offers every company and the backend rejects a wrong one with a 400.
 - [ ] **CUT-FIRST** Report and block UI, once #39 is merged.
-- [ ] **MUST · Nov 13** Write a timed demo script under 3 minutes and reproduce it successfully twice in a row on staging.
+- [ ] **MUST · Nov 13** Write a timed demo script of about 7 minutes (judges get 10 minutes per panel, including questions, and there are two panels) and reproduce it successfully twice in a row on staging. Also write a 2-minute fallback for if something breaks.
 - [ ] **MUST · before Nov 16** Record a backup screen recording of the chat and connect part of the demo, saved locally.
 - [ ] **MUST · Nov 16 week** On call for Chat and Connect issues during the live run.
 
@@ -141,7 +142,7 @@ Last updated: Nov 10, 2026 by Sameeksha (PM).
 - [x] **SHOULD · Nov 10** Extend the Postman collection with the referral fields (done), and with reports, blocks and interview experiences once #39 merged (done in #55).
 - [ ] **SHOULD** Keep a bug log with priorities.
 - [x] **MUST · Nov 10** Write `python manage.py reset_demo_data` and `python manage.py issue_demo_token <email>` (prints a login token, and only runs when `ALLOW_DEMO_TOOLS=1`). See "Demo accounts for the showcase" in the README.
-- [ ] **MUST · Nov 10** Run `reset_demo_data --dry-run`, then the reset, on staging once, and sign in with `issue_demo_token demo.sam@ncsu.edu`. Confirm the demo starts as the README describes. Danny: confirm the exact Railway command for running it inside the service.
+- [ ] **MUST · Nov 10** Run `reset_demo_data --dry-run`, then the reset, on staging once, and sign in with `issue_demo_token skeshav2@ncsu.edu` (set A) and `issue_demo_token dbbakalo@ncsu.edu` (set B). Confirm the demo starts as the README describes. Danny: confirm the exact Railway command for running it inside the service.
 - [ ] **MUST · Nov 13** Recruit 15 to 20 real ACM members to sign up on staging and fill out real profiles and company history. Start this week.
 - [ ] **MUST · Nov 13** Organize the full team demo rehearsal.
 - [ ] **MUST · before Nov 16** Record a backup screen recording of the full demo flow, saved offline.

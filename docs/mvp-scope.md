@@ -2,13 +2,36 @@
 
 **Status:** Updated Nov 10, 2026 (code freeze was Nov 8). The table below shows where each row stands today. Open work and owners are in [project-checklist.md](project-checklist.md).
 
-**Showcase:** the week of Monday 11/16. Plan for the earliest day (Monday 11/16) and treat the rest of that week as buffer, not build time. The team rehearsal is Friday 11/13.
+**Showcase:** Monday 11/16, 6:00 to 7:30 PM (team members arrive for dinner at 5:30 PM). The team rehearsal is Friday 11/13.
 
 **Definition of Done for every row:** merged to `main`, CI green, visible on staging.
 
+## Showcase day
+
+| Time | What |
+|---|---|
+| 5:30 to 6:00 PM | Dinner and networking for project members and industry (room 3001) |
+| 5:50 to 6:00 PM | Teams move to room 3211 and set up |
+| 6:00 to 6:20 PM | Introduction to ACM and Neurotech, opening remarks (room 3211) |
+| 6:20 to 7:00 PM | Judging |
+| 6:20 to 7:20 PM | Showcase |
+| 7:20 to 7:30 PM | Prizes and closing remarks |
+
+- **Judging:** two panels of judges each visit once between 6:20 and 7:00 PM. We get **10 minutes per panel, including their questions**, so the demo is about **7 minutes**. For the rest of the showcase we demo to other attendees.
+- **Two panels, two demo sets:** every judge sees the demo from the start, so the first panel uses demo set A and the second uses set B (see "Demo accounts for the showcase" in the README). Run `reset_demo_data` before 6:00 PM, not between panels.
+- **Scoring:** each judge scores 1 to 5 on each criterion below and the score is the sum. The winning team has the highest average across judges. Each member of the winning team gets a $50 Visa gift card.
+
+| Criterion | What to show or say |
+|---|---|
+| Technology | Django, DRF and JWT auth, email-code verification through Brevo, chat polling, rate limits and the security checklist, load tests on SQLite, a Postman collection that covers every endpoint, one-command rollback, accessibility checks in CI. |
+| Design | `@ncsu.edu` verification with a manual alumni path, empty, loading and error states, accessibility checks. |
+| Execution | What we cut and why (report and block UI, notification emails, the company endpoint), a backup recording, a staging reset. |
+| Teamwork | Every member can explain their own part: backend, profile and directory, chat and connect, infrastructure, and PM. |
+| Purpose | Students have no easy way to find alumni at a target company and ask for a referral. |
+
 ## The demo story
 
-One flow the audience can follow in about five minutes:
+One flow the audience can follow in about seven minutes, with three minutes left for the judges' questions:
 
 1. A new user signs up with an @ncsu.edu address, enters the emailed code and lands signed in.
 2. They fill in their profile (major, graduation year, past roles).

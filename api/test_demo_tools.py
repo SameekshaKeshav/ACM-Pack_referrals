@@ -75,9 +75,9 @@ class ResetTests(TestCase):
 
         # Maya is waiting in Sam's inbox, and Sam already chats with Avery.
         inbox = client_for(sam).get("/api/connections/?type=incoming").json()
-        self.assertEqual([row["sender"]["name"] for row in inbox], ["Maya Patel"])
+        self.assertEqual([row["sender"]["name"] for row in inbox], [demo.MAYA.name])
         conversations = client_for(sam).get("/api/chat/conversations/").json()
-        self.assertEqual([c["other_user"]["name"] for c in conversations], ["Avery Chen"])
+        self.assertEqual([c["other_user"]["name"] for c in conversations], [demo.AVERY.name])
         self.assertEqual(conversations[0]["unread_count"], 1)
         thread = (
             client_for(sam)
@@ -95,7 +95,7 @@ class ResetTests(TestCase):
         run("reset_demo_data", yes=True)
         sam = User.objects.get(email=demo.SAM.email)
         people = client_for(sam).get("/api/accounts/users/").json()["results"]
-        self.assertEqual(len(people), 5)
+        self.assertEqual(len(people), len(demo.CAST))
         lee = next(p for p in people if p["name"] == "Lee Park")
         self.assertFalse(lee["open_to_connect"])
         companies = {p["current_company"]["name"] for p in people if p["current_company"]}
@@ -178,15 +178,55 @@ class ResetTests(TestCase):
             sam_before,
             "accounts are kept, not recreated",
         )
-        self.assertEqual(User.objects.count(), 5)
+        self.assertEqual(User.objects.count(), len(demo.CAST))
         inbox = (
             client_for(User.objects.get(email=demo.SAM.email))
             .get("/api/connections/?type=incoming")
             .json()
         )
-        self.assertEqual([row["sender"]["name"] for row in inbox], ["Maya Patel"])
-        self.assertEqual(Conversation.objects.count(), 1)
-        self.assertEqual(Message.objects.count(), 3)
+        self.assertEqual([row["sender"]["name"] for row in inbox], [demo.MAYA.name])
+        self.assertEqual(Conversation.objects.count(), 2, "one per demo set")
+        self.assertEqual(Message.objects.count(), 6)
+
+    def test_each_demo_set_starts_with_its_own_chat_and_waiting_request(self):
+        run("reset_demo_data", yes=True)
+        for demo_set in demo.SETS:
+            with self.subTest(demo_set=demo_set.label):
+                presenter = User.objects.get(email=demo_set.presenter.email)
+                inbox = client_for(presenter).get("/api/connections/?type=incoming").json()
+                self.assertEqual([row["sender"]["name"] for row in inbox], [demo_set.waiting.name])
+                chats = client_for(presenter).get("/api/chat/conversations/").json()
+                self.assertEqual([c["other_user"]["name"] for c in chats], [demo_set.alum.name])
+                self.assertEqual(chats[0]["unread_count"], 1)
+
+    def test_the_first_panels_demo_does_not_change_the_second_panels_start(self):
+        run("reset_demo_data", yes=True)
+        sam = User.objects.get(email=demo.SAM.email)
+        jordan = User.objects.get(email=demo.JORDAN.email)
+        waiting = ConnectionRequest.objects.get(sender__email=demo.MAYA.email, recipient=sam)
+        client_for(sam).patch(f"/api/connections/{waiting.pk}/accept/")
+        client_for(sam).post(
+            "/api/connections/", {"recipient_id": jordan.pk, "message_text": "Hi"}, format="json"
+        )
+
+        second = demo.SET_B
+        presenter = User.objects.get(email=second.presenter.email)
+        inbox = client_for(presenter).get("/api/connections/?type=incoming").json()
+        self.assertEqual([row["sender"]["name"] for row in inbox], [second.waiting.name])
+        again = client_for(presenter).post(
+            "/api/connections/", {"recipient_id": jordan.pk, "message_text": "Hi"}, format="json"
+        )
+        self.assertEqual(again.status_code, 201, "Jordan is still free for the second presenter")
+
+    def test_the_demo_accounts_are_the_teams_own_ncsu_addresses(self):
+        self.assertEqual(
+            {member.email for demo_set in demo.SETS for member in demo_set.members},
+            {
+                "skeshav2@ncsu.edu", "sshett24@ncsu.edu", "rtelgoha@ncsu.edu",
+                "dbbakalo@ncsu.edu", "kmpanick@ncsu.edu", "tlhart@ncsu.edu",
+            },
+        )
+        self.assertEqual(len(set(demo.CAST_EMAILS)), len(demo.CAST_EMAILS), "no repeats")
 
     def test_profile_edits_to_a_demo_account_are_put_back(self):
         run("reset_demo_data", yes=True)
@@ -198,7 +238,7 @@ class ResetTests(TestCase):
         run("reset_demo_data", yes=True)
 
         avery = User.objects.get(email=demo.AVERY.email)
-        self.assertEqual(avery.first_name, "Avery")
+        self.assertEqual(avery.first_name, demo.AVERY.first_name)
         self.assertEqual(avery.profile.current_role, "Software Engineer")
         self.assertEqual(avery.profile.current_company.name, "Red Hat")
         self.assertTrue(avery.profile.open_to_connect)
@@ -344,7 +384,7 @@ class ResetTests(TestCase):
             "builtins.input", return_value="y"
         ):
             run("reset_demo_data")
-        self.assertEqual(User.objects.count(), 5)
+        self.assertEqual(User.objects.count(), len(demo.CAST))
 
     def test_it_refuses_to_take_over_a_staff_account_at_a_demo_address(self):
         User.objects.create_superuser(username="admin", email=demo.SAM.email, password="x")
@@ -367,7 +407,7 @@ class ResetTests(TestCase):
     def test_remove_deletes_the_demo_accounts_and_only_those(self):
         ana = real_member("ana@ncsu.edu")
         run("reset_demo_data", yes=True)
-        self.assertEqual(User.objects.count(), 6)
+        self.assertEqual(User.objects.count(), len(demo.CAST) + 1)
 
         run("reset_demo_data", yes=True, remove=True)
 
@@ -406,7 +446,9 @@ class IssueTokenTests(TestCase):
         self.assertEqual(refreshed.status_code, 200)
 
     def test_the_address_is_matched_ignoring_case_and_spaces(self):
-        self.assertIn("Sam Student", run("issue_demo_token", "  Demo.SAM@NCSU.edu "))
+        self.assertIn(
+            demo.SAM.name, run("issue_demo_token", f"  {demo.SAM.email.upper()} ")
+        )
 
     def test_it_never_issues_a_login_for_a_real_member_or_an_admin(self):
         ana = real_member("ana@ncsu.edu")

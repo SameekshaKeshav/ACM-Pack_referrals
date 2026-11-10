@@ -7,8 +7,8 @@ from api import demo
 
 class Command(BaseCommand):
     help = (
-        "Put the five demo accounts (demo.sam@ncsu.edu and friends) back to the state "
-        "the showcase demo starts from. Touches only those accounts. "
+        "Put the demo accounts (two demo sets of three, plus two shared fictional members) "
+        "back to the state the showcase demo starts from. Touches only those accounts. "
         "Needs ALLOW_DEMO_TOOLS=1."
     )
 
@@ -39,7 +39,8 @@ class Command(BaseCommand):
             self.stdout.write(f"  {rows:>4}  {kind}{extra}")
         if not options["remove"]:
             self.stdout.write(
-                "then recreates the starting state: 5 accounts, 1 conversation, 1 request waiting."
+                f"then recreates the starting state: {len(demo.CAST)} accounts, and in each of the "
+                f"{len(demo.SETS)} demo sets 1 conversation and 1 request waiting."
             )
         self.stdout.write("No other member's profile or data is touched.")
 
@@ -59,6 +60,10 @@ class Command(BaseCommand):
         demo.reset()
         self.stdout.write(self.style.SUCCESS(f"Demo data reset ({total} rows cleared)."))
         self.stdout.write(
-            "Sign in as the presenter with: "
-            f"ALLOW_DEMO_TOOLS=1 python manage.py issue_demo_token {demo.SAM.email}"
+            "Sign in as a presenter with: "
+            + "  or  ".join(
+                f"ALLOW_DEMO_TOOLS=1 python manage.py issue_demo_token {s.presenter.email}"
+                f" (set {s.label})"
+                for s in demo.SETS
+            )
         )
