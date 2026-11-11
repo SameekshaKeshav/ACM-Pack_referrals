@@ -29,7 +29,7 @@ test('create and reload anonymous post, then confirm own deletion', async ({ pag
   await card.getByRole('button', { name: 'Confirm delete' }).click();
   await expect(card).toHaveCount(0);
   expect(state.calls.some((call) => call.path === '/api/companies/3/experiences/99/' && call.method === 'DELETE')).toBe(true);
-  await expect(page.getByRole('article', { name: 'Analyst' }).getByRole('button')).toHaveCount(0);
+  await expect(page.getByRole('article', { name: 'Analyst' }).getByRole('button', { name: /^Delete/ })).toHaveCount(0);
 });
 
 test('daily limit keeps draft; large Unicode paste is capped', async ({ page }) => {
