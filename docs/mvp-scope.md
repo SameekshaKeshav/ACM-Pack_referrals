@@ -25,7 +25,7 @@
 |---|---|
 | Technology | Django, DRF and JWT auth, email-code verification through Brevo, chat polling, rate limits and the security checklist, load tests on SQLite, a Postman collection that covers every endpoint, one-command rollback, accessibility checks in CI. |
 | Design | `@ncsu.edu` verification with a manual alumni path, empty, loading and error states, accessibility checks. |
-| Execution | What we cut and why (notification emails, the company endpoint, unblock in the UI), a backup recording, a staging reset. |
+| Execution | What we cut and why (notification emails, the company endpoint, a full list of blocked people to unblock from later), a backup recording, a staging reset. |
 | Teamwork | Every member can explain their own part: backend, profile and directory, chat and connect, infrastructure, and PM. |
 | Purpose | Students have no easy way to find alumni at a target company and ask for a referral. |
 
@@ -58,7 +58,7 @@ What is left is merging the open pull requests (#47, #55, #57, #58, #62), puttin
 
 - Anonymous interview experiences on company pages. The API (#39) and the UI (#47) are on `main`. It is not part of the demo story above, so it is the first thing to cut if the dry-run shows trouble.
 - Accessibility checks in CI (`eslint-plugin-jsx-a11y` and axe scans) and the manual audits.
-- Moderation in the admin (the Report API is create-only: `POST /api/reports/`; reports are read and actioned in the admin). The Report and Block buttons are in the chat, and Report is on other members' interview experiences. There is no unblock button and no Report button in the directory or on messages.
+- Moderation in the admin (the Report API is create-only: `POST /api/reports/`; reports are read and actioned in the admin). The Report and Block buttons are in the chat, and Report is on other members' interview experiences. Right after blocking, an Unblock button undoes it; there is no list of blocked people to unblock from later, and no Report button in the directory or on messages.
 
 ## CUT, in this order, if we are behind
 

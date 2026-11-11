@@ -127,7 +127,7 @@ Last updated: Nov 10, 2026 by Sameeksha (PM).
 - [ ] **SHOULD · Nov 8** Accessibility pass on Chat, Connect and the auth screens: no serious or critical axe violations, a keyboard-only walkthrough (send a request, accept, send a message), and `aria-live` announcements for new messages and errors.
 - [ ] **MUST · after Karthik's referral accept/decline is on `main`** Accept and Decline buttons on incoming referral requests, with the card updating to the new status.
 - [x] **CUT · Nov 10** Referral form: offer only the companies on the selected connection's profile. Not built: the company endpoint was cut, so the form offers every company and the backend rejects a wrong one with a 400.
-- [x] **CUT-FIRST** Report and block UI, once #39 is merged. Built after all (Nov 10): Report and Block in a chat, Report on interview experiences. No unblock button; `reset_demo_data` restores a blocked demo chat.
+- [x] **CUT-FIRST** Report and block UI, once #39 is merged. Built after all (Nov 10): Report and Block in a chat, Report on interview experiences. Right after blocking, an Unblock button undoes it; there is no list of blocked people (that needs a new endpoint), and `reset_demo_data` restores a blocked demo chat.
 - [ ] **MUST · Nov 13** Write a timed demo script of about 7 minutes (judges get 10 minutes per panel, including questions, and there are two panels) and reproduce it successfully twice in a row on staging. Also write a 2-minute fallback for if something breaks.
 - [ ] **MUST · before Nov 16** Record a backup screen recording of the chat and connect part of the demo, saved locally.
 - [ ] **MUST · Nov 16 week** On call for Chat and Connect issues during the live run.

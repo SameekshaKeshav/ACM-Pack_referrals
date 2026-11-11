@@ -11,7 +11,7 @@ const { createElement: h, StrictMode } = await import('react');
 const { render, screen, cleanup, waitFor } = await import('@testing-library/react');
 const { default: userEvent } = await import('@testing-library/user-event');
 const vite = await createServer({ server: { middlewareMode: true, hmr: false } });
-const { ReportButton, BlockButton } = await vite.ssrLoadModule('/src/components/SafetyActions.jsx');
+const { ReportButton, BlockButton, BlockedNotice } = await vite.ssrLoadModule('/src/components/SafetyActions.jsx');
 const { default: Experiences } = await vite.ssrLoadModule('/src/components/InterviewExperiences.jsx');
 const session = await vite.ssrLoadModule('/src/auth/session.js');
 const originalFetch = globalThis.fetch;
@@ -140,4 +140,27 @@ test('works under StrictMode, which mounts every component twice in development'
   await who.click(screen.getByRole('button', { name: 'Block Maya' }));
   await waitFor(() => assert.equal(blocked, 1));
   await waitFor(() => assert.equal(screen.queryByRole('group'), null));
+});
+
+test('after a block the notice offers Unblock, which sends DELETE and tells the page', async () => {
+  const calls = backend(() => new Response(null, { status: 204 }));
+  let undone = 0;
+  render(h(StrictMode, null, h(BlockedNotice, { userId: 12, name: 'Maya', onUnblocked: () => { undone += 1; } })));
+  assert.match(screen.getByRole('status').textContent, /You blocked Maya/);
+  await actor().click(screen.getByRole('button', { name: 'Unblock Maya' }));
+  await waitFor(() => assert.equal(undone, 1));
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].path, '/api/connections/users/12/block/');
+  assert.equal(calls[0].method, 'DELETE');
+  assert.equal(calls[0].headers.Authorization, 'Bearer access');
+});
+
+test('a failed unblock shows the error, keeps the button and does not tell the page', async () => {
+  backend(() => json({ detail: 'Server error.' }, 500));
+  let undone = 0;
+  render(h(BlockedNotice, { userId: 12, name: 'Maya', onUnblocked: () => { undone += 1; } }));
+  await actor().click(screen.getByRole('button', { name: 'Unblock Maya' }));
+  assert.equal((await screen.findByRole('alert')).textContent, 'Server error.');
+  assert.equal(undone, 0);
+  assert.equal(screen.getByRole('button', { name: 'Unblock Maya' }).disabled, false);
 });

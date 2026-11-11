@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import ChatWindow from '../components/ChatWindow';
 import ConnectionRequests from '../components/ConnectionRequests';
 import ConversationListItem from '../components/ConversationListItem';
-import { BlockButton, ReportButton } from '../components/SafetyActions';
+import { BlockButton, BlockedNotice, ReportButton } from '../components/SafetyActions';
 
 export function mergeHistory(history, current = []) {
   const rows = new Map(history.map((row) => [row.id, row]));
@@ -26,7 +26,7 @@ export default function Chat() {
   const [threadVersion, setThreadVersion] = useState(0);
   const [pollVersion, setPollVersion] = useState(0);
   const [focusConversation, setFocusConversation] = useState(null);
-  const [blockedName, setBlockedName] = useState('');
+  const [blocked, setBlocked] = useState(null);
   const threadSnapshot = useRef(threads);
   threadSnapshot.current = threads;
   const mounted = useRef(false);
@@ -146,7 +146,8 @@ export default function Chat() {
   return <main id="main-content" tabIndex={-1} className="main-content live-chat-page">
     <div className="section-heading"><div><h1>Messages</h1><p>Continue a conversation with an accepted connection.</p></div><button className="button-secondary" disabled={listLoading} onClick={() => setListVersion((value) => value + 1)}>Refresh conversations</button></div>
     {listError && <p role="alert" className="feedback feedback-error">{listError} <button className="button-secondary" onClick={() => setListVersion((value) => value + 1)}>Retry conversations</button></p>}
-    {blockedName && <p role="status" className="feedback">You blocked {blockedName}. Their conversation is hidden.</p>}
+    {blocked && !blocked.undone && <BlockedNotice key={blocked.id} userId={blocked.id} name={blocked.name} onUnblocked={() => { setBlocked({ ...blocked, undone: true }); setListVersion((value) => value + 1); }} />}
+    {blocked?.undone && <p role="status" className="feedback">You unblocked {blocked.name}. Their conversation is back in your list.</p>}
     <ConnectionRequests onAccepted={(id) => { setFocusConversation(id); setListVersion((value) => value + 1); navigate(`/chat/${id}`); }} />
     <div className="chat-layout">
       <aside className="conversation-sidebar" aria-label="Conversation list"><div className="sidebar-heading">Messages <span>{conversations.length}</span></div>
@@ -158,7 +159,7 @@ export default function Chat() {
       {active && <div className="safety-actions" key={`safety-${active.id}`}>
         <ReportButton targetType="user" targetId={active.other_user.id} subject={active.other_user.name} />
         <BlockButton userId={active.other_user.id} name={active.other_user.name} onBlocked={() => {
-          setBlockedName(active.other_user.name);
+          setBlocked({ id: active.other_user.id, name: active.other_user.name, undone: false });
           setConversations((rows) => rows.filter((row) => row.id !== active.id));
           navigate('/chat');
           setListVersion((value) => value + 1);

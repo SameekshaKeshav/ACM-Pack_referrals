@@ -31,3 +31,9 @@ export async function blockUser(userId, { signal } = {}) {
   if (!validId(userId)) throw new TypeError('A valid user is required.');
   await apiRequest(`/api/connections/users/${userId}/block/`, { method: 'POST', signal });
 }
+
+// Removing a block that is not there is not an error on the server (204).
+export async function unblockUser(userId, { signal } = {}) {
+  if (!validId(userId)) throw new TypeError('A valid user is required.');
+  await apiRequest(`/api/connections/users/${userId}/block/`, { method: 'DELETE', signal });
+}

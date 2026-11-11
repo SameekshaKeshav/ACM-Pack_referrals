@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { blockUser, REPORT_DETAILS_LIMIT, REPORT_REASONS, sendReport } from '../api/safety';
+import { blockUser, REPORT_DETAILS_LIMIT, REPORT_REASONS, sendReport, unblockUser } from '../api/safety';
 
 // A Report button that opens a short form under it. `subject` finishes the
 // sentence "Report ..." for people using a screen reader, for example
@@ -94,5 +94,33 @@ export function BlockButton({ userId, name, onBlocked }) {
         <button type="button" className="button-primary" ref={confirmButton} disabled={busy} onClick={confirm}>{busy ? 'Blocking…' : `Block ${name}`}</button>
       </div>
     </div>}
+  </div>;
+}
+
+// Shown right after a block, so a mis-click can be undone. The conversation
+// list does not show blocked people, so this is the one place to unblock.
+export function BlockedNotice({ userId, name, onUnblocked }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const flight = useRef(false);
+  const mounted = useRef(true);
+  // Set true on every mount: React's dev StrictMode mounts, unmounts and mounts again.
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  async function undo() {
+    if (flight.current) return;
+    flight.current = true; setBusy(true); setError('');
+    try {
+      await unblockUser(userId);
+      onUnblocked?.();
+    } catch (failure) {
+      if (mounted.current) setError(failure.message || `Could not unblock ${name}. Please try again.`);
+    } finally { flight.current = false; if (mounted.current) setBusy(false); }
+  }
+
+  return <div className="safety-control">
+    <p role="status" className="feedback">You blocked {name}. Their conversation is hidden.</p>
+    {error && <p role="alert" className="feedback feedback-error">{error}</p>}
+    <button type="button" className="button-secondary" disabled={busy} onClick={undo}>{busy ? 'Unblocking…' : `Unblock ${name}`}</button>
   </div>;
 }
