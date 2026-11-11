@@ -164,3 +164,16 @@ test('a failed unblock shows the error, keeps the button and does not tell the p
   assert.equal(undone, 0);
   assert.equal(screen.getByRole('button', { name: 'Unblock Maya' }).disabled, false);
 });
+
+test('a late Unblock answer after the notice is gone does not tell the page', async () => {
+  let finish;
+  const calls = backend(() => new Promise((resolve) => { finish = () => resolve(new Response(null, { status: 204 })); }));
+  let undone = 0;
+  render(h(BlockedNotice, { userId: 12, name: 'Maya', onUnblocked: () => { undone += 1; } }));
+  await actor().click(screen.getByRole('button', { name: 'Unblock Maya' }));
+  await waitFor(() => assert.equal(calls.length, 1));
+  cleanup(); // the page replaced the notice, for example because someone else was blocked
+  finish();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(undone, 0);
+});

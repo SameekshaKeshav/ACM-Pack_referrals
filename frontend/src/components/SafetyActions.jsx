@@ -112,7 +112,9 @@ export function BlockedNotice({ userId, name, onUnblocked }) {
     flight.current = true; setBusy(true); setError('');
     try {
       await unblockUser(userId);
-      onUnblocked?.();
+      // The page replaces this notice when someone else is blocked. A late answer
+      // for the earlier person must not overwrite the newer notice.
+      if (mounted.current) onUnblocked?.();
     } catch (failure) {
       if (mounted.current) setError(failure.message || `Could not unblock ${name}. Please try again.`);
     } finally { flight.current = false; if (mounted.current) setBusy(false); }
