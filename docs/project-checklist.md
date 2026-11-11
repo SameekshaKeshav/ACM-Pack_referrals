@@ -143,7 +143,8 @@ Last updated: Nov 10, 2026 by Sameeksha (PM).
 - [x] **SHOULD · Nov 10** Extend the Postman collection with the referral fields (done), and with reports, blocks and interview experiences once #39 merged (done in #55).
 - [ ] **SHOULD** Keep a bug log with priorities.
 - [x] **MUST · Nov 10** Write `python manage.py reset_demo_data` and `python manage.py issue_demo_token <email>` (prints a login token, and only runs when `ALLOW_DEMO_TOOLS=1`). See "Demo accounts for the showcase" in the README.
-- [ ] **MUST · Nov 10** Run `reset_demo_data --dry-run`, then the reset, on staging once, and sign in with `issue_demo_token skeshav2@ncsu.edu` (set A) and `issue_demo_token dbbakalo@ncsu.edu` (set B). Confirm the demo starts as the README describes. Danny: confirm the exact Railway command for running it inside the service.
+- [x] **MUST · Nov 10** Run `reset_demo_data --dry-run`, then the reset, on staging once, and sign in with `issue_demo_token skeshav2@ncsu.edu` (set A) and `issue_demo_token dbbakalo@ncsu.edu` (set B). Confirm the demo starts as the README describes. Danny: confirm the exact Railway command for running it inside the service.
+  - Nov 11 (Danny): the Railway command is confirmed and written up in the README ("Running it on staging"). The dry run and the reset ran on staging, signing in with `issue_demo_token` works, and both sets start as the README describes.
 - [ ] **MUST · Nov 13** Recruit 15 to 20 real ACM members to sign up on staging and fill out real profiles and company history. Start this week.
 - [ ] **MUST · Nov 13** Organize the full team demo rehearsal.
 - [ ] **MUST · before Nov 16** Record a backup screen recording of the full demo flow, saved offline.

@@ -143,7 +143,7 @@ Eight accounts let the presenter run the demo from a known start. There are **tw
 
 Both sets share two fictional members: `demo.jordan@ncsu.edu` (open to connect, so each presenter can send a fresh request live) and `demo.lee@ncsu.edu` (not open to connect). They do not receive mail.
 
-**These six accounts become demo accounts.** A reset overwrites their name, major, graduation year, bio and company with the demo profile, and removes their connection requests, conversations, referrals, reports, blocks and past roles. Do not use them for anything real until `reset_demo_data --remove` has been run after the showcase. A reset refuses to touch an account that is a staff or superuser account, so run the dry run first and check for that message.
+**These six accounts become demo accounts.** A reset overwrites their name, major, graduation year, bio and company with the demo profile, and removes their connection requests, conversations, referrals, reports, blocks and past roles. Do not use them for anything real until `reset_demo_data --remove` has been run after the showcase. A reset refuses to touch an account that is a staff or superuser account. The dry run does **not** check for this (only the real run does, and it changes nothing when it refuses), so check the staff accounts yourself first: see "Running it on staging" below.
 
 Two commands manage them. Both do nothing unless `ALLOW_DEMO_TOOLS=1` is set for that command.
 
@@ -168,7 +168,35 @@ ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data --remove
 
 **`issue_demo_token`** only works for the eight demo addresses, never for any other member. It prints one line to paste into the browser's developer console: it saves the login where the app looks for it and opens `/chat`. The access token lasts about a day and the refresh token printed with it up to 7 days (`ACCESS_TOKEN_LIFETIME_HOURS`, `REFRESH_TOKEN_LIFETIME_DAYS`). It refuses a staff or superuser account, and so does `reset_demo_data`, including `--remove`. Anyone with shell access on the server can sign in as any of the eight, so treat the login like a password.
 
-**Running it on staging:** the database is on the Railway volume, so the command has to run inside the service, for example from a shell opened with `railway ssh`. `railway run` does not work: it runs on your laptop, where `/data` does not exist. Set the variable only for that command, as in the examples above.
+**Running it on staging:** the database is on the Railway volume, so the command has to run inside the service, from a shell opened with `railway ssh`. `railway run` does not work: it runs on your laptop, where `/data` does not exist. Danny runs it, because the Railway project is in his workspace. Anyone else needs to be invited to the project and to add an SSH key (`railway ssh keys`). Staging is the Railway environment called `production`.
+
+```bash
+# On your laptop. Staging sleeps when idle, and railway ssh cannot wake it: it fails with
+# "Railway TUI not currently available" or "agent path is temporarily unavailable".
+curl -s https://acm-packreferrals-production.up.railway.app/api/health/
+railway ssh --environment production --service ACM-Pack_referrals
+
+# Now on the server (the prompt looks like root@...:/app#, not your laptop's).
+pwd                                   # /app
+echo $RAILWAY_ENVIRONMENT_NAME        # production
+
+# The SSH shell does not have the app's PATH, so `python` is "command not found" until you
+# copy it from the running app (process 1). This reads only PATH, not the other variables.
+export PATH="$(tr '\0' '\n' < /proc/1/environ | sed -n 's/^PATH=//p')"
+
+# Check Django uses the volume. If this is not under /data, stop: the commands would run
+# against an empty database in the container.
+python manage.py shell -c "from django.conf import settings; print(settings.DATABASES['default']['NAME'])"
+
+# Staff accounts. None of them may have one of the eight demo addresses.
+python manage.py shell -c "from django.contrib.auth import get_user_model as G; print(list(G().objects.filter(is_staff=True).values_list('username', 'email')))"
+
+ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data --dry-run
+ALLOW_DEMO_TOOLS=1 python manage.py reset_demo_data      # read the counts, then answer y
+exit
+```
+
+Use the interactive shell rather than `railway ssh -- <command>`: the reset asks before changing anything and refuses without a terminal. Set `ALLOW_DEMO_TOOLS=1` only in front of the command, as above, never in the service's Variables in Railway's dashboard, where it would apply to the running app.
 
 ## Logging
 
