@@ -264,8 +264,9 @@ select:focus-visible { outline: 3px solid #a74646; outline-offset: 3px; }
 .experience-process { white-space: pre-wrap; overflow-wrap: anywhere; }
 .experience-confirmation button { margin-right: 10px; }
 /* Report and Block */
-.safety-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; margin: 0 0 12px; }
+.safety-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; margin: 0; padding: 14px 16px 12px; }
 .safety-control { min-width: 0; }
+.button-link { display: inline-block; text-decoration: none; white-space: normal; max-width: 100%; }
 .safety-form { background: white; border: 1px solid #b9bdb2; border-radius: 8px; padding: 14px 16px; margin: 8px 0; max-width: 460px; }
 .safety-form select, .safety-form textarea { width: 100%; padding: 10px 12px; border: 1px solid #68775d; border-radius: 6px; font: inherit; background: white; }
 .safety-form textarea { resize: vertical; }

@@ -155,8 +155,9 @@ export default function Chat() {
         {!listLoading && !listError && !conversations.length && <p className="empty-state">No conversations yet. An accepted connection starts a conversation.</p>}
         {conversations.map((row) => <ConversationListItem key={row.id} conversation={row} selected={row.id === selectedId} onSelect={(id) => navigate(`/chat/${id}`)} />)}
       </aside>
-      <div className="chat-thread-panel">{active && <p><Link to={`/referrals?recipient=${active.other_user.id}`}>Ask {active.other_user.name} for a referral</Link></p>}
+      <div className="chat-thread-panel">
       {active && <div className="safety-actions" key={`safety-${active.id}`}>
+        <Link className="button-primary button-link" to={`/referrals?recipient=${active.other_user.id}`}>Ask {active.other_user.name} for a referral</Link>
         <ReportButton targetType="user" targetId={active.other_user.id} subject={active.other_user.name} />
         <BlockButton userId={active.other_user.id} name={active.other_user.name} onBlocked={() => {
           setBlocked({ id: active.other_user.id, name: active.other_user.name, undone: false });
