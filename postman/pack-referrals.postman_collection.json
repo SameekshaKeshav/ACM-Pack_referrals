@@ -3579,7 +3579,7 @@
     {
       "id": "efacfbd3-4dbd-5f08-88a5-24eea197df83",
       "name": "Referrals",
-      "description": "Asks for a referral between accepted connections. Needs the Connections folder first. Write fields: `recipient_id`, `role_title` (max 255), `message_text` (max 500), and optional `company_id` (must be on the recipient's profile), `job_url`, `resume_url` (http/https). A folder-level test checks every referral in a response against `REFERRAL_FIELDS`; extend that list when adding a field. Not on main yet: `PATCH /api/connections/referrals/<id>/accept|decline/`.",
+      "description": "Asks for a referral between accepted connections. Needs the Connections folder first. Write fields: `recipient_id`, `role_title` (max 255), `contact_email` (required, where the recipient can reach the sender), `message_text` (max 500), and optional `company_id` (must be on the recipient's profile), `job_url`, `resume_url` (http/https). A folder-level test checks every referral in a response against `REFERRAL_FIELDS`; extend that list when adding a field. Not on main yet: `PATCH /api/connections/referrals/<id>/accept|decline/`.",
       "item": [
         {
           "id": "094b863a-926f-5069-8d9a-3c40683c1b60",
@@ -3619,7 +3619,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"recipient_id\": {{recipient_id}},\n  \"company_id\": {{company_id}},\n  \"role_title\": \"Software Engineering Intern\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\"\n}",
+              "raw": "{\n  \"recipient_id\": {{recipient_id}},\n  \"company_id\": {{company_id}},\n  \"role_title\": \"Software Engineering Intern\",\n  \"contact_email\": \"sender@example.com\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3652,7 +3652,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"recipient_id\": {{recipient_id}},\n  \"company_id\": {{company_id}},\n  \"role_title\": \"Software Engineering Intern\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\"\n}",
+                  "raw": "{\n  \"recipient_id\": {{recipient_id}},\n  \"company_id\": {{company_id}},\n  \"role_title\": \"Software Engineering Intern\",\n  \"contact_email\": \"sender@example.com\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -3670,7 +3670,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"company\": {\n    \"id\": 1,\n    \"name\": \"Acme\"\n  },\n  \"role_title\": \"Software Engineering Intern\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n  \"resolved_at\": null\n}"
+              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"company\": {\n    \"id\": 1,\n    \"name\": \"Acme\"\n  },\n  \"role_title\": \"Software Engineering Intern\",\n  \"contact_email\": \"sender@example.com\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n  \"resolved_at\": null\n}"
             }
           ]
         },
@@ -3965,7 +3965,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"count\": 1,\n  \"next\": null,\n  \"previous\": null,\n  \"results\": [\n    {\n      \"id\": 1,\n      \"sender\": {\n        \"id\": 1,\n        \"name\": \"Sender User\",\n        \"company\": \"Acme\"\n      },\n      \"recipient\": {\n        \"id\": 2,\n        \"name\": \"Recipient User\",\n        \"company\": \"Acme\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"name\": \"Acme\"\n      },\n      \"role_title\": \"Software Engineering Intern\",\n      \"job_url\": \"https://careers.example.com/jobs/123\",\n      \"resume_url\": \"https://drive.example.com/resume.pdf\",\n      \"message_text\": \"Would you be willing to refer me for this role?\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n      \"resolved_at\": null\n    }\n  ]\n}"
+              "body": "{\n  \"count\": 1,\n  \"next\": null,\n  \"previous\": null,\n  \"results\": [\n    {\n      \"id\": 1,\n      \"sender\": {\n        \"id\": 1,\n        \"name\": \"Sender User\",\n        \"company\": \"Acme\"\n      },\n      \"recipient\": {\n        \"id\": 2,\n        \"name\": \"Recipient User\",\n        \"company\": \"Acme\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"name\": \"Acme\"\n      },\n      \"role_title\": \"Software Engineering Intern\",\n      \"contact_email\": \"sender@example.com\",\n      \"job_url\": \"https://careers.example.com/jobs/123\",\n      \"resume_url\": \"https://drive.example.com/resume.pdf\",\n      \"message_text\": \"Would you be willing to refer me for this role?\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n      \"resolved_at\": null\n    }\n  ]\n}"
             }
           ]
         },
@@ -4069,7 +4069,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"count\": 1,\n  \"next\": null,\n  \"previous\": null,\n  \"results\": [\n    {\n      \"id\": 1,\n      \"sender\": {\n        \"id\": 1,\n        \"name\": \"Sender User\",\n        \"company\": \"Acme\"\n      },\n      \"recipient\": {\n        \"id\": 2,\n        \"name\": \"Recipient User\",\n        \"company\": \"Acme\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"name\": \"Acme\"\n      },\n      \"role_title\": \"Software Engineering Intern\",\n      \"job_url\": \"https://careers.example.com/jobs/123\",\n      \"resume_url\": \"https://drive.example.com/resume.pdf\",\n      \"message_text\": \"Would you be willing to refer me for this role?\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n      \"resolved_at\": null\n    }\n  ]\n}"
+              "body": "{\n  \"count\": 1,\n  \"next\": null,\n  \"previous\": null,\n  \"results\": [\n    {\n      \"id\": 1,\n      \"sender\": {\n        \"id\": 1,\n        \"name\": \"Sender User\",\n        \"company\": \"Acme\"\n      },\n      \"recipient\": {\n        \"id\": 2,\n        \"name\": \"Recipient User\",\n        \"company\": \"Acme\"\n      },\n      \"company\": {\n        \"id\": 1,\n        \"name\": \"Acme\"\n      },\n      \"role_title\": \"Software Engineering Intern\",\n      \"contact_email\": \"sender@example.com\",\n      \"job_url\": \"https://careers.example.com/jobs/123\",\n      \"resume_url\": \"https://drive.example.com/resume.pdf\",\n      \"message_text\": \"Would you be willing to refer me for this role?\",\n      \"status\": \"pending\",\n      \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n      \"resolved_at\": null\n    }\n  ]\n}"
             }
           ]
         },
@@ -4135,7 +4135,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"company\": {\n    \"id\": 1,\n    \"name\": \"Acme\"\n  },\n  \"role_title\": \"Software Engineering Intern\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n  \"resolved_at\": null\n}"
+              "body": "{\n  \"id\": 1,\n  \"sender\": {\n    \"id\": 1,\n    \"name\": \"Sender User\",\n    \"company\": \"Acme\"\n  },\n  \"recipient\": {\n    \"id\": 2,\n    \"name\": \"Recipient User\",\n    \"company\": \"Acme\"\n  },\n  \"company\": {\n    \"id\": 1,\n    \"name\": \"Acme\"\n  },\n  \"role_title\": \"Software Engineering Intern\",\n  \"contact_email\": \"sender@example.com\",\n  \"job_url\": \"https://careers.example.com/jobs/123\",\n  \"resume_url\": \"https://drive.example.com/resume.pdf\",\n  \"message_text\": \"Would you be willing to refer me for this role?\",\n  \"status\": \"pending\",\n  \"created_at\": \"2026-11-10T17:58:11.241681Z\",\n  \"resolved_at\": null\n}"
             }
           ]
         },
@@ -4234,7 +4234,7 @@
               "// Runs after every request in this folder. Every referral in a 200/201 body must have",
               "// exactly these fields. When the API gains a referral field, add it here and to the",
               "// request bodies below, then regenerate the examples (see postman/README.md).",
-              "const REFERRAL_FIELDS = [\"id\", \"sender\", \"recipient\", \"company\", \"role_title\", \"job_url\", \"resume_url\", \"message_text\", \"status\", \"created_at\", \"resolved_at\"];",
+              "const REFERRAL_FIELDS = [\"id\", \"sender\", \"recipient\", \"company\", \"role_title\", \"contact_email\", \"job_url\", \"resume_url\", \"message_text\", \"status\", \"created_at\", \"resolved_at\"];",
               "if (pm.response.code === 200 || pm.response.code === 201) {",
               "  const body = pm.response.json();",
               "  const referrals = Array.isArray(body.results) ? body.results : [body];",

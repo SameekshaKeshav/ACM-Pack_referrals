@@ -14,7 +14,7 @@ from django.core.cache import cache
 from rest_framework.test import APIClient, APITestCase
 
 REFERRAL_FIELDS = {
-    "id", "sender", "recipient", "company", "role_title", "job_url",
+    "id", "sender", "recipient", "company", "role_title", "contact_email", "job_url",
     "resume_url", "message_text", "status", "created_at", "resolved_at",
 }
 
@@ -158,6 +158,7 @@ class DemoJourneyTests(APITestCase):
         self.assertEqual(referral["status"], "pending")
         self.assertEqual(referral["company"]["name"], "Acme")
         self.assertEqual(referral["role_title"], "Software Engineer Intern")
+        self.assertEqual(referral["contact_email"], "alice@example.com")
         self.assertEqual(referral["job_url"], "https://acme.example/jobs/1")
         self.assertEqual(referral["resume_url"], "https://drive.example/resume")
         self.assertEqual(referral["message_text"], "I built a similar system in my capstone.")
@@ -227,6 +228,7 @@ class DemoJourneyTests(APITestCase):
                 "recipient_id": recipient.user_id,
                 "company_id": company_id,
                 "role_title": "Software Engineer Intern",
+                "contact_email": "alice@example.com",
                 "job_url": "https://acme.example/jobs/1",
                 "resume_url": "https://drive.example/resume",
                 "message_text": "I built a similar system in my capstone.",

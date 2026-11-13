@@ -20,7 +20,7 @@ export function normalizeReferral(row) {
     || !['pending', 'accepted', 'declined'].includes(row.status)
     || !Number.isFinite(Date.parse(row.created_at))
     || (row.company !== null && (!validId(row.company?.id) || typeof row.company.name !== 'string'))) throw mismatch();
-  return { ...row, job_url: safeReferralUrl(row.job_url), resume_url: safeReferralUrl(row.resume_url) };
+  return { ...row, contact_email: typeof row.contact_email === 'string' ? row.contact_email : '', job_url: safeReferralUrl(row.job_url), resume_url: safeReferralUrl(row.resume_url) };
 }
 
 export async function listReferrals(type, { offset = 0, signal } = {}) {
@@ -33,7 +33,7 @@ export async function listReferrals(type, { offset = 0, signal } = {}) {
 }
 
 export async function createReferral(fields, { signal } = {}) {
-  const body = { recipient_id: Number(fields.recipientId), role_title: fields.role.trim(), message_text: fields.message };
+  const body = { recipient_id: Number(fields.recipientId), role_title: fields.role.trim(), contact_email: fields.contactEmail.trim(), message_text: fields.message };
   if (fields.companyId) body.company_id = Number(fields.companyId);
   if (fields.jobUrl.trim()) body.job_url = fields.jobUrl.trim();
   if (fields.resumeUrl.trim()) body.resume_url = fields.resumeUrl.trim();

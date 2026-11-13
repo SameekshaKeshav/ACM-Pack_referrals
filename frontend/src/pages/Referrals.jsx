@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { listConversations } from '../api/chat';
 import { searchCompanies } from '../api/companies';
+import { getSession } from '../auth/session';
 import { createReferral, listReferrals, respondToReferral, REFERRAL_PAGE_SIZE, safeReferralUrl } from '../api/referrals';
 
-const emptyFields = { recipientId: '', companyId: '', role: '', jobUrl: '', resumeUrl: '', message: '' };
+const emptyFields = { recipientId: '', companyId: '', role: '', contactEmail: '', jobUrl: '', resumeUrl: '', message: '' };
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const length = (text) => Array.from(text).length;
 
 function ReferralForm({ initialRecipient, onCreated }) {
-  const [fields, setFields] = useState({ ...emptyFields, recipientId: initialRecipient });
+  const [fields, setFields] = useState({ ...emptyFields, recipientId: initialRecipient, contactEmail: getSession()?.user?.email || '' });
   const [people, setPeople] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,9 @@ function ReferralForm({ initialRecipient, onCreated }) {
     if (!fields.role.trim() || length(fields.role.trim()) > 255 || !fields.message.trim() || length(fields.message) > 500) {
       setError('Enter a role up to 255 characters and a message up to 500 characters.'); return;
     }
+    if (!EMAIL_PATTERN.test(fields.contactEmail.trim()) || length(fields.contactEmail.trim()) > 254) {
+      setError('Enter a valid contact email, like you@example.com.'); return;
+    }
     if ([fields.jobUrl, fields.resumeUrl].some((url) => url.trim() && (length(url.trim()) > 500 || !safeReferralUrl(url.trim())))) {
       setError('Use complete http or https links, up to 500 characters each.'); return;
     }
@@ -52,7 +57,7 @@ function ReferralForm({ initialRecipient, onCreated }) {
     try {
       const saved = await createReferral(fields, { signal: controller.signal });
       if (controller.signal.aborted) return;
-      setFields({ ...emptyFields, recipientId: fields.recipientId });
+      setFields({ ...emptyFields, recipientId: fields.recipientId, contactEmail: fields.contactEmail });
       onCreated(saved);
     } catch (failure) {
       if (!controller.signal.aborted) {
@@ -86,6 +91,9 @@ function ReferralForm({ initialRecipient, onCreated }) {
         <p id="referral-company-help" className="meta">Choose a company on this connection’s current or past profile. The server checks eligibility.</p>
         <label htmlFor="referral-role">Role title (required)</label>
         <input id="referral-role" required value={fields.role} onChange={(event) => change('role', Array.from(event.target.value).slice(0, 255).join(''))} />
+        <label htmlFor="referral-email">Contact email (required)</label>
+        <input id="referral-email" type="email" required autoComplete="email" value={fields.contactEmail} aria-describedby="referral-email-help" onChange={(event) => change('contactEmail', event.target.value)} placeholder="you@example.com" />
+        <p id="referral-email-help" className="meta">The person you ask will see this so they can reach you.</p>
         <label htmlFor="referral-job">Job link (optional)</label>
         <input id="referral-job" type="url" value={fields.jobUrl} onChange={(event) => change('jobUrl', event.target.value)} placeholder="https://…" />
         <label htmlFor="referral-resume">Résumé link (optional)</label>
@@ -93,7 +101,7 @@ function ReferralForm({ initialRecipient, onCreated }) {
         <label htmlFor="referral-note">Why you fit (required)</label>
         <textarea id="referral-note" required rows="5" value={fields.message} aria-describedby="referral-note-count" onChange={(event) => change('message', Array.from(event.target.value).slice(0, 500).join(''))} />
         <p id="referral-note-count" className="meta" aria-live="polite">{500 - length(fields.message)} characters remaining</p>
-        <button className="button-primary" disabled={busy || conflict || !fields.role.trim() || !fields.message.trim() || !people.some((person) => String(person.id) === fields.recipientId)}>{busy ? 'Sending referral request…' : 'Send referral request'}</button>
+        <button className="button-primary" disabled={busy || conflict || !fields.role.trim() || !fields.contactEmail.trim() || !fields.message.trim() || !people.some((person) => String(person.id) === fields.recipientId)}>{busy ? 'Sending referral request…' : 'Send referral request'}</button>
       </fieldset>
       {error && <p role="alert" className="feedback feedback-error">{error}</p>}
     </form>
@@ -179,6 +187,7 @@ export function ReferralList({ direction, version }) {
       {!page.results.length && <p className="empty-state">No {direction} referral requests yet.</p>}
       {page.results.map((row) => <article className="referral-card" key={row.id} aria-label={`Referral ${incoming ? 'from' : 'to'} ${(incoming ? row.sender : row.recipient).name}`}>
         <h3>{row.role_title}</h3><p>{incoming ? 'From' : 'To'}: {(incoming ? row.sender : row.recipient).name}</p>
+        {incoming && row.contact_email && <p>Contact: <a href={`mailto:${row.contact_email}`}>{row.contact_email}</a></p>}
         {row.company && <p>Company: {row.company.name}</p>}<p tabIndex={-1} ref={(node) => { statusRefs.current[row.id] = node; }}>Status: <strong>{row.status}</strong></p>
         <p className="referral-note">{row.message_text}</p>
         <div className="referral-links">{row.job_url && <a href={row.job_url} target="_blank" rel="noopener noreferrer">View job</a>}{row.resume_url && <a href={row.resume_url} target="_blank" rel="noopener noreferrer">View résumé</a>}</div>

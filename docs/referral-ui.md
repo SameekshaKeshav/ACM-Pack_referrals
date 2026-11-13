@@ -23,7 +23,7 @@ need its backend data repaired before it appears in these choices.
 ## Contract and behaviour
 
 - `POST /api/connections/referrals/`: numeric `recipient_id`, `role_title`,
-  `message_text`; optional numeric `company_id`, `job_url`, `resume_url`.
+  `contact_email`, `message_text`; optional numeric `company_id`, `job_url`, `resume_url`.
 - `GET /api/connections/referrals/?type=incoming|outgoing&limit=20&offset=N`:
   reads `{count, results}` and builds local page requests without following next links.
 - `GET /api/chat/conversations/`: recipient choices.
@@ -31,7 +31,8 @@ need its backend data repaired before it appears in these choices.
   outside a recipient's profile; the backend rejects an ineligible choice and the form
   keeps the draft. Company-list failure still permits an ask without a company.
 - The shared API client attaches Bearer auth, handles token refresh and session changes.
-- Required nonblank role (255 code points), note (500 code points), http/https links
+- Required contact email (prefilled with the signed-in address, editable; the recipient
+  sees it on the incoming card), nonblank role (255 code points), note (500 code points), http/https links
   (500 code points each). Unicode counting includes emoji as one code point.
 - While sending, the form is disabled. Success clears role/note/links/company, retains
   the recipient, selects outgoing and reloads persisted cards. It does not claim email

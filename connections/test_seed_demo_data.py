@@ -68,6 +68,7 @@ class SeedDemoDataTests(TestCase):
                 "recipient_id": recipient.pk,
                 "company_id": int(values["company_id"]),
                 "role_title": "SWE Intern",
+                "contact_email": "sender@example.com",
                 "message_text": "Hi",
             },
             format="json",
