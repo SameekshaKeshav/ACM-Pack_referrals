@@ -91,8 +91,8 @@ def check_may_ask(sender, recipient) -> None:
         raise refusal
 
 
-def create_referral_request(sender, recipient, *, company, role_title, job_url,
-                            resume_url, message_text) -> ReferralRequest:
+def create_referral_request(sender, recipient, *, company, role_title, contact_email,
+                            job_url, resume_url, message_text) -> ReferralRequest:
     """Create a pending ask, or raise if one for the same role is already open.
 
     The same person, company and role (ignoring case) cannot have two pending asks.
@@ -122,6 +122,7 @@ def create_referral_request(sender, recipient, *, company, role_title, job_url,
                 recipient=recipient,
                 company=company,
                 role_title=role_title,
+                contact_email=contact_email,
                 job_url=job_url,
                 resume_url=resume_url,
                 message_text=message_text,

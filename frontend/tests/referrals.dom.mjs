@@ -68,12 +68,57 @@ test('sends exact referral body with Bearer, disables in flight, then shows outg
   assert.equal(posts.length, 1);
   assert.equal(posts[0].path, '/api/connections/referrals/');
   assert.equal(posts[0].headers.Authorization, 'Bearer access');
-  assert.deepEqual(JSON.parse(posts[0].body), { recipient_id: 12, role_title: 'Engineer', message_text: 'I fit this role.', company_id: 3, job_url: 'https://example.com/job' });
+  assert.deepEqual(JSON.parse(posts[0].body), { recipient_id: 12, role_title: 'Engineer', contact_email: 'me@ncsu.edu', message_text: 'I fit this role.', company_id: 3, job_url: 'https://example.com/job' });
   stored = [referral()];
   await act(async () => release(json(stored[0], 201)));
   await screen.findByText(/Referral request sent/);
   assert.equal(screen.getByLabelText('Why you fit (required)').value, '');
   await screen.findByRole('article', { name: 'Referral to Maya' });
+});
+
+test('contact email starts as the signed-in address, can be changed, and is sent', async () => {
+  const calls = backend();
+  mount(); const who = await fill();
+  const field = screen.getByLabelText('Contact email (required)');
+  assert.equal(field.value, 'me@ncsu.edu');
+  await who.clear(field);
+  await who.type(field, 'me.personal@example.com');
+  await who.click(screen.getByRole('button', { name: 'Send referral request' }));
+  await screen.findByText(/Referral request sent/);
+  const post = calls.find((call) => call.method === 'POST');
+  assert.equal(JSON.parse(post.body).contact_email, 'me.personal@example.com');
+  assert.equal(screen.getByLabelText('Contact email (required)').value, 'me.personal@example.com');
+});
+
+test('a blank contact email disables sending and a malformed one is refused without a request', async () => {
+  const calls = backend();
+  mount(); const who = await fill();
+  const field = screen.getByLabelText('Contact email (required)');
+  await who.clear(field);
+  assert.ok(screen.getByRole('button', { name: 'Send referral request' }).disabled);
+  await who.type(field, 'not-an-email');
+  await act(async () => { dom.window.document.querySelector('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })); });
+  assert.match((await screen.findByRole('alert')).textContent, /valid contact email/);
+  assert.equal(calls.filter((call) => call.method === 'POST').length, 0);
+});
+
+test('the contact email shows on incoming asks as a mail link, and not on outgoing ones', async () => {
+  backend({ list: () => json({ count: 1, results: [referral(1, { contact_email: 'sam.personal@example.com' })] }) });
+  render(h(ReferralList, { direction: 'incoming' }));
+  const link = await screen.findByRole('link', { name: 'sam.personal@example.com' });
+  assert.equal(link.getAttribute('href'), 'mailto:sam.personal@example.com');
+  cleanup();
+  backend({ list: () => json({ count: 1, results: [referral(1, { contact_email: 'sam.personal@example.com' })] }) });
+  render(h(ReferralList, { direction: 'outgoing' }));
+  await screen.findByRole('article');
+  assert.ok(!screen.queryByText(/sam.personal@example.com/));
+});
+
+test('an older ask saved before contact emails existed shows no contact line', async () => {
+  backend({ list: () => json({ count: 1, results: [referral()] }) });
+  render(h(ReferralList, { direction: 'incoming' }));
+  await screen.findByRole('article');
+  assert.ok(!screen.queryByText(/^Contact:/));
 });
 
 test('409 keeps draft and prevents retry of the unchanged duplicate ask', async () => {

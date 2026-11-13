@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const person = (id, name) => ({ id, name, company: 'Example' });
-const row = { id: 1, sender: person(7, 'Me'), recipient: person(12, 'Maya'), company: null, role_title: 'Engineer', message_text: 'Relevant experience', status: 'pending', job_url: '', resume_url: '', created_at: '2026-11-01T12:00:00Z' };
+const row = { id: 1, sender: person(7, 'Me'), recipient: person(12, 'Maya'), company: null, role_title: 'Engineer', contact_email: 'maya.contact@example.com', message_text: 'Relevant experience', status: 'pending', job_url: '', resume_url: '', created_at: '2026-11-01T12:00:00Z' };
 const json = (route, data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
 async function setup(page, conflict = false) {
   let saved = [];
@@ -14,7 +14,7 @@ async function setup(page, conflict = false) {
     if (url.pathname === '/api/companies/' || url.pathname === '/api/connections/') return json(route, []);
     if (url.pathname === '/api/connections/referrals/') {
       if (route.request().method() === 'POST') {
-        expect(route.request().postDataJSON()).toEqual({ recipient_id: 12, role_title: 'Engineer', message_text: 'Relevant experience' });
+        expect(route.request().postDataJSON()).toEqual({ recipient_id: 12, role_title: 'Engineer', contact_email: 'me@ncsu.edu', message_text: 'Relevant experience' });
         expect(route.request().headers().authorization).toBe('Bearer access');
         if (conflict) return json(route, { detail: 'Duplicate ask' }, 409);
         saved = [row]; return json(route, row, 201);
@@ -77,6 +77,7 @@ async function incomingFixture(page, { conflict = false, failure = false } = {})
 for (const action of ['accept', 'decline']) {
   test(`recipient can ${action} using keyboard; status persists after reload`, async ({ page }) => {
     const patches = await incomingFixture(page);
+    await expect(page.getByRole('link', { name: 'maya.contact@example.com' })).toHaveAttribute('href', 'mailto:maya.contact@example.com');
     const button = page.getByRole('button', { name: `${action === 'accept' ? 'Accept' : 'Decline'} referral for Engineer from Maya` });
     await button.focus(); await page.keyboard.press('Enter');
     const status = action === 'accept' ? 'accepted' : 'declined';

@@ -66,6 +66,9 @@ class ReferralRequest(models.Model):
         related_name="referral_requests",
     )
     role_title = models.CharField(max_length=255)
+    # Where the recipient can reach the sender about this ask. Required by the API.
+    # Blank only on asks made before this field existed.
+    contact_email = models.EmailField(max_length=254, blank=True)
     job_url = models.URLField(max_length=500, blank=True)
     resume_url = models.URLField(max_length=500, blank=True)
     message_text = models.CharField(max_length=500)

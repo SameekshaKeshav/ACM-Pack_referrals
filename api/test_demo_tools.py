@@ -114,6 +114,7 @@ class ResetTests(TestCase):
                 "recipient_id": avery.pk,
                 "company_id": red_hat.pk,
                 "role_title": "SWE Intern",
+                "contact_email": demo.SAM.email,
                 "message_text": "Could you refer me?",
             },
             format="json",
@@ -148,7 +149,8 @@ class ResetTests(TestCase):
             "/api/connections/", {"recipient_id": jordan.pk, "message_text": "Hi"}, format="json"
         )
         ReferralRequest.objects.create(
-            sender=sam, recipient=avery, role_title="SWE", message_text="hi"
+            sender=sam, recipient=avery, role_title="SWE", contact_email=sam.email,
+            message_text="hi",
         )
         Block.objects.create(blocker=sam, blocked=jordan)
         Report.objects.create(
@@ -267,7 +269,8 @@ class ResetTests(TestCase):
         )
         Block.objects.create(blocker=ben, blocked=ana)
         ReferralRequest.objects.create(
-            sender=ana, recipient=ben, role_title="SWE", message_text="x", company=acme
+            sender=ana, recipient=ben, role_title="SWE", contact_email=ana.email,
+            message_text="x", company=acme,
         )
         snapshot = (
             list(User.objects.filter(pk__in=[ana.pk, ben.pk]).values()),
