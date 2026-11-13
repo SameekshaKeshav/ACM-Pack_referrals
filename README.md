@@ -198,6 +198,8 @@ exit
 
 Use the interactive shell rather than `railway ssh -- <command>`: the reset asks before changing anything and refuses without a terminal. Set `ALLOW_DEMO_TOOLS=1` only in front of the command, as above, never in the service's Variables in Railway's dashboard, where it would apply to the running app.
 
+**Shortcut from your laptop:** `bash scripts/reset_demo_staging.sh` wakes staging, runs the dry run, asks `[y/N]`, then resets. It needs the Railway CLI logged in and linked (`railway status`). It does not list the staff accounts first, so run the staff check above before the first use. A reset still refuses to touch a staff account, and then changes nothing.
+
 ## Logging
 
 `pack_referrals/middleware.py` logs one JSON line to stdout per request, which Railway shows in the service's logs. Each line has `method`, `path` (without the query string, so tokens or codes in the URL aren't logged), `status_code` and `duration_ms`:
