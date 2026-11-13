@@ -127,7 +127,7 @@ SET_A = DemoSet(
     "A",
     presenter=_presenter("skeshav2@ncsu.edu", "Sameeksha", "Keshav"),
     alum=_red_hat_alum("sshett24@ncsu.edu", "Sanjana", "Shetty"),
-    waiting=_sre_alum("rtelgoha@ncsu.edu", "Rawan", "Telgoha"),
+    waiting=_sre_alum("rtelgoha@ncsu.edu", "Rawan", "Elgohary"),
 )
 SET_B = DemoSet(
     "B",

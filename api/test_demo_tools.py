@@ -230,6 +230,20 @@ class ResetTests(TestCase):
         )
         self.assertEqual(len(set(demo.CAST_EMAILS)), len(demo.CAST_EMAILS), "no repeats")
 
+    def test_a_suspended_demo_account_is_active_again_after_a_reset(self):
+        run("reset_demo_data", yes=True)
+        Profile.objects.filter(user__email=demo.SAM.email).update(
+            account_status=Profile.AccountStatus.SUSPENDED
+        )
+        User.objects.filter(email=demo.SAM.email).update(is_active=False)
+
+        run("reset_demo_data", yes=True)
+
+        sam = User.objects.get(email=demo.SAM.email)
+        self.assertTrue(sam.is_active)
+        self.assertEqual(sam.profile.account_status, Profile.AccountStatus.ACTIVE)
+        self.assertIn("access token", run("issue_demo_token", demo.SAM.email))
+
     def test_profile_edits_to_a_demo_account_are_put_back(self):
         run("reset_demo_data", yes=True)
         Profile.objects.filter(user__email=demo.AVERY.email).update(
