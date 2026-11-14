@@ -106,12 +106,22 @@ test('the contact email shows on incoming asks as a mail link, and not on outgoi
   backend({ list: () => json({ count: 1, results: [referral(1, { contact_email: 'sam.personal@example.com' })] }) });
   render(h(ReferralList, { direction: 'incoming' }));
   const link = await screen.findByRole('link', { name: 'sam.personal@example.com' });
-  assert.equal(link.getAttribute('href'), 'mailto:sam.personal@example.com');
+  assert.equal(link.getAttribute('href'), 'mailto:sam.personal%40example.com');
   cleanup();
   backend({ list: () => json({ count: 1, results: [referral(1, { contact_email: 'sam.personal@example.com' })] }) });
   render(h(ReferralList, { direction: 'outgoing' }));
   await screen.findByRole('article');
   assert.ok(!screen.queryByText(/sam.personal@example.com/));
+});
+
+test('a contact email with mail-link syntax cannot add a bcc or subject to the mailto link', async () => {
+  const sneaky = 'a?bcc=evil&subject=Hi@example.com';
+  backend({ list: () => json({ count: 1, results: [referral(1, { contact_email: sneaky })] }) });
+  render(h(ReferralList, { direction: 'incoming' }));
+  const link = await screen.findByRole('link', { name: sneaky });
+  const href = link.getAttribute('href');
+  assert.equal(href, `mailto:${encodeURIComponent(sneaky)}`);
+  assert.ok(!/[?&=]/.test(href.slice('mailto:'.length)), 'nothing after mailto: can start a header');
 });
 
 test('an older ask saved before contact emails existed shows no contact line', async () => {

@@ -187,7 +187,7 @@ export function ReferralList({ direction, version }) {
       {!page.results.length && <p className="empty-state">No {direction} referral requests yet.</p>}
       {page.results.map((row) => <article className="referral-card" key={row.id} aria-label={`Referral ${incoming ? 'from' : 'to'} ${(incoming ? row.sender : row.recipient).name}`}>
         <h3>{row.role_title}</h3><p>{incoming ? 'From' : 'To'}: {(incoming ? row.sender : row.recipient).name}</p>
-        {incoming && row.contact_email && <p>Contact: <a href={`mailto:${row.contact_email}`}>{row.contact_email}</a></p>}
+        {incoming && row.contact_email && <p>Contact: <a href={`mailto:${encodeURIComponent(row.contact_email)}`}>{row.contact_email}</a></p>}
         {row.company && <p>Company: {row.company.name}</p>}<p tabIndex={-1} ref={(node) => { statusRefs.current[row.id] = node; }}>Status: <strong>{row.status}</strong></p>
         <p className="referral-note">{row.message_text}</p>
         <div className="referral-links">{row.job_url && <a href={row.job_url} target="_blank" rel="noopener noreferrer">View job</a>}{row.resume_url && <a href={row.resume_url} target="_blank" rel="noopener noreferrer">View résumé</a>}</div>

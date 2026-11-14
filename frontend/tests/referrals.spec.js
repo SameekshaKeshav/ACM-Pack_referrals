@@ -77,7 +77,7 @@ async function incomingFixture(page, { conflict = false, failure = false } = {})
 for (const action of ['accept', 'decline']) {
   test(`recipient can ${action} using keyboard; status persists after reload`, async ({ page }) => {
     const patches = await incomingFixture(page);
-    await expect(page.getByRole('link', { name: 'maya.contact@example.com' })).toHaveAttribute('href', 'mailto:maya.contact@example.com');
+    await expect(page.getByRole('link', { name: 'maya.contact@example.com' })).toHaveAttribute('href', 'mailto:maya.contact%40example.com');
     const button = page.getByRole('button', { name: `${action === 'accept' ? 'Accept' : 'Decline'} referral for Engineer from Maya` });
     await button.focus(); await page.keyboard.press('Enter');
     const status = action === 'accept' ? 'accepted' : 'declined';
