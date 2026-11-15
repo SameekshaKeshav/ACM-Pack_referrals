@@ -369,6 +369,7 @@ class ReferralRequestListCreateView(generics.GenericAPIView):
                 recipient,
                 company=serializer.validated_data.get("company"),
                 role_title=serializer.validated_data["role_title"].strip(),
+                contact_email=serializer.validated_data["contact_email"],
                 job_url=serializer.validated_data.get("job_url", ""),
                 resume_url=serializer.validated_data.get("resume_url", ""),
                 message_text=serializer.validated_data["message_text"],

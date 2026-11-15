@@ -54,6 +54,7 @@ class ReferralTestCase(TestCase):
             "recipient_id": self.bob.pk,
             "company_id": self.acme.pk,
             "role_title": "Software Engineer Intern",
+            "contact_email": "alice.personal@example.com",
             "job_url": "https://acme.example/jobs/1",
             "resume_url": "https://drive.example/resume",
             "message_text": "I built a similar system in my capstone.",
@@ -66,7 +67,8 @@ class ReferralTestCase(TestCase):
         return self.client.post(URL, self.payload(**overrides), format="json")
 
     def make_referral(self, sender=None, recipient=None, **fields):
-        defaults = {"role_title": "SWE", "message_text": "please", "company": self.acme}
+        defaults = {"role_title": "SWE", "message_text": "please", "company": self.acme,
+                    "contact_email": "alice@example.com"}
         defaults.update(fields)
         return ReferralRequest.objects.create(
             sender=sender or self.alice, recipient=recipient or self.bob, **defaults
@@ -83,6 +85,7 @@ class CreateReferralTests(ReferralTestCase):
         self.assertEqual(body["recipient"]["id"], self.bob.pk)
         self.assertEqual(body["company"], {"id": self.acme.pk, "name": "Acme"})
         self.assertEqual(body["role_title"], "Software Engineer Intern")
+        self.assertEqual(body["contact_email"], "alice.personal@example.com")
         self.assertEqual(body["job_url"], "https://acme.example/jobs/1")
         self.assertEqual(body["resume_url"], "https://drive.example/resume")
         self.assertEqual(body["message_text"], "I built a similar system in my capstone.")
@@ -101,7 +104,8 @@ class CreateReferralTests(ReferralTestCase):
         self._as(self.alice)
         response = self.client.post(
             URL,
-            {"recipient_id": self.bob.pk, "role_title": "PM", "message_text": "hello"},
+            {"recipient_id": self.bob.pk, "role_title": "PM", "contact_email": "a@example.com",
+             "message_text": "hello"},
             format="json",
         )
 
@@ -244,8 +248,9 @@ class WhoMayAskTests(ReferralTestCase):
         for body in ({}, {"recipient_id": None}, {"recipient_id": "abc"}, {"recipient_id": 0},
                      {"recipient_id": True}):
             with self.subTest(body=body):
-                response = self.client.post(URL, {**body, "role_title": "x", "message_text": "y"},
-                                            format="json")
+                full = {**body, "role_title": "x", "contact_email": "a@example.com",
+                        "message_text": "y"}
+                response = self.client.post(URL, full, format="json")
                 self.assertEqual(response.status_code, 400)
 
     def test_a_non_object_body_is_a_400(self):
@@ -296,6 +301,35 @@ class ValidationTests(ReferralTestCase):
 
     def test_links_over_500_characters_are_a_400(self):
         self.assertEqual(self.ask(job_url="https://a.example/" + "x" * 500).status_code, 400)
+
+    def test_contact_email_is_stored_and_the_recipient_sees_it(self):
+        self.assertEqual(self.ask(contact_email="alice.personal@example.com").status_code, 201)
+
+        self.assertEqual(
+            ReferralRequest.objects.get().contact_email, "alice.personal@example.com"
+        )
+        self._as(self.bob)
+        row = self.client.get(URL, {"type": "incoming"}).json()["results"][0]
+        self.assertEqual(row["contact_email"], "alice.personal@example.com")
+
+    def test_contact_email_is_required(self):
+        body = self.payload()
+        del body["contact_email"]
+        self._as(self.alice)
+
+        response = self.client.post(URL, body, format="json")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("contact_email", response.json())
+        self.assertEqual(ReferralRequest.objects.count(), 0)
+
+    def test_a_blank_or_malformed_contact_email_is_a_400(self):
+        for value in ("", "   ", None, "not-an-email", "a@", "two@example.com three@example.com"):
+            with self.subTest(contact_email=value):
+                response = self.ask(contact_email=value)
+                self.assertEqual(response.status_code, 400)
+                self.assertIn("contact_email", response.json())
+        self.assertEqual(ReferralRequest.objects.count(), 0)
 
     def test_message_text_is_limited_to_500_characters(self):
         self.assertEqual(self.ask(message_text="x" * 501).status_code, 400)
@@ -423,7 +457,8 @@ class DuplicateTests(ReferralTestCase):
             with self.assertRaises(referrals.DuplicateReferralError):
                 referrals.create_referral_request(
                     self.alice, self.bob, company=self.acme, role_title="SWE",
-                    job_url="", resume_url="", message_text="again",
+                    contact_email="alice@example.com", job_url="", resume_url="",
+                    message_text="again",
                 )
 
 
@@ -465,8 +500,8 @@ class ReadReferralTests(ReferralTestCase):
 
         self.assertEqual(
             set(row),
-            {"id", "sender", "recipient", "company", "role_title", "job_url", "resume_url",
-             "message_text", "status", "created_at", "resolved_at"},
+            {"id", "sender", "recipient", "company", "role_title", "contact_email", "job_url",
+             "resume_url", "message_text", "status", "created_at", "resolved_at"},
         )
         self.assertEqual(row["sender"]["name"], "Alice")
         self.assertEqual(row["recipient"]["company"], "Acme")

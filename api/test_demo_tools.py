@@ -114,6 +114,7 @@ class ResetTests(TestCase):
                 "recipient_id": avery.pk,
                 "company_id": red_hat.pk,
                 "role_title": "SWE Intern",
+                "contact_email": demo.SAM.email,
                 "message_text": "Could you refer me?",
             },
             format="json",
@@ -148,7 +149,8 @@ class ResetTests(TestCase):
             "/api/connections/", {"recipient_id": jordan.pk, "message_text": "Hi"}, format="json"
         )
         ReferralRequest.objects.create(
-            sender=sam, recipient=avery, role_title="SWE", message_text="hi"
+            sender=sam, recipient=avery, role_title="SWE", contact_email=sam.email,
+            message_text="hi",
         )
         Block.objects.create(blocker=sam, blocked=jordan)
         Report.objects.create(
@@ -228,6 +230,20 @@ class ResetTests(TestCase):
         )
         self.assertEqual(len(set(demo.CAST_EMAILS)), len(demo.CAST_EMAILS), "no repeats")
 
+    def test_a_suspended_demo_account_is_active_again_after_a_reset(self):
+        run("reset_demo_data", yes=True)
+        Profile.objects.filter(user__email=demo.SAM.email).update(
+            account_status=Profile.AccountStatus.SUSPENDED
+        )
+        User.objects.filter(email=demo.SAM.email).update(is_active=False)
+
+        run("reset_demo_data", yes=True)
+
+        sam = User.objects.get(email=demo.SAM.email)
+        self.assertTrue(sam.is_active)
+        self.assertEqual(sam.profile.account_status, Profile.AccountStatus.ACTIVE)
+        self.assertIn("access token", run("issue_demo_token", demo.SAM.email))
+
     def test_profile_edits_to_a_demo_account_are_put_back(self):
         run("reset_demo_data", yes=True)
         Profile.objects.filter(user__email=demo.AVERY.email).update(
@@ -267,7 +283,8 @@ class ResetTests(TestCase):
         )
         Block.objects.create(blocker=ben, blocked=ana)
         ReferralRequest.objects.create(
-            sender=ana, recipient=ben, role_title="SWE", message_text="x", company=acme
+            sender=ana, recipient=ben, role_title="SWE", contact_email=ana.email,
+            message_text="x", company=acme,
         )
         snapshot = (
             list(User.objects.filter(pk__in=[ana.pk, ben.pk]).values()),

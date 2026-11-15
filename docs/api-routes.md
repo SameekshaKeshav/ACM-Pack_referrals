@@ -37,7 +37,7 @@ One place that lists every route the backend serves, so both frontends can code 
 | `GET /api/connections/<id>/` | no | One request; only its sender or recipient (else 404) | Scoped |
 | `PATCH /api/connections/<id>/accept/` | no | Recipient accepts; creates the conversation; returns `{id, status, conversation_id}`; 409 if already resolved | Scoped |
 | `PATCH /api/connections/<id>/decline/` | no | Recipient declines; returns `{id, status, conversation_id: null}`; 409 if already resolved | Scoped |
-| `POST /api/connections/referrals/` | no | Ask a connection for a referral (201, 400, 403, 404, 409). Body: `recipient_id`, `role_title`, `message_text` (max 500), optional `company_id` (on the recipient's profile), `job_url`, `resume_url` (http/https only). 403 unless an accepted connection exists and neither side blocked the other. 409 if you already have a **pending** ask for the same role (compared ignoring case) at the same company, to the same person. Once the recipient accepts or declines, the ask is no longer pending and the same role can be asked again; clients should not offer a retry on a 409 while it is still pending | Scoped |
+| `POST /api/connections/referrals/` | no | Ask a connection for a referral (201, 400, 403, 404, 409). Body: `recipient_id`, `role_title`, `contact_email` (required, a valid email where the recipient can reach the sender; shown to the recipient), `message_text` (max 500), optional `company_id` (on the recipient's profile), `job_url`, `resume_url` (http/https only). 403 unless an accepted connection exists and neither side blocked the other. 409 if you already have a **pending** ask for the same role (compared ignoring case) at the same company, to the same person. Once the recipient accepts or declines, the ask is no longer pending and the same role can be asked again; clients should not offer a retry on a 409 while it is still pending | Scoped |
 | `GET /api/connections/referrals/?type=incoming\|outgoing[&status=pending\|accepted\|declined]` | no | The caller's referral asks, newest first; blocked users' asks are hidden. Paged like the people directory: `?limit=` (default 20, max 100) and `?offset=`; the body is `{count, next, previous, results}` | Scoped |
 | `GET /api/connections/referrals/<id>/` | no | One ask; only its sender or recipient (else 404) | Scoped |
 | `PATCH /api/connections/referrals/<id>/accept/` | no | Recipient accepts the ask; returns the full referral object with `status: "accepted"` and `resolved_at` set. 403 for the sender, 404 for anyone else and for unknown ids, 409 if already answered | Scoped |
@@ -82,7 +82,7 @@ accepted connection, account status, blocks, company eligibility and duplicates 
 
 Lists request `limit=20&offset=N`, render incoming/outgoing cards and all three statuses,
 and construct their own same-origin page URLs. The form sends required `recipient_id`,
-`role_title` (max 255) and `message_text` (max 500 Unicode code points), plus optional
+`role_title` (max 255), `contact_email` (valid email, prefilled with the signed-in address and editable) and `message_text` (max 500 Unicode code points), plus optional
 `company_id`, `job_url` and `resume_url` (max 500 each). It never sends sender or status.
 A 409 keeps the draft and disables resubmission until edited; there is no retry action.
 Company selection is optional and lists directory companies; the server rejects a choice

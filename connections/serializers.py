@@ -120,7 +120,8 @@ class ReferralRequestSerializer(serializers.ModelSerializer):
     """A referral ask, as sent and as shown.
 
     Write: ``recipient_id``, ``company_id`` (optional, must be on the recipient's
-    profile), ``role_title``, ``job_url``, ``resume_url``, ``message_text``.
+    profile), ``role_title``, ``contact_email`` (required: where the recipient can
+    reach the sender), ``job_url``, ``resume_url``, ``message_text``.
     The sender and status are never read from the body.
     """
 
@@ -138,6 +139,7 @@ class ReferralRequestSerializer(serializers.ModelSerializer):
         allow_null=True,
     )
     role_title = serializers.CharField(max_length=255)
+    contact_email = serializers.EmailField(max_length=254, allow_blank=False)
     job_url = serializers.URLField(
         max_length=500, required=False, allow_blank=True, validators=[HTTP_ONLY_URL]
     )
@@ -158,6 +160,7 @@ class ReferralRequestSerializer(serializers.ModelSerializer):
             "company",
             "company_id",
             "role_title",
+            "contact_email",
             "job_url",
             "resume_url",
             "message_text",
